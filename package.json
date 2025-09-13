@@ -1,0 +1,19 @@
+{
+  "name": "deearthx-v3",
+  "version": "1.0.0",
+  "description": "main",
+  "repository": {
+    "type": "git",
+    "url": "https://git.tianpao.top/Tianpao/DeEarthX-V3.git"
+  },
+  "license": "ISC",
+  "author": "Tianpao",
+  "type": "module",
+  "main": "./.build/build.js",
+  "scripts": {
+    "backend":"cd ./backend && npm run build",
+    "upx":".\\.build\\upx.exe .\\backend\\dist\\Dex-v3-core.exe",
+    "tauri":"cd ./front && npm run tauri build",
+    "build":"npm run tauri && npm run backend && npm run upx"
+  }
+}

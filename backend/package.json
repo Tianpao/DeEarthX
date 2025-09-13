@@ -7,15 +7,26 @@
   "type": "module",
   "main": "main.js",
   "scripts": {
-    "test": "node main.js"
+    "test": "tsc&&node dist/main.js",
+    "rollup": "rollup -c rollup.config.js",
+    "nexe": "nexe -i ./dist/bundle.js --ico Dex.ico --build -t x86-22.13.0 --output ./dist/Dex-v3-core.exe",
+    "build": "npm run rollup && npm run nexe"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
     "nexe": "^5.0.0-beta.4",
     "rollup": "^4.50.1",
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "fs-extra": "^11.3.1",
     "got": "^14.4.8",
-    "p-map": "^7.0.3"
+    "inquirer": "^12.9.4",
+    "p-map": "^7.0.3",
+    "picocolors": "^1.1.1",
+    "yauzl-promise": "^4.0.0"
   }
 }
