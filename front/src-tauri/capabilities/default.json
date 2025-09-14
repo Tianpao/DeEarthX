@@ -8,6 +8,20 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "store:default"
+    "store:default",
+    "shell:default",
+    "shell:allow-execute",
+    "shell:allow-spawn",
+    "shell:allow-open",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "core",
+          "cmd": "core.exe",
+          "args": true
+        }
+      ]
+    }
   ]
 }

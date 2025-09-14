@@ -1,9 +1,49 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
-import * as fs from "@tauri-apps/plugin-store"
-const config = ref({})
+import { ref, watch } from 'vue';
+import * as shell from '@tauri-apps/plugin-shell';
+import { message } from 'ant-design-vue';
+/* Config */
+interface IConfig {
+  mirror: {
+    bmclapi: boolean;
+    mcimirror: boolean;
+  };
+  filter: {
+    hashes: boolean;
+    dexpub: boolean;
+    mixins: boolean;
+  };
+}
+const config = ref<IConfig>({mirror: {bmclapi: false, mcimirror: false}, filter: {hashes: false, dexpub: false, mixins: false}})
+fetch('http://localhost:37019/getconfig',{
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+}).then(res=>res.json()).then(res=>config.value = res)
 
-const checked = ref(false);
+let first = true;
+watch(config,(newv)=>{ //写入Config
+    if(!first){
+       fetch('http://localhost:37019/writeconfig',{
+         method: 'POST',
+         headers: {
+          'Content-Type': 'application/json'
+         },
+         body: JSON.stringify(newv)
+       }).then(res=>{
+         if(res.status === 200){
+           message.success('配置已保存')
+         }
+       })
+    // shell.Command.create('core',['writeconfig',JSON.stringify(newv)]).execute().then(()=>{
+    // message.success('配置已保存')
+    // })
+    console.log(newv)
+    return
+}
+  first = false;
+},{deep:true})
 </script>
 
 <template>
@@ -20,15 +60,15 @@ const checked = ref(false);
         <div class="tw:flex">
             <div class="tw:flex tw:ml-5 tw:mt-2">
                 <p class="tw:text-gray-600">哈希过滤</p>
-                <a-switch class="tw:left-2" v-model:checked="checked" />
+                <a-switch class="tw:left-2" v-model:checked="config.filter.hashes" />
             </div>
             <div class="tw:flex tw:ml-5 tw:mt-2">
                 <p class="tw:text-gray-600">DeP过滤</p>
-                <a-switch class="tw:left-2" v-model:checked="checked" />
+                <a-switch class="tw:left-2" v-model:checked="config.filter.dexpub" />
             </div>
             <div class="tw:flex tw:ml-5 tw:mt-2">
                 <p class="tw:text-gray-600">Mixin过滤</p>
-                <a-switch class="tw:left-2" v-model:checked="checked" />
+                <a-switch class="tw:left-2" v-model:checked="config.filter.mixins" />
             </div>
         </div>
         <!-- DeEarth设置 -->
@@ -38,7 +78,7 @@ const checked = ref(false);
           <div class="tw:flex">
                          <div class="tw:flex tw:ml-5 tw:mt-2">
                 <p class="tw:text-gray-600">MCIM镜像源</p>
-                <a-switch class="tw:left-2" v-model:checked="checked" />
+                <a-switch class="tw:left-2" v-model:checked="config.mirror.mcimirror" />
             </div>
           </div>
     </div>

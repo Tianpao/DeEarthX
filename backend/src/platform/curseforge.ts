@@ -1,15 +1,8 @@
 import got from "got";
 import { join } from "node:path";
-import { fastdownload, usemirror } from "../utils/utils.js";
+import { fastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
 
-const cf_url = (() => {
-  if (usemirror) {
-    return "https://mod.mcimirror.top/curseforge";
-  } else {
-    return "https://api.curseforge.com";
-  }
-})();
 export interface CurseForgeManifest {
   minecraft: {
     version: string;
@@ -19,6 +12,10 @@ export interface CurseForgeManifest {
 }
 
 export class CurseForge implements XPlatform {
+  private utils: Utils;
+  constructor() {
+    this.utils = new Utils();
+  }
   async getinfo(manifest: object): Promise<modpack_info> {
     let result: modpack_info = Object.create({});
     const local_manifest = manifest as CurseForgeManifest;
@@ -40,7 +37,7 @@ export class CurseForge implements XPlatform {
     });
     let tmp: [string, string] | string[][] = [];
     await got
-      .post(cf_url + "/v1/mods/files", {
+      .post(this.utils.curseforge_url + "/v1/mods/files", {
         body: FileID,
         headers: {
           "Content-Type": "application/json",
@@ -57,14 +54,16 @@ export class CurseForge implements XPlatform {
               return;
             }
             const unpath = join(path + "/mods/", e.fileName);
-            if (usemirror) {
-              tmp.push([
-                "https://mod.mcimirror.top" + new URL(e.downloadUrl).pathname,
-                unpath,
-              ]);
-            } else {
-              tmp.push([e.downloadUrl, unpath]);
-            }
+            const url = e.downloadUrl.replace("https://edge.forgecdn.net", this.utils.curseforge_Durl)
+            tmp.push([url, unpath])
+            // if (usemirror) {
+            //   tmp.push([
+            //     "https://mod.mcimirror.top" + new URL(e.downloadUrl).pathname,
+            //     unpath,
+            //   ]);
+            // } else {
+            //   tmp.push([e.downloadUrl, unpath]);
+            // }
           }
         );
       });

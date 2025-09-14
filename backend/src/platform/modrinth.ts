@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { mr_fastdownload, usemirror } from "../utils/utils.js";
+import { mr_fastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
 import { join } from "node:path";
 
@@ -15,6 +15,10 @@ interface ModrinthManifest {
 }
 
 export class Modrinth implements XPlatform {
+  private utils: Utils;
+  constructor() {
+    this.utils = new Utils();
+  }
   async getinfo(manifest: object): Promise<modpack_info> {
     let result: modpack_info = Object.create({});
     const local_manifest = manifest as ModrinthManifest;
@@ -37,12 +41,14 @@ export class Modrinth implements XPlatform {
         if (e.path.endsWith(".zip")) {
             return;
           }
+    const url = e.downloads[0].replace("https://cdn.modrinth.com",this.utils.modrinth_Durl)
     const unpath = join(path,e.path)
-    if (usemirror){
-        tmp.push(["https://mod.mcimirror.top"+new URL(e.downloads[0]).pathname,unpath,String(e.fileSize)])
-    }else{
-        tmp.push([e.downloads[0],unpath,String(e.fileSize)])
-    }
+    tmp.push([e.downloads[0],unpath,String(e.fileSize)])
+    // if (usemirror){
+    //     tmp.push(["https://mod.mcimirror.top"+new URL(e.downloads[0]).pathname,unpath,String(e.fileSize)])
+    // }else{
+    //     tmp.push([e.downloads[0],unpath,String(e.fileSize)])
+    // }
     });
     await mr_fastdownload(tmp as unknown as [string, string, string])
   }

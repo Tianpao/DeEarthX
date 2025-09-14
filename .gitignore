@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.zip
+Dex-v3-core.exe
+core-x86_64-pc-windows-msvc.exe
+config.json

@@ -9,7 +9,7 @@
   "scripts": {
     "test": "tsc&&node dist/main.js",
     "rollup": "rollup -c rollup.config.js",
-    "nexe": "nexe -i ./dist/bundle.js --ico Dex.ico --build -t x86-22.13.0 --output ./dist/Dex-v3-core.exe",
+    "nexe": "nexe -i ./dist/bundle.js --build -t x86-22.13.0 --output ./dist/core-x86_64-pc-windows-msvc.exe",
     "build": "npm run rollup && npm run nexe"
   },
   "devDependencies": {
@@ -17,16 +17,27 @@
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.4",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/fs-extra": "^11.0.4",
+    "@types/multer": "^2.0.0",
+    "@types/ws": "^8.18.1",
+    "@types/yauzl": "^2.10.3",
     "nexe": "^5.0.0-beta.4",
     "rollup": "^4.50.1",
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "fs-extra": "^11.3.1",
     "got": "^14.4.8",
     "inquirer": "^12.9.4",
+    "multer": "^2.0.2",
     "p-map": "^7.0.3",
+    "p-retry": "^7.0.0",
     "picocolors": "^1.1.1",
-    "yauzl-promise": "^4.0.0"
+    "ws": "^8.18.3",
+    "yauzl": "^3.2.0"
   }
 }
