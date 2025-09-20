@@ -3,6 +3,7 @@ import { h, ref } from 'vue';
 import { MenuProps } from 'ant-design-vue';
 import { SettingOutlined, UserOutlined, WindowsOutlined } from '@ant-design/icons-vue';
 import { useRouter } from 'vue-router';
+import * as shell from '@tauri-apps/plugin-shell';
 const router = useRouter();
 const selectedKeys = ref(['main']);
 const items: MenuProps['items'] = [

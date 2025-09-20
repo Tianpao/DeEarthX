@@ -1,5 +1,5 @@
-import fs from "fs";
-interface IConfig {
+import fs from "node:fs";
+export interface IConfig {
   mirror: {
     bmclapi: boolean;
     mcimirror: boolean;

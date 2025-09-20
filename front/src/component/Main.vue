@@ -3,7 +3,6 @@ import { nextTick, ref, VNodeRef } from 'vue';
 import { InboxOutlined } from '@ant-design/icons-vue';
 import { message, StepsProps } from 'ant-design-vue';
 import type { UploadFile, UploadChangeParam, Upload } from 'ant-design-vue';
-import * as shell from '@tauri-apps/plugin-shell';
 interface IWSM {
     status: "unzip"|"pending"|"changed",
     result: string
@@ -63,7 +62,7 @@ function reactFL() {
     isDisabled.value = false;
 }
 /* 获取文件区 */
-shell.Command.create('core',['start']).spawn()
+//shell.Command.create('core',['start']).spawn()
 function runDeEarthX(data: Blob) {
     console.log(data)
     const fd = new FormData();

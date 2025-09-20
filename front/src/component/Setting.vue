@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
-import * as shell from '@tauri-apps/plugin-shell';
 import { message } from 'ant-design-vue';
 /* Config */
 interface IConfig {
@@ -15,7 +14,7 @@ interface IConfig {
   };
 }
 const config = ref<IConfig>({mirror: {bmclapi: false, mcimirror: false}, filter: {hashes: false, dexpub: false, mixins: false}})
-fetch('http://localhost:37019/getconfig',{
+fetch('http://localhost:37019/config/get',{
   method: 'GET',
   headers: {
     'Content-Type': 'application/json'
@@ -25,7 +24,7 @@ fetch('http://localhost:37019/getconfig',{
 let first = true;
 watch(config,(newv)=>{ //写入Config
     if(!first){
-       fetch('http://localhost:37019/writeconfig',{
+       fetch('http://localhost:37019/config/post',{
          method: 'POST',
          headers: {
           'Content-Type': 'application/json'

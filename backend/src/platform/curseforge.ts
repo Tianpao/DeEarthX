@@ -30,6 +30,9 @@ export class CurseForge implements XPlatform {
 
   async downloadfile(manifest: object, path: string): Promise<void> {
     const local_manifest = manifest as CurseForgeManifest;
+    if (local_manifest.files.length === 0){
+      return;
+    }
     const FileID = JSON.stringify({
       fileIds: local_manifest.files.map(
         (file: { fileID: number }) => file.fileID

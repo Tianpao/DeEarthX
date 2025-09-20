@@ -2,7 +2,7 @@ import pMap from "p-map";
 import config from "./config.js";
 import got from "got";
 import pRetry from "p-retry";
-import fs from "fs";
+import fs from "node:fs";
 import fse from "fs-extra";
 
 export class Utils {
@@ -24,18 +24,42 @@ export class Utils {
   }
 }
 
+export function mavenToUrl(
+  coordinate: { split: (arg0: string) => [any, any, any, any] },
+  base = "maven"
+) {
+  const [g, a, v, ce] = coordinate.split(":");
+  const [c, e = "jar"] = (ce || "").split("@");
+  return `${base.replace(/\/$/, "")}/${g.replace(
+    /\./g,
+    "/"
+  )}/${a}/${v}/${a}-${v}${c ? "-" + c : ""}.${e}`;
+}
+
+export function version_compare(v1: string, v2: string) {
+  const v1_arr = v1.split(".");
+  const v2_arr = v2.split(".");
+  for (let i = 0; i < v1_arr.length; i++) {
+    if (v1_arr[i] !== v2_arr[i]) {
+      return v1_arr[i] > v2_arr[i] ? 1 : -1;
+    }
+  }
+  return 0;
+}
+
 export async function fastdownload(data: [string, string]) {
   return await pMap(
-    data,
-    async (e) => {
+    [data],
+    async (e:any) => {
       try {
         await pRetry(
           async () => {
             if (!fs.existsSync(e[1])) {
+              /*
               const size: number = await (async () => {
                 const head = (
                   await got.head(
-                    e[0] /*.replace("https://mod.mcimirror.top","https://edge.forgecdn.net")*/,
+                    e[0],
                     { headers: { "user-agent": "DeEarthX" } }
                   )
                 ).headers["content-length"];
@@ -44,7 +68,56 @@ export async function fastdownload(data: [string, string]) {
                 } else {
                   return 0;
                 }
-              })();
+              })();*/
+              console.log(e)
+              await got
+                .get(e[0], {
+                  responseType: "buffer",
+                  headers: {
+                    "user-agent": "DeEarthX",
+                  },
+                })
+                .on("downloadProgress", (progress) => {
+                  //bar.update(progress.transferred);
+                })
+                .then((res) => {
+                  fse.outputFileSync(e[1], res.rawBody);
+                });
+            }
+          },
+          { retries: 3 }
+        );
+      } catch (e) {
+        //LOGGER.error({ err: e });
+      }
+    },
+    { concurrency: 16 }
+  );
+}
+
+export async function xfastdownload(data: [string, string][]) {
+  return await pMap(
+    data,
+    async (e:any) => {
+      try {
+        await pRetry(
+          async () => {
+            if (!fs.existsSync(e[1])) {
+              /*
+              const size: number = await (async () => {
+                const head = (
+                  await got.head(
+                    e[0],
+                    { headers: { "user-agent": "DeEarthX" } }
+                  )
+                ).headers["content-length"];
+                if (head) {
+                  return Number(head);
+                } else {
+                  return 0;
+                }
+              })();*/
+              console.log(e)
               await got
                 .get(e[0], {
                   responseType: "buffer",

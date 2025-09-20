@@ -3,6 +3,7 @@ import Stream from "node:stream"
 
 export interface IentryP extends yauzl.Entry {
     openReadStream: Promise<Stream.Readable>;
+    ReadEntry: Promise<Buffer>;
 }
 
 export async function yauzl_promise(buffer: Buffer): Promise<IentryP[]>{
@@ -25,7 +26,8 @@ export async function yauzl_promise(buffer: Buffer): Promise<IentryP[]>{
             getLastModDate: entry.getLastModDate,
             isEncrypted: entry.isEncrypted,
             isCompressed: entry.isCompressed,
-            openReadStream: _openReadStream(zip,entry)
+            openReadStream: _openReadStream(zip,entry),
+            ReadEntry: _ReadEntry(zip,entry)
           }
           entries.push(_entry)
           if (zip.entryCount === entries.length){
@@ -37,6 +39,24 @@ export async function yauzl_promise(buffer: Buffer): Promise<IentryP[]>{
             reject(err);
         })
     });
+}
+
+async function _ReadEntry(zip:yauzl.ZipFile,entry:yauzl.Entry): Promise<Buffer>{
+  return new Promise((resolve,reject)=>{
+    zip.openReadStream(entry,(err,stream)=>{
+      if (err){
+        reject(err);
+        return;
+      }
+      const chunks: Buffer[] = [];
+      stream.on("data",(chunk)=>{
+        chunks.push(chunk);
+      })
+      stream.on("end",()=>{
+        resolve(Buffer.concat(chunks));
+      })
+    })
+  })
 }
 
 async function _openReadStream(zip:yauzl.ZipFile,entry:yauzl.Entry): Promise<Stream.Readable>{
