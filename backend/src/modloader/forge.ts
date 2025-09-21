@@ -1,7 +1,7 @@
 import got, { Got } from "got";
 import fs from "node:fs"
 import fse from "fs-extra"
-import { xfastdownload } from "../utils/utils.js";
+import { version_compare, xfastdownload } from "../utils/utils.js";
 import { yauzl_promise } from "../utils/yauzl.promise.js";
 
 interface Iforge{
@@ -39,13 +39,14 @@ export class Forge {
  async setup(){
     await this.installer()
     await this.library()
-    // if (this.minecraft.startsWith("1.18")){
-    // }
+    if (version_compare(this.minecraft,"1.18") === -1){
+        await this.wshell()
+    }
  }
 
  async library(){
     const _downlist: [string,string][]= []
-    const data = await fs.promises.readFile(`./forge/Forge-${this.minecraft}-${this.loaderVersion}.jar`)
+    const data = await fs.promises.readFile(`./forge/forge-${this.minecraft}-${this.loaderVersion}-installer.jar`)
     const zip = await yauzl_promise(data)
     for await(const entry of zip){
         if(entry.fileName === "version.json" || entry.fileName === "install_profile.json"){ //Libraries
@@ -76,9 +77,14 @@ export class Forge {
 
  async installer(){
    const res = (await this.got.get(`forge/download?mcversion=${this.minecraft}&version=${this.loaderVersion}&category=installer&format=jar`)).rawBody;
-   await fse.outputFile(`./forge/Forge-${this.minecraft}-${this.loaderVersion}.jar`,res);
+   await fse.outputFile(`./forge/forge-${this.minecraft}-${this.loaderVersion}-installer.jar`,res);
  }
 
+ private async wshell(){
+    const cmd = `java -jar forge-${this.minecraft}-${this.loaderVersion}.jar`
+    await fs.promises.writeFile("./forge/run.bat",`@echo off\n${cmd}`) //Windows
+    await fs.promises.writeFile("./forge/run.sh",`#!/bin/bash\n${cmd}`) //Linux
+ }
 
  private MTP(string:string){
     const mjp =  string.replace(/^\[|\]$/g, '')

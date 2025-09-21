@@ -25,6 +25,8 @@ export class Dex {
       this._unzip(buffer,mpname),
       platform(plat).downloadfile(this.in,`./instance/${mpname}`)
     ])
+    this.ws.send(JSON.stringify({ status: "changed", result: undefined })); //改变状态
+    
     //await this._unzip(buffer);
   }
 
@@ -64,6 +66,5 @@ export class Dex {
       index++
     }
     /* 解压完成 */
-    this.ws.send(JSON.stringify({ status: "changed", result: undefined }));
   }
 }

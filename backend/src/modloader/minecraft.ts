@@ -17,9 +17,11 @@ interface ILInfo{
 export class Minecraft{
     loader: string;
     minecraft: string;
-    constructor(loader:string,minecraft:string,){
+    loaderVersion: string;
+    constructor(loader:string,minecraft:string,lv:string){
         this.loader = loader;
         this.minecraft = minecraft;
+        this.loaderVersion = lv;
     }
 
     async setup(){
@@ -31,19 +33,12 @@ export class Minecraft{
     }
 
     async forge_setup(){
+       if(version_compare(this.minecraft,"1.18") === 1){
+       // 1.18.x + MC依赖解压
        const mcpath = `./forge/libraries/net/minecraft/server/${this.minecraft}/server-${this.minecraft}.jar`
        await fastdownload([`https://bmclapi2.bangbang93.com/version/${this.minecraft}/server`,mcpath])
-       if(version_compare(this.minecraft,"1.18") === 1){
-       // 1.18.x + 依赖解压
        const zip = await yauzl_promise(await fs.promises.readFile(mcpath))
        for await(const entry of zip){
-        //console.log(entry.fileName.replace("META-INF/libraries/",""))
-        if(entry.fileName.endsWith("/")){
-           const dirPath = entry.fileName.replace("META-INF/libraries/","./forge/libraries/")
-        if (!fs.existsSync(dirPath)){
-        await fs.promises.mkdir(dirPath, { recursive: true });
-        }
-        }
         if(entry.fileName.startsWith("META-INF/libraries/")&&!entry.fileName.endsWith("/")){
         console.log(entry.fileName)
         const stream = await entry.openReadStream;
@@ -53,13 +48,24 @@ export class Minecraft{
        }
        // 1.18.x + 依赖解压
     }else{
-       //1.18.x - 依赖下载
-        const json = await got.get(`https://bmclapi2.bangbang93.com/version/${this.minecraft}/json`)
-        .json<ILInfo>()
+       //1.18.x - MC依赖下载
+        const lowv = `./forge/minecraft_server.${this.minecraft}.jar`
+        const dmc = fastdownload([`https://bmclapi2.bangbang93.com/version/${this.minecraft}/server`,lowv])
+        const download:Promise<void> = new Promise(async (resolve)=>{
+            console.log("并行")
+            const json = await got.get(`https://bmclapi2.bangbang93.com/version/${this.minecraft}/json`,{
+                headers:{
+                    "User-Agent": "DeEarthX"
+                }
+            })
+            .json<ILInfo>()
         json.libraries.forEach(async e=>{
             const path = e.downloads.artifact.path
             await fastdownload([`https://bmclapi2.bangbang93.com/maven/${path}`,`./forge/libraries/${path}`])
         })
+        resolve()
+    })
+      await Promise.all([dmc,download])
        //1.18.x - 依赖下载
     }
     }
