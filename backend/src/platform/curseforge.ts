@@ -1,6 +1,7 @@
 import got from "got";
+import { WebSocket } from "ws";
 import { join } from "node:path";
-import { fastdownload, Utils } from "../utils/utils.js";
+import { Wfastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
 
 export interface CurseForgeManifest {
@@ -28,7 +29,7 @@ export class CurseForge implements XPlatform {
     return result;
   }
 
-  async downloadfile(manifest: object, path: string): Promise<void> {
+  async downloadfile(manifest: object, path: string, ws:WebSocket): Promise<void> {
     const local_manifest = manifest as CurseForgeManifest;
     if (local_manifest.files.length === 0){
       return;
@@ -70,6 +71,6 @@ export class CurseForge implements XPlatform {
           }
         );
       });
-    await fastdownload(tmp as unknown as [string, string]); //下载文件
+    await Wfastdownload(tmp as unknown as [string, string],ws); //下载文件
   }
 }

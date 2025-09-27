@@ -4,6 +4,8 @@ import got from "got";
 import pRetry from "p-retry";
 import fs from "node:fs";
 import fse from "fs-extra";
+import { WebSocket } from "ws";
+import { ExecOptions, exec} from "node:child_process";
 
 export class Utils {
   public modrinth_url: string;
@@ -47,6 +49,19 @@ export function version_compare(v1: string, v2: string) {
   return 0;
 }
 
+export function execPromise(cmd:string,options:ExecOptions){
+  return new Promise((resolve,reject)=>{
+    exec(cmd,options,(err,stdout,stderr)=>{
+      if(err){
+        reject(err)
+        return;
+      }
+    }).on('exit',(code)=>{
+      resolve(code)
+    })
+  })
+}
+
 export async function fastdownload(data: [string, string]) {
   return await pMap(
     [data],
@@ -84,6 +99,46 @@ export async function fastdownload(data: [string, string]) {
                   fse.outputFileSync(e[1], res.rawBody);
                 });
             }
+          },
+          { retries: 3 }
+        );
+      } catch (e) {
+        //LOGGER.error({ err: e });
+      }
+    },
+    { concurrency: 16 }
+  );
+}
+
+export async function Wfastdownload(data: [string, string],ws:WebSocket) {
+  let index = 1;
+  return await pMap(
+    data,
+    async (e:any) => {
+      try {
+        await pRetry(
+          async () => {
+            if (!fs.existsSync(e[1])) {
+              await got
+                .get(e[0], {
+                  responseType: "buffer",
+                  headers: {
+                    "user-agent": "DeEarthX",
+                  },
+                })
+                .then((res) => {
+                  fse.outputFileSync(e[1], res.rawBody);
+                });
+            }
+           ws.send(JSON.stringify({
+             status:"downloading",
+               result:{
+                total:data.length,
+                index:index,
+                name:e[1]
+              }
+            }))
+            index++
           },
           { retries: 3 }
         );

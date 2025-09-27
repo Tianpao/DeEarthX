@@ -1,5 +1,6 @@
 import got, { Got } from "got";
-import { fastdownload, xfastdownload } from "../utils/utils.js";
+import fs from "node:fs"
+import { execPromise, fastdownload, xfastdownload } from "../utils/utils.js";
 
 interface ILatestLoader{
     url:string,
@@ -16,9 +17,11 @@ export class Fabric{
     minecraft: string;
     loaderVersion: string;
     got:Got
-    constructor(minecraft:string,loaderVersion:string) {
+    path: string;
+    constructor(minecraft:string,loaderVersion:string,path:string) {
         this.minecraft = minecraft;
         this.loaderVersion = loaderVersion;
+        this.path = path
         this.got = got.extend({
             prefixUrl:"https://bmclapi2.bangbang93.com/",
             headers:{
@@ -27,16 +30,31 @@ export class Fabric{
         })
     }
 
-    async setup(){
+    async setup():Promise<void>{
+        await this.getLaestLoader()
         await this.libraries()
+        await this.install()
+        await this.wshell()
     }
+
+    async install(){
+        await execPromise(`java -jar fabric-installer.jar server -dir . -mcversion ${this.minecraft} -loader ${this.loaderVersion}`,{
+            cwd:this.path
+        })
+    }
+
+    private async wshell(){
+        const cmd = `java -jar fabric-server-launch.jar`
+        await fs.promises.writeFile(`${this.path}/run.bat`,`@echo off\n${cmd}`) //Windows
+        await fs.promises.writeFile(`${this.path}/run.sh`,`#!/bin/bash\n${cmd}`) //Linux
+     }
 
     async libraries(){
         const res = await this.got.get(`fabric-meta/v2/versions/loader/${this.minecraft}/${this.loaderVersion}/server/json`).json<IServer>()
         const _downlist: [string,string][]= []
         res.libraries.forEach(e=>{
             const path = this.MTP(e.name)
-            _downlist.push([`https://bmclapi2.bangbang93.com/maven/${path}`,`./fabric/libraries/${path}`])
+            _downlist.push([`https://bmclapi2.bangbang93.com/maven/${path}`,`${this.path}/libraries/${path}`])
         })
         await xfastdownload(_downlist)
     }
@@ -46,11 +64,12 @@ export class Fabric{
         const res = await this.got.get("fabric-meta/v2/versions/installer").json<ILatestLoader[]>()
         res.forEach(e=>{
             if(e.stable){
-                downurl = `https://bmclapi2.bangbang93.com/maven/${new URL(e.url).pathname.slice(1)}`
+                //downurl = `https://bmclapi2.bangbang93.com/maven/${new URL(e.url).pathname.slice(1)}`
+                downurl = e.url
                 return;
             }
         })
-        await fastdownload([downurl,`./fabric/fabric-installer.jar`])
+        await fastdownload([downurl,`${this.path}/fabric-installer.jar`])
     }
 
     private MTP(string:string){

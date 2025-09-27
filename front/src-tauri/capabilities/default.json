@@ -22,6 +22,7 @@
           "args": true
         }
       ]
-    }
+    },
+    "notification:default"
   ]
 }

@@ -1,5 +1,6 @@
 import fs from "node:fs";
-import { mr_fastdownload, Utils } from "../utils/utils.js";
+import { WebSocket } from "ws";
+import { Wfastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
 import { join } from "node:path";
 
@@ -34,22 +35,22 @@ export class Modrinth implements XPlatform {
     }
     return result;
   }
-  async downloadfile(manifest: object,path:string): Promise<void> {
+  async downloadfile(manifest: object,path:string,ws:WebSocket): Promise<void> {
     const index = manifest as ModrinthManifest;
-    let tmp: [string, string, string][] = []
+    let tmp: [string, string][] = []
     index.files.forEach(async (e: { path: string; downloads: string[]; fileSize: number;}) => {
         if (e.path.endsWith(".zip")) {
             return;
           }
     const url = e.downloads[0].replace("https://cdn.modrinth.com",this.utils.modrinth_Durl)
     const unpath = join(path,e.path)
-    tmp.push([e.downloads[0],unpath,String(e.fileSize)])
+    tmp.push([e.downloads[0],unpath])
     // if (usemirror){
     //     tmp.push(["https://mod.mcimirror.top"+new URL(e.downloads[0]).pathname,unpath,String(e.fileSize)])
     // }else{
     //     tmp.push([e.downloads[0],unpath,String(e.fileSize)])
     // }
     });
-    await mr_fastdownload(tmp as unknown as [string, string, string])
+    await Wfastdownload(tmp as unknown as [string, string],ws)
   }
 }

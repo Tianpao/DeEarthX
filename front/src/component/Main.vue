@@ -3,9 +3,14 @@ import { nextTick, ref, VNodeRef } from 'vue';
 import { InboxOutlined } from '@ant-design/icons-vue';
 import { message, StepsProps } from 'ant-design-vue';
 import type { UploadFile, UploadChangeParam, Upload } from 'ant-design-vue';
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from '@tauri-apps/plugin-notification';
 interface IWSM {
-    status: "unzip"|"pending"|"changed",
-    result: string
+    status: "unzip"|"finish"|"changed"|"downloading",
+    result: any
 }
 /* 进度显示区 */
 const disp_steps = ref(true);
@@ -64,30 +69,61 @@ function reactFL() {
 /* 获取文件区 */
 //shell.Command.create('core',['start']).spawn()
 function runDeEarthX(data: Blob) {
-    console.log(data)
+    //console.log(data)
     const fd = new FormData();
     fd.append('file', data);
     console.log(fd.getAll('file'))
         fetch('http://localhost:37019/start',{
         method:'POST',
         body:fd
-    }).then(async res=>res.json()).then(res=>{
-       prews(res)
+    }).then(async res=>res.json()).then(()=>{
+       prews()
     })
     // shell.Command.create('core',['start',new BigUint64Array(data).toString()]).stdout.on('data',(data)=>{
     //     console.log(data)
     // })
     reactFL()
 }
-
-function prews(res: object){
+const prog = ref({status:"active",percent:0,display:true})
+const dprog = ref({status:"active",percent:0,display:true})
+function prews(){
     const ws = new WebSocket('ws://localhost:37019/')
+        // ws.addEventListener('message',(wsm)=>{
+        //    const _data = JSON.parse(wsm.data) as IWSM
+        //    if (_data.status === "changed") {
+        //        setyps_current.value ++;
+        //    }
+        //    logs.value.push({message:_data.result})
+        // })
         ws.addEventListener('message',(wsm)=>{
-           const _data = JSON.parse(wsm.data) as IWSM
-           if (_data.status === "changed") {
+            const _data = JSON.parse(wsm.data) as IWSM
+            //console.log(_data)
+           if (_data.status === "changed") { //状态更改
                setyps_current.value ++;
            }
-           logs.value.push({message:_data.result})
+            if (_data.status === "unzip"){ //解压ZIP
+              prog.value.percent = Math.round(((_data.result.current / _data.result.total) * 100))
+              if (_data.result.current === _data.result.total){
+              prog.value.status = "succees"
+                setTimeout(()=>{
+                 prog.value.display = false;
+                },2000)
+              }
+            }
+            if (_data.status === "downloading"){ //下载文件
+                dprog.value.percent = Math.round((_data.result.index / _data.result.total) * 100)
+                if(dprog.value.percent === 100){
+                    dprog.value.status = "succees"
+                    setTimeout(()=>{
+                        dprog.value.display = false;
+                    },2000)
+                }
+            }
+            if (_data.status === "finish"){
+                const time = Math.round(_data.result / 1000 / 1000)
+                setyps_current.value ++;
+                sendNotification({ title: 'DeEarthX V3', body: `服务端制作完成！共用时${time}秒！` });
+            }
         })
 }
 
@@ -127,10 +163,20 @@ logContainer.value.scrollTop = logContainer.value.scrollHeight;
             class="tw:fixed tw:bottom-2 tw:ml-4 tw:w-272 tw:h-16 tw:flex tw:justify-center tw:items-center tw:text-sm">
             <a-steps :current="setyps_current" :items="setps_items" />
         </div>
-        <div v-if="disp_steps" ref="logContainer" class="tw:absolute tw:right-2 tw:bottom-20 tw:h-96 tw:w-56 tw:bg-gray-200 tw:rounded-xl tw:container tw:overflow-y-auto">
-               <div v-for="log in logs" class="tw:mt-2 tw:last:mb-0">
-                <span class="tw:text-blue-500">{{ log.message }}</span>
-               </div>
+        <!-- <div class="tw:absolute tw:bottom-20 tw:right-2 tw:h-16 tw:w-16">
+       
+        </div> -->
+        <div v-if="disp_steps" ref="logContainer" class="tw:absolute tw:right-2 tw:bottom-20 tw:h-80 tw:w-56 tw:rounded-xl tw:container tw:overflow-y-auto">
+                <a-card title="制作进度" :bordered="true">
+                    <div v-if="prog.display">
+                  <h1>解压进度</h1>
+                  <a-progress :percent="prog.percent" :status="prog.status" size="small" />
+                  </div>
+                  <div v-if="dprog.display">
+                  <h1>下载进度</h1>
+                  <a-progress :percent="dprog.percent" :status="dprog.status" size="small" />
+                  </div>
+            </a-card>
         </div>
     </div>
 

@@ -7,25 +7,27 @@ import fs from "node:fs"
 import { pipeline } from "node:stream/promises";
 import { Config, IConfig } from "./utils/config.js";
 import { yauzl_promise } from "./utils/yauzl.promise.js";
+import { Dex } from "./Dex.js";
+import { mlsetup } from "./modloader/index.js";
 export class Core {
     private config: IConfig;
     private readonly app: Application;
     private readonly server: Server;
-    public ws!: websocket;
+    public ws!: WebSocketServer;
+    private wsx!: websocket;
     private readonly upload: multer.Multer;
     private task: {} = {};
+    dex: Dex;
     constructor(config: IConfig) {
         this.config = config
         this.app = express();
-        this.upload = multer()
         this.server = createServer(this.app);
-        new WebSocketServer({ server: this.server }).on("connection", (ws) => {
-            this.ws = ws;
+        this.upload = multer()
+        this.ws = new WebSocketServer({ server: this.server })
+        this.ws.on("connection",(e)=>{
+            this.wsx = e
         })
-    }
-
-    async DeEarthX(buffer:Buffer){
-
+        this.dex = new Dex(this.ws)
     }
 
     express() {
@@ -35,7 +37,8 @@ export class Core {
             if (!req.file) {
                 return;
             }
-            this.DeEarthX(req.file.buffer)
+        this.dex.Main(req.file.buffer) //Dex
+            //this.dex.Main(req.file.buffer)
             res.json({
                 status:200,
                 message:"task is peding"

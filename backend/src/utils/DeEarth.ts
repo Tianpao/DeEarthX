@@ -3,6 +3,8 @@ import crypto from "node:crypto"
 import { yauzl_promise } from "./yauzl.promise.js"
 import got from "got"
 import { Utils } from "./utils.js"
+import pa from "node:path"
+import WebSocket from "ws"
 interface IMixins{
     name: string
     data: string
@@ -29,9 +31,9 @@ export class DeEarth{
     modspath: string
     file: IFile[]
     utils: Utils
-    constructor(modspath:string) {
+    constructor(modspath:string,movepath:string) {
         this.utils = new Utils();
-        this.movepath = "./.rubbish"
+        this.movepath = movepath
         this.modspath = modspath
         this.file = []
     }
@@ -44,8 +46,10 @@ export class DeEarth{
         const hash =  await this.Check_Hashes()
         const mixins = await this.Check_Mixins()
         const result = [...new Set(hash.concat(mixins))]
+                console.log(result)
         result.forEach(async e=>{
-            await fs.promises.rename(`${this.modspath}/${e}`,`${this.movepath}/${e}`)
+            await fs.promises.rename(`${e}`,`${this.movepath}/${e}`.replace(this.modspath,""))
+            //await fs.promises.rename(`${this.modspath}/${e}`,`${this.movepath}/${e}`)
         })
     }
 

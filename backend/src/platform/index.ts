@@ -1,9 +1,10 @@
 import { CurseForge } from "./curseforge.js";
 import { Modrinth } from "./modrinth.js";
+import { WebSocket } from "ws";
 
 export interface XPlatform {
   getinfo(manifest: object): Promise<modpack_info>;
-  downloadfile(manifest: object,path:string): Promise<void>;
+  downloadfile(manifest: object,path:string,ws:WebSocket): Promise<void>;
 }
 
 export interface modpack_info {
