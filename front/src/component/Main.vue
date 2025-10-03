@@ -1,19 +1,15 @@
 <script lang="ts" setup>
-import { nextTick, ref, VNodeRef } from 'vue';
+import { ref } from 'vue';
 import { InboxOutlined } from '@ant-design/icons-vue';
 import { message, StepsProps } from 'ant-design-vue';
-import type { UploadFile, UploadChangeParam, Upload } from 'ant-design-vue';
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification,
-} from '@tauri-apps/plugin-notification';
+import type { UploadFile, UploadChangeParam } from 'ant-design-vue';
+import {sendNotification,} from '@tauri-apps/plugin-notification';
 interface IWSM {
     status: "unzip"|"finish"|"changed"|"downloading",
     result: any
 }
 /* 进度显示区 */
-const disp_steps = ref(true);
+const disp_steps = ref(false);
 const setyps_current = ref(0);
 const setps_items: StepsProps['items'] = [{
     title: '解压整合包',
@@ -59,17 +55,20 @@ function handleUpload() {
     }
     runDeEarthX(FileList.value[0].originFileObj) //获取文件内容
     BtnisDisabled.value = true; //禁用按钮
+    isDisabled.value = true; //禁用上传
     disp_steps.value = true; //开始显示进度条
 }
 
 function reactFL() {
     FileList.value = [];
     isDisabled.value = false;
+    BtnisDisabled.value = false;
+    disp_steps.value = false; //关闭进度条
 }
 /* 获取文件区 */
-//shell.Command.create('core',['start']).spawn()
 function runDeEarthX(data: Blob) {
     //console.log(data)
+    message.success("开始制作,请勿切换菜单！");
     const fd = new FormData();
     fd.append('file', data);
     console.log(fd.getAll('file'))
@@ -79,10 +78,6 @@ function runDeEarthX(data: Blob) {
     }).then(async res=>res.json()).then(()=>{
        prews()
     })
-    // shell.Command.create('core',['start',new BigUint64Array(data).toString()]).stdout.on('data',(data)=>{
-    //     console.log(data)
-    // })
-    reactFL()
 }
 const prog = ref({status:"active",percent:0,display:true})
 const dprog = ref({status:"active",percent:0,display:true})
@@ -120,22 +115,17 @@ function prews(){
                 }
             }
             if (_data.status === "finish"){
-                const time = Math.round(_data.result / 1000 / 1000)
+                console.log(_data.result)
+                const time = Math.round(_data.result / 1000)
                 setyps_current.value ++;
+                message.success(`服务端制作完成！共用时${time}秒！`)
                 sendNotification({ title: 'DeEarthX V3', body: `服务端制作完成！共用时${time}秒！` });
+                setTimeout(()=>{ //恢复状态
+                    reactFL()
+                },8*1000)
             }
         })
 }
-
-/* 日志区 */
-const logs = ref<{message:string}[]>([]);
-//logs.value.push({message:"114514"})
-const logContainer = ref<HTMLDivElement>();
-nextTick(()=>{
-if(logContainer.value){
-logContainer.value.scrollTop = logContainer.value.scrollHeight;
-}
-})
 </script>
 <template>
     <div class="tw:h-full tw:w-full tw:relative">

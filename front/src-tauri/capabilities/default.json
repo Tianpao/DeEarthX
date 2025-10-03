@@ -12,9 +12,10 @@
     "shell:default",
     "shell:allow-execute",
     "shell:allow-spawn",
+    "shell:allow-kill",
     "shell:allow-open",
     {
-      "identifier": "shell:allow-execute",
+      "identifier": "shell:allow-spawn",
       "allow": [
         {
           "name": "core",

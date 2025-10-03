@@ -26,3 +26,6 @@ dist-ssr
 Dex-v3-core.exe
 core-x86_64-pc-windows-msvc.exe
 config.json
+*.exe
+*.jar
+instance

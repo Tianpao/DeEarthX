@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "dex-v3-ui",
+  "productName": "DeEarthX-V3",
   "version": "0.1.0",
   "identifier": "top.tianpao.dex-v3-ui",
   "build": {
@@ -15,7 +15,10 @@
         "title": "DeEarthX V3",
         "width": 1280,
         "height": 720,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "fullscreen": false,
+        "resizable": false,
+        "center": true
       }
     ],
     "security": {
@@ -32,6 +35,19 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/core"]
+    "externalBin": ["binaries/core"],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "languages": ["SimpChinese","English"],
+        "displayLanguageSelector": true,
+        "installMode": "perMachine"
+      },
+      "wix": {
+        "language": "zh-CN"
+      }
+    }
   }
 }

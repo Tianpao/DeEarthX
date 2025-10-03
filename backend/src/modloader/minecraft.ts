@@ -88,7 +88,7 @@ export class Minecraft {
         const mcpath = `${this.path}/server.jar`
         await fastdownload([`https://bmclapi2.bangbang93.com/version/${this.minecraft}/server`, mcpath])
         // 依赖解压
-        const zip = await yauzl_promise(await fs.promises.readFile(mcpath))
+        /*const zip = await yauzl_promise(await fs.promises.readFile(mcpath))
         for await (const entry of zip) {
             // if (entry.fileName.startsWith("META-INF/libraries/") && entry.fileName.endsWith("/") &&entry.fileName !== "META-INF/libraries/") {
             //     fs.promises.mkdir(`${this.path}/libraries/${entry.fileName.replace("META-INF/libraries/", "")}`,{
@@ -105,16 +105,12 @@ export class Minecraft {
                 const out = entry.ReadEntrySync
                 await fsExtra.outputFile(`${this.path}/libraries/${entry.fileName.replace("META-INF/libraries/", "")}`,out)
             }
-        }
+        }*/
         // 依赖解压
     }
 
     async eula(){
-        const context = `
-        #By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).
-        #Spawn by DeEarthX(QQgroup:559349662) Tianpao:(https://space.bilibili.com/1728953419)
-        eula=true
-        `
+        const context = `#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).\n#Spawn by DeEarthX(QQgroup:559349662) Tianpao:(https://space.bilibili.com/1728953419)\neula=true`
         await fs.promises.writeFile(`${this.path}/eula.txt`,context)
     }
 }

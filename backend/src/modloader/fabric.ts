@@ -40,7 +40,7 @@ export class Fabric{
     async install(){
         await execPromise(`java -jar fabric-installer.jar server -dir . -mcversion ${this.minecraft} -loader ${this.loaderVersion}`,{
             cwd:this.path
-        })
+        }).catch(e=>console.log(e))
     }
 
     private async wshell(){

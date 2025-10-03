@@ -22,11 +22,10 @@ export class Dex {
       this.ws = e
     })
     this.in = {}
-    console.log(this.ws)
-  }
+}
 
   public async Main(buffer: Buffer) {
-    const first = new Date().getTime()
+    const first = Date.now()
     const info = await this._getinfo(buffer)
     const plat = what_platform(info)
     const mpname = this.in.name
@@ -46,8 +45,7 @@ export class Dex {
       })); //改变状态(DeEarth筛选模组完毕)
     const mlinfo = await platform(plat).getinfo(this.in)   
     await mlsetup(mlinfo.loader,mlinfo.minecraft,mlinfo.loader_version,unpath) //安装服务端
-    const latest = new Date().getTime()
-    console.log(latest - first)
+    const latest = Date.now()
     this.ws.send(JSON.stringify({
       status: "finish",
       result: latest - first

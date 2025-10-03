@@ -30,7 +30,7 @@ export function modloader(ml:string,mcv:string,mlv:string,path:string){
 
 export async function mlsetup(ml:string,mcv:string,mlv:string,path:string){
     const minecraft = new Minecraft(ml,mcv,mlv,path);
-    console.log(ml)
+    //console.log(ml)
     await modloader(ml,mcv,mlv,path).setup()
     await minecraft.setup()
 }

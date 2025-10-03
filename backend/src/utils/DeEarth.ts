@@ -5,6 +5,7 @@ import got from "got"
 import { Utils } from "./utils.js"
 import pa from "node:path"
 import WebSocket from "ws"
+import config from "./config.js"
 interface IMixins{
     name: string
     data: string
@@ -43,10 +44,19 @@ export class DeEarth{
             fs.mkdirSync(this.movepath,{recursive:true})
         }
         await this.getFile()
-        const hash =  await this.Check_Hashes()
-        const mixins = await this.Check_Mixins()
+        let hash;
+        let mixins;
+        if (config.filter.hashes){ //Hash
+        hash =  await this.Check_Hashes()
+        }
+        if (config.filter.mixins){ //Mixins
+            mixins = await this.Check_Mixins()
+        }
+        if(!hash||mixins){
+            return;
+        }
         const result = [...new Set(hash.concat(mixins))]
-                console.log(result)
+                //console.log(result)
         result.forEach(async e=>{
             await fs.promises.rename(`${e}`,`${this.movepath}/${e}`.replace(this.modspath,""))
             //await fs.promises.rename(`${this.modspath}/${e}`,`${this.movepath}/${e}`)
@@ -57,7 +67,7 @@ export class DeEarth{
         const cmap = new Map<string,string>()
         const fmap = new Map<string,string>()
         const hashes:string[] = []
-        const files = this.file.forEach(e=>{
+        this.file.forEach(e=>{
             hashes.push(e.hash);
             cmap.set(e.hash,e.filename)
         })

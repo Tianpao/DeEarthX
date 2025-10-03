@@ -84,7 +84,8 @@ export async function fastdownload(data: [string, string]) {
                   return 0;
                 }
               })();*/
-              console.log(e)
+              
+               //console.log(e)
               await got
                 .get(e[0], {
                   responseType: "buffer",
@@ -172,7 +173,7 @@ export async function xfastdownload(data: [string, string][]) {
                   return 0;
                 }
               })();*/
-              console.log(e)
+               //console.log(e)
               await got
                 .get(e[0], {
                   responseType: "buffer",

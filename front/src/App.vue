@@ -1,9 +1,43 @@
 <script lang="ts" setup>
 import { h, ref } from 'vue';
-import { MenuProps } from 'ant-design-vue';
+import { MenuProps, message } from 'ant-design-vue';
 import { SettingOutlined, UserOutlined, WindowsOutlined } from '@ant-design/icons-vue';
 import { useRouter } from 'vue-router';
 import * as shell from '@tauri-apps/plugin-shell';
+
+import { invoke } from "@tauri-apps/api/core";
+async function contant(){
+    await invoke("open_url",{url:"https://space.bilibili.com/1728953419"})
+}
+
+//屏蔽右键菜单
+document.oncontextmenu = function (event: any) {
+    try {
+        var the = event.srcElement
+        if (
+            !(
+                (the.tagName == 'INPUT' && the.type.toLowerCase() == 'text') ||
+                the.tagName == 'TEXTAREA'
+            )
+        ) {
+            return false
+        }
+        return true
+    } catch (e) {
+        return false
+    }
+}
+
+/* 启动后端 */
+message.loading("DeEarthX.Core启动中，此过程中请勿执行任何操作......").then(()=>{
+    shell.Command.create("core").spawn().then(()=>{
+        message.success("DeEarthX.Core 启动成功")
+        console.log(`DeEarthX V3 Core`)
+    }).catch((e)=>{
+        console.log(e)
+        message.error("DeEarthX.Core 启动失败，请检查37019是否被占用！")
+    })
+})
 const router = useRouter();
 const selectedKeys = ref(['main']);
 const items: MenuProps['items'] = [
@@ -49,7 +83,14 @@ const handleClick: MenuProps['onClick'] = (e) => {
 <template>
     <div class="tw:h-screen tw:w-screen">
         <a-page-header class="tw:fixed tw:h-16" style="border: 1px solid rgb(235, 237, 240)" title="DeEarthX"
-            sub-title="V3" />
+            sub-title="V3" 
+            :avatar="{ src: '../assets/tianpao.jpg' }"
+        >
+                <template #extra>
+                 <a-button @click="contant">作者B站</a-button>
+                </template>
+
+        </a-page-header>
         <div class="tw:flex tw:full tw:h-89/100">
             <a-menu id="menu" style="width: 144px;" :selectedKeys="selectedKeys" mode="inline" :items="items" @click="handleClick"/>
             <RouterView />
@@ -58,4 +99,40 @@ const handleClick: MenuProps['onClick'] = (e) => {
 </template>
 
 
-<style scoped></style>
+<style>
+ /* 禁止选择文本的样式 */
+        h1 {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select:none;
+        }
+
+        li {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select:none;
+        }
+
+        p {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select:none;
+        }
+
+        span {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select:none;
+        }
+        
+        /* 禁止拖拽图片 */
+        img {
+            -webkit-user-drag: none;
+            -moz-user-drag: none;
+            -ms-user-drag: none;
+        }
+</style>
