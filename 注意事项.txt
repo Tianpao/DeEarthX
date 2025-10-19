@@ -1,3 +1,2 @@
 安装DeEarthX V3时，默认安装至C:\Program Files\DeEarthX-V3 （建议不要装在C盘，因为权限问题）。
-请自行记好安装目录！！！
 QQ群：559349662

@@ -78,51 +78,36 @@ const handleClick: MenuProps['onClick'] = (e) => {
             break;
     }
 }
+
+const theme = ref({
+    "token": {
+        "colorPrimary": "#67eac3",
+    }
+})
 </script>
 
 <template>
-    <div class="tw:h-screen tw:w-screen">
-        <a-page-header class="tw:fixed tw:h-16" style="border: 1px solid rgb(235, 237, 240)" title="DeEarthX"
-            sub-title="V3" 
-            :avatar="{ src: '../assets/tianpao.jpg' }"
-        >
+    <a-config-provider :theme="theme">
+        <div class="tw:h-screen tw:w-screen">
+            <a-page-header class="tw:fixed tw:h-16" style="border: 1px solid rgb(235, 237, 240)" title="DeEarthX"
+                sub-title="V3" :avatar="{ src: './public/dex.png' }">
                 <template #extra>
-                 <a-button @click="contant">作者B站</a-button>
+                    <a-button @click="contant">作者B站</a-button>
                 </template>
-
-        </a-page-header>
-        <div class="tw:flex tw:full tw:h-89/100">
-            <a-menu id="menu" style="width: 144px;" :selectedKeys="selectedKeys" mode="inline" :items="items" @click="handleClick"/>
-            <RouterView />
+            </a-page-header>
+            <div class="tw:flex tw:full tw:h-89/100">
+                <a-menu id="menu" style="width: 144px;" :selectedKeys="selectedKeys" mode="inline" :items="items"
+                    @click="handleClick" />
+                <RouterView />
+            </div>
         </div>
-    </div>
+    </a-config-provider>
 </template>
 
 
 <style>
  /* 禁止选择文本的样式 */
-        h1 {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select:none;
-        }
-
-        li {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select:none;
-        }
-
-        p {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select:none;
-        }
-
-        span {
+        h1,li,p,span {
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;

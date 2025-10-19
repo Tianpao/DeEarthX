@@ -4,8 +4,9 @@ import { InboxOutlined } from '@ant-design/icons-vue';
 import { message, StepsProps } from 'ant-design-vue';
 import type { UploadFile, UploadChangeParam } from 'ant-design-vue';
 import {sendNotification,} from '@tauri-apps/plugin-notification';
+import { SelectProps } from 'ant-design-vue/es/vc-select';
 interface IWSM {
-    status: "unzip"|"finish"|"changed"|"downloading",
+    status: "unzip"|"finish"|"changed"|"downloading"|"error",
     result: any
 }
 /* 进度显示区 */
@@ -72,7 +73,7 @@ function runDeEarthX(data: Blob) {
     const fd = new FormData();
     fd.append('file', data);
     console.log(fd.getAll('file'))
-        fetch('http://localhost:37019/start',{
+        fetch(`http://localhost:37019/start?mode=${Cselect.value}`,{
         method:'POST',
         body:fd
     }).then(async res=>res.json()).then(()=>{
@@ -81,6 +82,7 @@ function runDeEarthX(data: Blob) {
 }
 const prog = ref({status:"active",percent:0,display:true})
 const dprog = ref({status:"active",percent:0,display:true})
+const CanO = ref(true);
 function prews(){
     const ws = new WebSocket('ws://localhost:37019/')
         // ws.addEventListener('message',(wsm)=>{
@@ -93,6 +95,10 @@ function prews(){
         ws.addEventListener('message',(wsm)=>{
             const _data = JSON.parse(wsm.data) as IWSM
             //console.log(_data)
+            if (_data.status === "error" && _data.result === "jini") {
+                CanO.value = false;
+                message.error("未在系统变量中找到Java！请安装Java！否则开服模式将无法使用！")
+            }
            if (_data.status === "changed") { //状态更改
                setyps_current.value ++;
            }
@@ -126,6 +132,26 @@ function prews(){
             }
         })
 }
+
+/* 选择区 */
+const Moptions = ref<SelectProps['options']>([
+    {
+        label: '开服模式',
+        value: 'server',
+        disabled: CanO.value ? false : true
+    },
+    {
+        label: '上传模式',
+        value: 'upload',
+        disabled: false
+    }
+])
+
+const Cselect = ref(CanO ? 'server' : 'upload')
+
+function handleSelect(value: string) {
+    Cselect.value = value;
+}
 </script>
 <template>
     <div class="tw:h-full tw:w-full tw:relative">
@@ -145,7 +171,14 @@ function prews(){
                     请使用.zip（CurseForge、MCBBS）和.mrpck（Modrinth）文件
                 </p>
             </a-upload-dragger>
-            <a-button :disabled="BtnisDisabled" type="primary" @click="handleUpload" style="margin-top: 32px">
+               <a-select
+      ref="select"
+      :options="Moptions"
+      :value="Cselect"
+      style="width: 120px;margin-top: 32px"
+      @select="handleSelect"
+    ></a-select>
+            <a-button :disabled="BtnisDisabled" type="primary" @click="handleUpload" style="margin-top: 6px">
                 开始
             </a-button>
         </div>

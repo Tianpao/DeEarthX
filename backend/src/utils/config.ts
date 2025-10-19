@@ -9,6 +9,7 @@ export interface IConfig {
     dexpub: boolean;
     mixins: boolean;
   };
+  oaf: boolean
 }
 
 export class Config {
@@ -22,6 +23,7 @@ export class Config {
       dexpub: false,
       mixins: true,
     },
+    oaf:true
   };
   config(): IConfig {
     if (!fs.existsSync("./config.json")) {

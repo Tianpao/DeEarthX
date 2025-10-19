@@ -3,12 +3,9 @@ import multer from "multer";
 import cors from "cors"
 import websocket, { WebSocketServer } from "ws"
 import { createServer, Server } from "node:http";
-import fs from "node:fs"
-import { pipeline } from "node:stream/promises";
 import { Config, IConfig } from "./utils/config.js";
-import { yauzl_promise } from "./utils/yauzl.promise.js";
 import { Dex } from "./Dex.js";
-import { mlsetup } from "./modloader/index.js";
+import { exec } from "node:child_process";
 export class Core {
     private config: IConfig;
     private readonly app: Application;
@@ -30,14 +27,36 @@ export class Core {
         this.dex = new Dex(this.ws)
     }
 
+    javachecker(){
+        exec("java -version",(err,stdout,stderr)=>{
+            if(err){
+                this.wsx.send(JSON.stringify({
+                    type:"error",
+                    message:"jini"
+                }))
+            }
+        })
+    }
+
     express() {
         this.app.use(cors());
         this.app.use(express.json());
+        this.app.get('/',(req,res)=>{
+            res.json({
+                status:200,
+                by:"DeEarthX.Core",
+                qqg:"559349662",
+                bilibili:"https://space.bilibili.com/1728953419"
+            })
+        })
         this.app.post("/start", this.upload.single("file"), (req, res) => {
             if (!req.file) {
                 return;
             }
-        this.dex.Main(req.file.buffer) //Dex
+            if (!req.query.mode){
+                return;
+            }
+        this.dex.Main(req.file.buffer,req.query.mode == "server") //Dex
             //this.dex.Main(req.file.buffer)
             res.json({
                 status:200,

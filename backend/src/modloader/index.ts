@@ -4,7 +4,8 @@ import { Minecraft } from "./minecraft.js";
 import { NeoForge } from "./neoforge.js";
 
 interface XModloader {
-  setup(): Promise<void>
+  setup(): Promise<void>;
+  installer(): Promise<void>;
 }
 export function modloader(ml:string,mcv:string,mlv:string,path:string){
     let modloader:XModloader
@@ -33,4 +34,8 @@ export async function mlsetup(ml:string,mcv:string,mlv:string,path:string){
     //console.log(ml)
     await modloader(ml,mcv,mlv,path).setup()
     await minecraft.setup()
+}
+
+export async function dinstall(ml:string,mcv:string,mlv:string,path:string){
+    await modloader(ml,mcv,mlv,path).installer();
 }

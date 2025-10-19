@@ -49,7 +49,7 @@ export function version_compare(v1: string, v2: string) {
   return 0;
 }
 
-export function execPromise(cmd:string,options:ExecOptions){
+export function execPromise(cmd:string,options?:ExecOptions){
   return new Promise((resolve,reject)=>{
     exec(cmd,options,(err,stdout,stderr)=>{
       if(err){

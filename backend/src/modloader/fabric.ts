@@ -31,7 +31,7 @@ export class Fabric{
     }
 
     async setup():Promise<void>{
-        await this.getLaestLoader()
+        await this.installer()
         await this.libraries()
         await this.install()
         await this.wshell()
@@ -59,7 +59,7 @@ export class Fabric{
         await xfastdownload(_downlist)
     }
 
-    async getLaestLoader(){
+    async installer(){
         let downurl = ""
         const res = await this.got.get("fabric-meta/v2/versions/installer").json<ILatestLoader[]>()
         res.forEach(e=>{

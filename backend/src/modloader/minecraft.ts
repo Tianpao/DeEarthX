@@ -109,6 +109,10 @@ export class Minecraft {
         // 依赖解压
     }
 
+    async installer(){ //占位
+
+    }
+
     async eula(){
         const context = `#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).\n#Spawn by DeEarthX(QQgroup:559349662) Tianpao:(https://space.bilibili.com/1728953419)\neula=true`
         await fs.promises.writeFile(`${this.path}/eula.txt`,context)

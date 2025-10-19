@@ -3,6 +3,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs'
 import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
+import terser from '@rollup/plugin-terser';
 /** @type {import('rollup').RollupOptions} */
 // ---cut---
 export default {
@@ -17,6 +18,7 @@ export default {
 		nodeResolve(),
 		resolve({preferBuiltins: true}),
 		commonjs(),
-		json()
+		json(),
+		terser()
 	]
 };
