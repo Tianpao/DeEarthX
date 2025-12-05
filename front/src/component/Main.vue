@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { InboxOutlined } from '@ant-design/icons-vue';
-import { message, StepsProps } from 'ant-design-vue';
+import { message, notification, StepsProps } from 'ant-design-vue';
 import type { UploadFile, UploadChangeParam } from 'ant-design-vue';
 import {sendNotification,} from '@tauri-apps/plugin-notification';
 import { SelectProps } from 'ant-design-vue/es/vc-select';
@@ -129,6 +129,12 @@ function prews(){
                 setTimeout(()=>{ //恢复状态
                     reactFL()
                 },8*1000)
+            }
+            if (_data.status === "error"){
+                notification.error({
+                    message: "DeEarth.X.Core 遇到了一个致命错误！",
+                    description:_data.result
+                })
             }
         })
 }

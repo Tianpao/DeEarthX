@@ -9,7 +9,7 @@
   "scripts": {
     "test": "tsc&&node dist/main.js",
     "rollup": "rollup -c rollup.config.js",
-    "nexe": "nexe -i ./dist/bundle.js --build -t x86-22.13.0 --output ./dist/core-x86_64-pc-windows-msvc.exe",
+    "nexe": "nexe -i ./dist/bundle.js --build -t x86-22.13.0 --output ./dist/core.exe",
     "build": "npm run rollup && npm run nexe"
   },
   "devDependencies": {

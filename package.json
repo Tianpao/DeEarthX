@@ -12,8 +12,10 @@
   "main": "./.build/build.js",
   "scripts": {
     "backend":"cd ./backend && npm run build",
-    "upx":".\\.build\\upx.exe .\\backend\\dist\\Dex-v3-core.exe",
+    "upx":".\\.build\\upx.exe .\\backend\\dist\\core.exe",
     "tauri":"cd ./front && npm run tauri build",
-    "build":"npm run tauri && npm run backend && npm run upx"
+    "back2front":"node b2f.js b2f",
+    "build2root":"node b2f.js b2r",
+    "build":"npm run backend && npm run upx && npm run back2front && npm run tauri && npm run build2root"
   }
 }

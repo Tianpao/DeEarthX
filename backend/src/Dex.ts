@@ -22,39 +22,52 @@ export class Dex {
   }
 
   public async Main(buffer: Buffer, dser: boolean) {
+    try{
     const first = Date.now();
-    const info = await this._getinfo(buffer);
+    const info = await this._getinfo(buffer).catch((e)=>{
+      throw new Error(e)
+    });
     const plat = what_platform(info);
     const mpname = this.in.name;
     const unpath = `./instance/${mpname}`;
     await Promise.all([
       this._unzip(buffer, mpname),
       await platform(plat).downloadfile(this.in, unpath, this.ws),
-    ]); // 解压和下载
+    ]).catch((e) => {
+      throw new Error(e)
+    }); // 解压和下载
     this.ws.send(
       JSON.stringify({
         status: "changed",
         result: undefined,
       })
     ); //改变状态
-    await new DeEarth(`${unpath}/mods`, `./.rubbish/${mpname}`).Main();
+    await new DeEarth(`${unpath}/mods`, `./.rubbish/${mpname}`).Main().catch((e) => {
+      throw new Error(e)
+    });
     this.ws.send(
       JSON.stringify({
         status: "changed",
         result: undefined,
       })
     ); //改变状态(DeEarth筛选模组完毕)
-    const mlinfo = await platform(plat).getinfo(this.in);
+    const mlinfo = await platform(plat).getinfo(this.in).catch((e)=>{
+      throw new Error(e)
+    });
     if (dser) {
       await mlsetup(
         mlinfo.loader,
         mlinfo.minecraft,
         mlinfo.loader_version,
         unpath
-      ); //安装服务端
+      ).catch((e) => {
+        throw new Error(e)
+      }); //安装服务端
     }
     if (!dser) {
-      dinstall(mlinfo.loader, mlinfo.minecraft, mlinfo.loader_version, unpath);
+      dinstall(mlinfo.loader, mlinfo.minecraft, mlinfo.loader_version, unpath).catch((e) => {
+        throw new Error(e)
+      });
     }
     const latest = Date.now();
     this.ws.send(
@@ -64,9 +77,20 @@ export class Dex {
       })
     );
     if (config.oaf) {
-      await execPromise(`start ${p.join("./instance")}`);
+      await execPromise(`start ${p.join("./instance")}`).catch((e) => {
+        throw new Error(e)
+      });
     }
     //await this._unzip(buffer);
+  }catch(e){
+    const err = e as Error
+    this.ws.send(
+      JSON.stringify({
+        status: "error",
+        result: err.message,
+      })
+    );
+  }
   }
 
   private async _getinfo(buffer: Buffer) {
