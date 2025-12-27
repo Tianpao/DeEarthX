@@ -1,10 +1,10 @@
+import { MessageWS } from "../utils/ws.js";
 import { CurseForge } from "./curseforge.js";
-import { Modrinth } from "./modrinth.js";
-import { WebSocket } from "ws";
+import { Modrinth } from "./modrinth.js";;
 
 export interface XPlatform {
   getinfo(manifest: object): Promise<modpack_info>;
-  downloadfile(manifest: object,path:string,ws:WebSocket): Promise<void>;
+  downloadfile(manifest: object,path:string,ws:MessageWS): Promise<void>;
 }
 
 export interface modpack_info {

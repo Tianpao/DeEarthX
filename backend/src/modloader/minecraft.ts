@@ -1,10 +1,8 @@
 import fs from "node:fs"
-import pa from "node:path"
 import { fastdownload, version_compare } from "../utils/utils.js";
 import { yauzl_promise } from "../utils/yauzl.promise.js";
 import { pipeline } from "node:stream/promises";
 import got from "got";
-import fsExtra from "fs-extra/esm";
 
 interface ILInfo {
     libraries: {

@@ -1,6 +1,6 @@
 import got, { Got } from "got";
 import fs from "node:fs"
-import { execPromise, fastdownload, xfastdownload } from "../utils/utils.js";
+import { execPromise, fastdownload } from "../utils/utils.js";
 
 interface ILatestLoader{
     url:string,
@@ -56,7 +56,7 @@ export class Fabric{
             const path = this.MTP(e.name)
             _downlist.push([`https://bmclapi2.bangbang93.com/maven/${path}`,`${this.path}/libraries/${path}`])
         })
-        await xfastdownload(_downlist)
+        await fastdownload(_downlist)
     }
 
     async installer(){

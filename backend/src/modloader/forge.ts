@@ -1,7 +1,7 @@
 import got, { Got } from "got";
 import fs from "node:fs"
 import fse from "fs-extra"
-import { execPromise, fastdownload, version_compare, xfastdownload } from "../utils/utils.js";
+import { execPromise, fastdownload, version_compare } from "../utils/utils.js";
 import { yauzl_promise } from "../utils/yauzl.promise.js";
 import { execSync } from "node:child_process";
 
@@ -76,7 +76,7 @@ export class Forge {
         }
     }
     const downlist = [...new Set(_downlist)]
-    await xfastdownload(downlist)
+    await fastdownload(downlist)
  }
 
  async install(){

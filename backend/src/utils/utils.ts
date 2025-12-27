@@ -6,6 +6,7 @@ import fs from "node:fs";
 import fse from "fs-extra";
 import { WebSocket } from "ws";
 import { ExecOptions, exec} from "node:child_process";
+import { MessageWS } from "./ws.js";
 
 export class Utils {
   public modrinth_url: string;
@@ -62,39 +63,26 @@ export function execPromise(cmd:string,options?:ExecOptions){
   })
 }
 
-export async function fastdownload(data: [string, string]) {
+export async function fastdownload(data: [string, string]|string[][]) {
+  let _data = undefined;
+  if(Array.isArray(data[0])){
+    _data = data
+  }else{
+    _data = [data]
+  }
   return await pMap(
-    [data],
+    _data,
     async (e:any) => {
       try {
         await pRetry(
           async () => {
             if (!fs.existsSync(e[1])) {
-              /*
-              const size: number = await (async () => {
-                const head = (
-                  await got.head(
-                    e[0],
-                    { headers: { "user-agent": "DeEarthX" } }
-                  )
-                ).headers["content-length"];
-                if (head) {
-                  return Number(head);
-                } else {
-                  return 0;
-                }
-              })();*/
-              
-               //console.log(e)
               await got
                 .get(e[0], {
                   responseType: "buffer",
                   headers: {
                     "user-agent": "DeEarthX",
                   },
-                })
-                .on("downloadProgress", (progress) => {
-                  //bar.update(progress.transferred);
                 })
                 .then((res) => {
                   fse.outputFileSync(e[1], res.rawBody);
@@ -111,7 +99,7 @@ export async function fastdownload(data: [string, string]) {
   );
 }
 
-export async function Wfastdownload(data: [string, string],ws:WebSocket) {
+export async function Wfastdownload(data: string[][],ws:MessageWS) {
   let index = 1;
   return await pMap(
     data,
@@ -131,14 +119,15 @@ export async function Wfastdownload(data: [string, string],ws:WebSocket) {
                   fse.outputFileSync(e[1], res.rawBody);
                 });
             }
-           ws.send(JSON.stringify({
-             status:"downloading",
-               result:{
-                total:data.length,
-                index:index,
-                name:e[1]
-              }
-            }))
+            ws.download(data.length,index,e[1])
+          //  ws.send(JSON.stringify({
+          //    status:"downloading",
+          //      result:{
+          //       total:data.length,
+          //       index:index,
+          //       name:e[1]
+          //     }
+          //   }))
             index++
           },
           { retries: 3 }
@@ -150,86 +139,3 @@ export async function Wfastdownload(data: [string, string],ws:WebSocket) {
     { concurrency: 16 }
   );
 }
-
-export async function xfastdownload(data: [string, string][]) {
-  return await pMap(
-    data,
-    async (e:any) => {
-      try {
-        await pRetry(
-          async () => {
-            if (!fs.existsSync(e[1])) {
-              /*
-              const size: number = await (async () => {
-                const head = (
-                  await got.head(
-                    e[0],
-                    { headers: { "user-agent": "DeEarthX" } }
-                  )
-                ).headers["content-length"];
-                if (head) {
-                  return Number(head);
-                } else {
-                  return 0;
-                }
-              })();*/
-               //console.log(e)
-              await got
-                .get(e[0], {
-                  responseType: "buffer",
-                  headers: {
-                    "user-agent": "DeEarthX",
-                  },
-                })
-                .on("downloadProgress", (progress) => {
-                  //bar.update(progress.transferred);
-                })
-                .then((res) => {
-                  fse.outputFileSync(e[1], res.rawBody);
-                });
-            }
-          },
-          { retries: 3 }
-        );
-      } catch (e) {
-        //LOGGER.error({ err: e });
-      }
-    },
-    { concurrency: 16 }
-  );
-}
-
-export async function mr_fastdownload(data: [string, string, string]) {
-  return await pMap(
-    data,
-    async (e) => {
-      //const bar = multibar.create(Number(e[2]), 0, { filename: e[1] });
-      try {
-        await pRetry(
-          async () => {
-            if (!fse.existsSync(e[1])) {
-              await got
-                .get(e[0], {
-                  responseType: "buffer",
-                  headers: {
-                    "user-agent": "DeEarthX",
-                  },
-                })
-                .on("downloadProgress", (progress) => {
-                  //bar.update(progress.transferred);
-                })
-                .then((res) => {
-                  fse.outputFileSync(e[1], res.rawBody);
-                });
-            }
-          },
-          { retries: 3 }
-        );
-      } catch (e) {
-        //LOGGER.error({ err: e });
-      }
-    },
-    { concurrency: 16 }
-  );
-}
-

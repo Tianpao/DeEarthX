@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import p from "node:path"
+import p from "node:path";
 import websocket, { WebSocketServer } from "ws";
 import { yauzl_promise } from "./utils/yauzl.promise.js";
 import { pipeline } from "node:stream/promises";
@@ -8,103 +8,95 @@ import { DeEarth } from "./utils/DeEarth.js";
 import { dinstall, mlsetup } from "./modloader/index.js";
 import config from "./utils/config.js";
 import { execPromise } from "./utils/utils.js";
+import { MessageWS } from "./utils/ws.js";
+import { debug } from "./utils/logger.js";
 
 export class Dex {
   wsx!: WebSocketServer;
-  in: any;
-  ws!: websocket;
+  message!: MessageWS;
   constructor(ws: WebSocketServer) {
     this.wsx = ws;
     this.wsx.on("connection", (e) => {
-      this.ws = e;
+      this.message = new MessageWS(e);
     });
-    this.in = {};
   }
 
   public async Main(buffer: Buffer, dser: boolean) {
-    try{
-    const first = Date.now();
-    const info = await this._getinfo(buffer).catch((e)=>{
-      throw new Error(e)
-    });
-    const plat = what_platform(info);
-    const mpname = this.in.name;
-    const unpath = `./instance/${mpname}`;
-    await Promise.all([
-      this._unzip(buffer, mpname),
-      await platform(plat).downloadfile(this.in, unpath, this.ws),
-    ]).catch((e) => {
-      throw new Error(e)
-    }); // 解压和下载
-    this.ws.send(
-      JSON.stringify({
-        status: "changed",
-        result: undefined,
-      })
-    ); //改变状态
-    await new DeEarth(`${unpath}/mods`, `./.rubbish/${mpname}`).Main().catch((e) => {
-      throw new Error(e)
-    });
-    this.ws.send(
-      JSON.stringify({
-        status: "changed",
-        result: undefined,
-      })
-    ); //改变状态(DeEarth筛选模组完毕)
-    const mlinfo = await platform(plat).getinfo(this.in).catch((e)=>{
-      throw new Error(e)
-    });
-    if (dser) {
-      await mlsetup(
-        mlinfo.loader,
-        mlinfo.minecraft,
-        mlinfo.loader_version,
-        unpath
-      ).catch((e) => {
-        throw new Error(e)
-      }); //安装服务端
-    }
-    if (!dser) {
-      dinstall(mlinfo.loader, mlinfo.minecraft, mlinfo.loader_version, unpath).catch((e) => {
-        throw new Error(e)
+    try {
+      const first = Date.now();
+      const { contain, info } = await this._getinfo(buffer).catch((e) => {
+        throw new Error(e);
       });
+      const plat = what_platform(contain);
+      debug(plat);
+      debug(info);
+      const mpname = info.name;
+      const unpath = `./instance/${mpname}`;
+      await Promise.all([
+        this._unzip(buffer, mpname),
+        await platform(plat).downloadfile(info, unpath, this.message),
+      ]).catch((e) => {
+        throw new Error(e);
+      }); // 解压和下载
+      this.message.statusChange(); //改变状态
+      await new DeEarth(`${unpath}/mods`, `./.rubbish/${mpname}`)
+        .Main()
+        .catch((e) => {
+          throw new Error(e);
+        });
+      this.message.statusChange(); //改变状态(DeEarth筛选模组完毕)
+      const mlinfo = await platform(plat)
+        .getinfo(info)
+        .catch((e) => {
+          throw new Error(e);
+        });
+      if (dser) {
+        await mlsetup(
+          mlinfo.loader,
+          mlinfo.minecraft,
+          mlinfo.loader_version,
+          unpath
+        ).catch((e) => {
+          throw new Error(e);
+        }); //安装服务端
+      }
+      if (!dser) {
+        dinstall(
+          mlinfo.loader,
+          mlinfo.minecraft,
+          mlinfo.loader_version,
+          unpath
+        ).catch((e) => {
+          throw new Error(e);
+        });
+      }
+      const latest = Date.now();
+      this.message.finish(first, latest); //完成
+      if (config.oaf) {
+        await execPromise(`start ${p.join("./instance")}`).catch((e) => {
+          throw new Error(e);
+        });
+      }
+      //await this._unzip(buffer);
+    } catch (e) {
+      const err = e as Error;
+      this.message.handleError(err);
     }
-    const latest = Date.now();
-    this.ws.send(
-      JSON.stringify({
-        status: "finish",
-        result: latest - first,
-      })
-    );
-    if (config.oaf) {
-      await execPromise(`start ${p.join("./instance")}`).catch((e) => {
-        throw new Error(e)
-      });
-    }
-    //await this._unzip(buffer);
-  }catch(e){
-    const err = e as Error
-    this.ws.send(
-      JSON.stringify({
-        status: "error",
-        result: err.message,
-      })
-    );
-  }
   }
 
   private async _getinfo(buffer: Buffer) {
     const important_name = ["manifest.json", "modrinth.index.json"];
     let contain: string = "";
+    let info: any = {};
     const zip = await yauzl_promise(buffer);
-    zip.forEach(async (e) => {
-      if (important_name.includes(e.fileName)) {
-        contain = e.fileName;
-        this.in = JSON.parse((await e.ReadEntry).toString());
-        return;
+    for await (const entry of zip) {
+      if (important_name.includes(entry.fileName)) {
+        contain = entry.fileName;
+        info = JSON.parse((await entry.ReadEntry).toString());
+        break;
       }
-    });
-    return contain;
+    }
+    return { contain, info };
   }
 
   private async _unzip(buffer: Buffer, instancename: string) {
@@ -139,12 +131,13 @@ export class Dex {
         );
         await pipeline(stream, write);
       }
-      this.ws.send(
-        JSON.stringify({
-          status: "unzip",
-          result: { name: entry.fileName, total: zip.length, current: index },
-        })
-      );
+      this.message.unzip(entry.fileName, zip.length, index);
+      // this.ws.send(
+      //   JSON.stringify({
+      //     status: "unzip",
+      //     result: { name: entry.fileName, total: zip.length, current: index },
+      //   })
+      // );
       index++;
     }
     /* 解压完成 */

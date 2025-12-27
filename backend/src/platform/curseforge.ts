@@ -3,6 +3,7 @@ import { WebSocket } from "ws";
 import { join } from "node:path";
 import { Wfastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
+import { MessageWS } from "../utils/ws.js";
 
 export interface CurseForgeManifest {
   minecraft: {
@@ -39,7 +40,7 @@ export class CurseForge implements XPlatform {
     return result;
   }
 
-  async downloadfile(manifest: object, path: string, ws:WebSocket): Promise<void> {
+  async downloadfile(manifest: object, path: string, ws:MessageWS): Promise<void> {
     const local_manifest = manifest as CurseForgeManifest;
     if (local_manifest.files.length === 0){
       return;
@@ -49,7 +50,7 @@ export class CurseForge implements XPlatform {
         (file: { fileID: number }) => file.fileID
       ),
     });
-    let tmp: [string, string] | string[][] = [];
+    let tmp: string[][] = [];
     await this.got
       .post("v1/mods/files", {
         body: FileID,
@@ -64,17 +65,9 @@ export class CurseForge implements XPlatform {
             const unpath = join(path + "/mods/", e.fileName);
             const url = e.downloadUrl.replace("https://edge.forgecdn.net", this.utils.curseforge_Durl)
             tmp.push([url, unpath])
-            // if (usemirror) {
-            //   tmp.push([
-            //     "https://mod.mcimirror.top" + new URL(e.downloadUrl).pathname,
-            //     unpath,
-            //   ]);
-            // } else {
-            //   tmp.push([e.downloadUrl, unpath]);
-            // }
           }
         );
       });
-    await Wfastdownload(tmp as unknown as [string, string],ws); //下载文件
+    await Wfastdownload(tmp,ws); //下载文件
   }
 }

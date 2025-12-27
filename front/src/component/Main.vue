@@ -133,7 +133,7 @@ function prews(){
             if (_data.status === "error"){
                 notification.error({
                     message: "DeEarth.X.Core 遇到了一个致命错误！",
-                    description:_data.result
+                    description:`请将整个窗口截图发在群里\n错误信息：${_data.result}`
                 })
             }
         })
