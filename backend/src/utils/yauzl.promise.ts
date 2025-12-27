@@ -4,7 +4,6 @@ import Stream from "node:stream"
 export interface IentryP extends yauzl.Entry {
     openReadStream: Promise<Stream.Readable>;
     ReadEntry: Promise<Buffer>;
-    ReadEntrySync: Buffer;
 }
 
 export async function yauzl_promise(buffer: Buffer): Promise<IentryP[]>{
@@ -29,7 +28,6 @@ export async function yauzl_promise(buffer: Buffer): Promise<IentryP[]>{
             isCompressed: entry.isCompressed,
             openReadStream: _openReadStream(zip,entry),
             ReadEntry: _ReadEntry(zip,entry),
-            ReadEntrySync: (await _ReadEntry(zip,entry))
           }
           entries.push(_entry)
           if (zip.entryCount === entries.length){

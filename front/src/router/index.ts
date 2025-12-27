@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import Main from "../component/Main.vue";
 import Setting from "../component/Setting.vue";
 import About from "../component/About.vue";
+import Error from "../component/Error.vue";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -17,6 +18,9 @@ const router = createRouter({
         },{
             path: "/about",
             component: About
+        },{
+            path: "/error",
+            component: Error
         }
     ]
 })

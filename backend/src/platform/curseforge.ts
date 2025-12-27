@@ -1,4 +1,4 @@
-import got from "got";
+import got, { Got } from "got";
 import { WebSocket } from "ws";
 import { join } from "node:path";
 import { Wfastdownload, Utils } from "../utils/utils.js";
@@ -14,8 +14,18 @@ export interface CurseForgeManifest {
 
 export class CurseForge implements XPlatform {
   private utils: Utils;
+  private got:Got;
   constructor() {
     this.utils = new Utils();
+    this.got = got.extend({
+      prefixUrl: this.utils.curseforge_url,
+      headers:{
+        "User-Agent": "DeEarthX",
+        "x-api-key":
+          "$2a$10$ydk0TLDG/Gc6uPMdz7mad.iisj2TaMDytVcIW4gcVP231VKngLBKy",
+        "Content-Type": "application/json",
+      }
+    })
   }
   async getinfo(manifest: object): Promise<modpack_info> {
     let result: modpack_info = Object.create({});
@@ -40,15 +50,9 @@ export class CurseForge implements XPlatform {
       ),
     });
     let tmp: [string, string] | string[][] = [];
-    await got
-      .post(this.utils.curseforge_url + "/v1/mods/files", {
+    await this.got
+      .post("v1/mods/files", {
         body: FileID,
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key":
-            "$2a$10$ydk0TLDG/Gc6uPMdz7mad.iisj2TaMDytVcIW4gcVP231VKngLBKy",
-          "User-Agent": "DeEarthX",
-        },
       })
       .json()
       .then((res: any) => {

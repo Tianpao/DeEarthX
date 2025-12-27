@@ -100,7 +100,7 @@ export class Dex {
     zip.forEach(async (e) => {
       if (important_name.includes(e.fileName)) {
         contain = e.fileName;
-        this.in = JSON.parse(e.ReadEntrySync.toString());
+        this.in = JSON.parse((await e.ReadEntry).toString());
         return;
       }
     });

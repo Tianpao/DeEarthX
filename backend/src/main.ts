@@ -1,15 +1,5 @@
 import config from "./utils/config.js";
-import fsp from "node:fs/promises";
-import fs from "node:fs";
-import { pipeline } from "node:stream/promises";
-import { yauzl_promise } from "./utils/yauzl.promise.js";
 import { Core } from "./core.js";
-import { DeEarth } from "./utils/DeEarth.js";
-import { version_compare } from "./utils/utils.js";
-import { Forge } from "./modloader/forge.js";
-import { Minecraft } from "./modloader/minecraft.js";
-import { Fabric } from "./modloader/fabric.js";
-import { NeoForge } from "./modloader/neoforge.js";
 
 const core = new Core(config);
 

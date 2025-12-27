@@ -3,8 +3,6 @@ import crypto from "node:crypto"
 import { yauzl_promise } from "./yauzl.promise.js"
 import got from "got"
 import { Utils } from "./utils.js"
-import pa from "node:path"
-import WebSocket from "ws"
 import config from "./config.js"
 interface IMixins{
     name: string

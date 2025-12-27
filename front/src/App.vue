@@ -6,8 +6,8 @@ import { useRouter } from 'vue-router';
 import * as shell from '@tauri-apps/plugin-shell';
 
 import { invoke } from "@tauri-apps/api/core";
-async function contant(){
-    await invoke("open_url",{url:"https://space.bilibili.com/1728953419"})
+async function contant() {
+    await invoke("open_url", { url: "https://space.bilibili.com/1728953419" })
 }
 
 //屏蔽右键菜单
@@ -29,11 +29,15 @@ document.oncontextmenu = function (event: any) {
 }
 
 /* 启动后端 */
-message.loading("DeEarthX.Core启动中，此过程中请勿执行任何操作......").then(()=>{
-    shell.Command.create("core").spawn().then(()=>{
-        message.success("DeEarthX.Core 启动成功")
+message.loading("DeEarthX.Core启动中，此过程中请勿执行任何操作......").then(() => {
+    shell.Command.create("core").spawn().then(() => {
+        fetch("http://localhost:37019/", { method: "GET" }).catch((e) => {
+            router.push('/error')
+        }).then(() => {
+            message.success("DeEarthX.Core 启动成功")
+        })
         console.log(`DeEarthX V3 Core`)
-    }).catch((e)=>{
+    }).catch((e) => {
         console.log(e)
         message.error("DeEarthX.Core 启动失败，请检查37019是否被占用！")
     })
@@ -106,18 +110,21 @@ const theme = ref({
 
 
 <style>
- /* 禁止选择文本的样式 */
-        h1,li,p,span {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select:none;
-        }
-        
-        /* 禁止拖拽图片 */
-        img {
-            -webkit-user-drag: none;
-            -moz-user-drag: none;
-            -ms-user-drag: none;
-        }
+/* 禁止选择文本的样式 */
+h1,
+li,
+p,
+span {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* 禁止拖拽图片 */
+img {
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
+    -ms-user-drag: none;
+}
 </style>
