@@ -54,21 +54,21 @@ const settings: SettingCategory[] = [
       {
         key: 'hashes',
         name: '哈希过滤',
-        description: '过滤不必要的哈希文件',
+        description: '过滤不必要的客户端模组（哈希过滤法）',
         path: 'filter.hashes',
         defaultValue: false
       },
       {
         key: 'dexpub',
         name: 'DeP过滤',
-        description: '过滤 DeP 相关文件',
+        description: '过滤 DeP 平台中记录的客户端文件',
         path: 'filter.dexpub',
         defaultValue: false
       },
       {
         key: 'mixins',
         name: 'Mixin过滤',
-        description: '过滤 Mixin 文件',
+        description: '过滤 Client Mixin 相关文件',
         path: 'filter.mixins',
         defaultValue: false
       }
