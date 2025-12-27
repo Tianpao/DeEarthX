@@ -5,7 +5,8 @@ import websocket, { WebSocketServer } from "ws"
 import { createServer, Server } from "node:http";
 import { Config, IConfig } from "./utils/config.js";
 import { Dex } from "./Dex.js";
-import { exec } from "node:child_process";
+import { logger } from "./utils/logger.js";
+import { checkJava, JavaCheckResult } from "./utils/utils.js";
 export class Core {
     private config: IConfig;
     private readonly app: Application;
@@ -27,56 +28,119 @@ export class Core {
         this.dex = new Dex(this.ws)
     }
 
-    javachecker(){
-        exec("java -version",(err,stdout,stderr)=>{
-            if(err){
-                this.wsx.send(JSON.stringify({
-                    type:"error",
-                    message:"jini"
-                }))
+    private async javachecker() {
+        try {
+            const result: JavaCheckResult = await checkJava();
+            
+            if (result.exists && result.version) {
+                logger.info(`Java detected: ${result.version.fullVersion} (${result.version.vendor})`);
+                
+                if (this.wsx) {
+                    this.wsx.send(JSON.stringify({
+                        type: "info",
+                        message: `Java detected: ${result.version.fullVersion} (${result.version.vendor})`,
+                        data: result.version
+                    }));
+                }
+            } else {
+                logger.error("Java check failed", result.error);
+                
+                if (this.wsx) {
+                    this.wsx.send(JSON.stringify({
+                        type: "error",
+                        message: result.error || "Java not found or version check failed",
+                        data: result
+                    }));
+                }
             }
-        })
+        } catch (error) {
+            logger.error("Java check exception", error as Error);
+            
+            if (this.wsx) {
+                this.wsx.send(JSON.stringify({
+                    type: "error",
+                    message: "Java check encountered an exception"
+                }));
+            }
+        }
     }
 
-    express() {
+    private express() {
         this.app.use(cors());
         this.app.use(express.json());
-        this.app.get('/',(req,res)=>{
+        
+        // 健康检查路由
+        this.app.get('/', (req, res) => {
             res.json({
-                status:200,
-                by:"DeEarthX.Core",
-                qqg:"559349662",
-                bilibili:"https://space.bilibili.com/1728953419"
-            })
-        })
+                status: 200,
+                by: "DeEarthX.Core",
+                qqg: "559349662",
+                bilibili: "https://space.bilibili.com/1728953419"
+            });
+        });
+        
+        // 启动任务路由
         this.app.post("/start", this.upload.single("file"), (req, res) => {
-            if (!req.file) {
-                return;
+            try {
+                if (!req.file) {
+                    return res.status(400).json({ status: 400, message: "No file uploaded" });
+                }
+                if (!req.query.mode) {
+                    return res.status(400).json({ status: 400, message: "Mode parameter missing" });
+                }
+                
+                const isServerMode = req.query.mode === "server";
+                logger.info("Starting task", { isServerMode });
+                
+                // 非阻塞执行主要任务
+                this.dex.Main(req.file.buffer, isServerMode).catch(err => {
+                    logger.error("Task execution failed", err);
+                });
+                
+                res.json({ status: 200, message: "Task is pending" });
+            } catch (err) {
+                const error = err as Error;
+                logger.error("/start route error", error);
+                res.status(500).json({ status: 500, message: "Internal server error" });
             }
-            if (!req.query.mode){
-                return;
-            }
-        this.dex.Main(req.file.buffer,req.query.mode == "server") //Dex
-            //this.dex.Main(req.file.buffer)
-            res.json({
-                status:200,
-                message:"task is peding"
-            })
-        })
+        });
+        
+        // 获取配置路由
         this.app.get('/config/get', (req, res) => {
-            res.json(this.config)
-        })
+            try {
+                res.json(this.config);
+            } catch (err) {
+                const error = err as Error;
+                logger.error("/config/get route error", error);
+                res.status(500).json({ status: 500, message: "Failed to get config" });
+            }
+        });
 
+        // 更新配置路由
         this.app.post('/config/post', (req, res) => {
-            Config.write_config(req.body)
-            res.json({ status: 200 })
-        })
+            try {
+                Config.writeConfig(req.body);
+                this.config = req.body; // 更新内存中的配置
+                logger.info("Config updated");
+                res.json({ status: 200 });
+            } catch (err) {
+                const error = err as Error;
+                logger.error("/config/post route error", error);
+                res.status(500).json({ status: 500, message: "Failed to update config" });
+            }
+        });
     }
 
-    start() {
-        this.express()
-        this.server.listen(37019, () => {
-            console.log("Server is running on http://localhost:37019")
-        })
+    public async start() {
+        this.express();
+        this.server.listen(37019, async () => {
+            logger.info("Server is running on http://localhost:37019");
+            await this.javachecker(); // 启动时检查Java
+        });
+        
+        // 处理服务器错误
+        this.server.on('error', (err) => {
+            logger.error("Server error", err);
+        });
     }
 }
