@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
-/* Config */
-interface IConfig {
+
+// 配置接口定义
+interface AppConfig {
   mirror: {
     bmclapi: boolean;
     mcimirror: boolean;
@@ -12,38 +13,61 @@ interface IConfig {
     dexpub: boolean;
     mixins: boolean;
   };
-  oaf: boolean
+  oaf: boolean; // 操作完成后打开目录
 }
-const config = ref<IConfig>({ mirror: { bmclapi: false, mcimirror: false }, filter: { hashes: false, dexpub: false, mixins: false }, oaf: false})
-fetch('http://localhost:37019/config/get', {
-  method: 'GET',
-  headers: {
-    'Content-Type': 'application/json'
-  }
-}).then(res => res.json()).then(res => config.value = res)
 
-let first = true;
-watch(config, (newv) => { //写入Config
-  if (!first) {
-    fetch('http://localhost:37019/config/post', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(newv)
-    }).then(res => {
-      if (res.status === 200) {
-        message.success('配置已保存')
-      }
-    })
-    // shell.Command.create('core',['writeconfig',JSON.stringify(newv)]).execute().then(()=>{
-    // message.success('配置已保存')
-    // })
-    console.log(newv)
-    return
+// 配置状态
+const config = ref<AppConfig>({
+  mirror: { bmclapi: false, mcimirror: false },
+  filter: { hashes: false, dexpub: false, mixins: false },
+  oaf: false
+});
+
+// 从后端加载配置
+async function loadConfig() {
+  try {
+    const response = await fetch('http://localhost:37019/config/get', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (response.ok) {
+      config.value = await response.json();
+    }
+  } catch (error) {
+    console.error('加载配置失败:', error);
+    message.error('加载配置失败');
   }
-  first = false;
-}, { deep: true })
+}
+
+// 保存配置到后端
+async function saveConfig(newConfig: AppConfig) {
+  try {
+    const response = await fetch('http://localhost:37019/config/post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newConfig)
+    });
+    if (response.ok) {
+      message.success('配置已保存');
+    }
+  } catch (error) {
+    console.error('保存配置失败:', error);
+    message.error('保存配置失败');
+  }
+}
+
+// 初始化时加载配置
+loadConfig();
+
+// 监听配置变化并保存
+let isInitialLoad = true;
+watch(config, (newValue) => {
+  if (isInitialLoad) {
+    isInitialLoad = false;
+    return;
+  }
+  saveConfig(newValue);
+}, { deep: true });
 </script>
 
 <template>
