@@ -86,17 +86,17 @@ const theme = ref({
 
 <template>
     <a-config-provider :theme="theme">
-        <div class="tw:h-screen tw:w-screen">
-            <a-page-header class="tw:fixed tw:h-16" style="border: 1px solid rgb(235, 237, 240)" title="DeEarthX"
+        <div class="tw:h-screen tw:w-screen tw:flex tw:flex-col">
+            <a-page-header class="tw:h-16" style="border: 1px solid rgb(235, 237, 240)" title="DeEarthX"
                 sub-title="V3" :avatar="{ src: './public/dex.png' }">
                 <template #extra>
                     <a-button @click="openAuthorBilibili">作者B站</a-button>
                 </template>
             </a-page-header>
-            <div class="tw:flex tw:full tw:h-89/100">
-                <a-menu id="menu" style="width: 144px;" :selectedKeys="selectedKeys" mode="inline" :items="menuItems"
+            <div class="tw:flex tw:flex-1 tw:overflow-hidden">
+                <a-menu id="menu" style="width: 144px; flex-shrink: 0;" :selectedKeys="selectedKeys" mode="inline" :items="menuItems"
                     @click="handleMenuClick" />
-                <RouterView />
+                <RouterView class="tw:flex-1 tw:overflow-auto" />
             </div>
         </div>
     </a-config-provider>

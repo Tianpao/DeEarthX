@@ -210,49 +210,47 @@ function handleStartProcess() {
 }
 </script>
 <template>
-    <div class="tw:h-full tw:w-full tw:relative">
-        <div class="tw:h-full tw:w-full tw:flex tw:flex-col tw:justify-center tw:items-center">
-            <div>
-                <h1 class="tw:text-4xl tw:text-center tw:animate-pulse">DeEarthX</h1>
-                <h1 class="tw:text-sm tw:text-gray-500 tw:text-center">让开服变成随时随地的事情！</h1>
+    <div class="tw:h-full tw:w-full tw:relative tw:flex tw:flex-col">
+        <div class="tw:flex-1 tw:w-full tw:flex tw:flex-col tw:justify-center tw:items-center tw:p-4">
+            <div class="tw:w-full tw:max-w-2xl tw:flex tw:flex-col tw:items-center">
+                <div>
+                    <h1 class="tw:text-4xl tw:text-center tw:animate-pulse">DeEarthX</h1>
+                    <h1 class="tw:text-sm tw:text-gray-500 tw:text-center">让开服变成随时随地的事情！</h1>
+                </div>
+                <a-upload-dragger :disabled="uploadDisabled" class="tw:w-full tw:max-w-md tw:h-48" name="file" action="/" :multiple="false"
+            :before-upload="beforeUpload" @change="handleFileChange" @drop="handleFileDrop" v-model:fileList="uploadedFiles"
+            accept=".zip,.mrpack">
+                    <p class="ant-upload-drag-icon">
+                        <inbox-outlined></inbox-outlined>
+                    </p>
+                    <p class="ant-upload-text">拖拽或点击以上传文件</p>
+                    <p class="ant-upload-hint">
+                        请使用.zip（CurseForge、MCBBS）和.mrpack（Modrinth）文件
+                    </p>
+                </a-upload-dragger>
+                   <a-select
+          ref="select"
+          :options="modeOptions"
+          :value="selectedMode"
+          style="width: 120px;margin-top: 32px"
+          @select="handleModeSelect"
+        ></a-select>
+                <a-button :disabled="startButtonDisabled" type="primary" @click="handleStartProcess" style="margin-top: 6px">
+                    开始
+                </a-button>
             </div>
-            <a-upload-dragger :disabled="uploadDisabled" class="tw:w-144 tw:h-48" name="file" action="/" :multiple="false"
-        :before-upload="beforeUpload" @change="handleFileChange" @drop="handleFileDrop" v-model:fileList="uploadedFiles"
-        accept=".zip,.mrpack">
-                <p class="ant-upload-drag-icon">
-                    <inbox-outlined></inbox-outlined>
-                </p>
-                <p class="ant-upload-text">拖拽或点击以上传文件</p>
-                <p class="ant-upload-hint">
-                    请使用.zip（CurseForge、MCBBS）和.mrpck（Modrinth）文件
-                </p>
-            </a-upload-dragger>
-               <a-select
-      ref="select"
-      :options="modeOptions"
-      :value="selectedMode"
-      style="width: 120px;margin-top: 32px"
-      @select="handleModeSelect"
-    ></a-select>
-            <a-button :disabled="startButtonDisabled" type="primary" @click="handleStartProcess" style="margin-top: 6px">
-                开始
-            </a-button>
         </div>
-        <div v-if="showSteps"
-            class="tw:fixed tw:bottom-2 tw:ml-4 tw:w-272 tw:h-16 tw:flex tw:justify-center tw:items-center tw:text-sm">
+        <div v-if="showSteps" class="tw:fixed tw:bottom-2 tw:left-1/2 tw:-translate-x-1/2 tw:w-full tw:max-w-3xl tw:h-16 tw:flex tw:justify-center tw:items-center tw:text-sm">
             <a-steps :current="currentStep" :items="stepItems" />
         </div>
-        <!-- <div class="tw:absolute tw:bottom-20 tw:right-2 tw:h-16 tw:w-16">
-       
-        </div> -->
-        <div v-if="showSteps" ref="logContainer" class="tw:absolute tw:right-2 tw:bottom-20 tw:h-80 tw:w-56 tw:rounded-xl tw:container tw:overflow-y-auto">
-                <a-card title="制作进度" :bordered="true">
+        <div v-if="showSteps" ref="logContainer" class="tw:absolute tw:right-2 tw:bottom-20 tw:h-80 tw:w-64 tw:rounded-xl tw:overflow-y-auto">
+                <a-card title="制作进度" :bordered="true" class="tw:h-full">
                     <div v-if="unzipProgress.display">
-                  <h1>解压进度</h1>
+                  <h1 class="tw:text-sm">解压进度</h1>
                   <a-progress :percent="unzipProgress.percent" :status="unzipProgress.status" size="small" />
                   </div>
                   <div v-if="downloadProgress.display">
-                  <h1>下载进度</h1>
+                  <h1 class="tw:text-sm">下载进度</h1>
                   <a-progress :percent="downloadProgress.percent" :status="downloadProgress.status" size="small" />
                   </div>
             </a-card>

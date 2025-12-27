@@ -13,11 +13,13 @@
     "windows": [
       {
         "title": "DeEarthX V3",
-        "width": 1280,
-        "height": 720,
+        "width": 1024,
+        "height": 600,
+        "minWidth": 800,
+        "minHeight": 500,
         "dragDropEnabled": false,
         "fullscreen": false,
-        "resizable": false,
+        "resizable": true,
         "center": true
       }
     ],
