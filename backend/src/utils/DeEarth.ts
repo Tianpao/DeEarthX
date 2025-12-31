@@ -1,162 +1,209 @@
-import fs from "node:fs"
-import crypto from "node:crypto"
-//import { yauzl_promise } from "./yauzl.promise.js"
-import { Azip } from "./ziplib.js"
-import got from "got"
-import { Utils } from "./utils.js"
-import config from "./config.js"
-interface IMixins{
-    name: string
-    data: string
+import fs from "node:fs";
+import crypto from "node:crypto";
+import { Azip } from "./ziplib.js";
+import got from "got";
+import { Utils } from "./utils.js";
+import config from "./config.js";
+import { logger } from "./logger.js";
+
+interface IMixinFile {
+  name: string;
+  data: string;
 }
 
-interface IFile{
-    filename: string
-    hash: string
-    mixins: IMixins[]
+interface IFileInfo {
+  filename: string;
+  hash: string;
+  mixins: IMixinFile[];
 }
 
-interface IHashRes{
-    [key:string]:{
-    project_id: string
-    }
+interface IHashResponse {
+  [hash: string]: { project_id: string };
 }
-interface IPjs{
-    id:string,
-    client_side:string,
-    server_side:string
+
+interface IProjectInfo {
+  id: string;
+  client_side: string;
+  server_side: string;
 }
-export class DeEarth{
-    movepath: string
-    modspath: string
-    file: IFile[]
-    utils: Utils
-    constructor(modspath:string,movepath:string) {
-        this.utils = new Utils();
-        this.movepath = movepath
-        this.modspath = modspath
-        this.file = []
-    }
 
-    async Main(){
-        if(!fs.existsSync(this.movepath)){
-            fs.mkdirSync(this.movepath,{recursive:true})
-        }
-        await this.getFile()
-        let hash;
-        let mixins;
-        if (config.filter.hashes){ //Hash
-        hash =  await this.Check_Hashes()
-        }
-        if (config.filter.mixins){ //Mixins
-            mixins = await this.Check_Mixins()
-        }
-        if(!hash||mixins){
-            return;
-        }
-        const result = [...new Set(hash.concat(mixins))]
-                //console.log(result)
-        result.forEach(async e=>{
-            console.log(e)
-            await fs.promises.rename(`${e}`,`${this.movepath}/${e}`.replace(this.modspath,""))
-            //await fs.promises.rename(`${this.modspath}/${e}`,`${this.movepath}/${e}`)
-        })
-    }
+export class DeEarth {
+  private movePath: string;
+  private modsPath: string;
+  private files: IFileInfo[];
+  private utils: Utils;
 
-    async Check_Hashes(){
-        const cmap = new Map<string,string>()
-        const fmap = new Map<string,string>()
-        const hashes:string[] = []
-        this.file.forEach(e=>{
-            hashes.push(e.hash);
-            cmap.set(e.hash,e.filename)
-        })
-        const res = await got.post(this.utils.modrinth_url+"/v2/version_files",{
-            headers:{
-                "User-Agent": "DeEarth",
-                "Content-Type": "application/json"
-            },
-            json:{
-                hashes,
-                algorithm: "sha1"
-            }
-        }).json<IHashRes>()
-        const x = Object.keys(res)
-        const arr = []
-        const fhashes = []
-        for(let i=0;i<x.length;i++){
-            const e = x[i] //hash
-            const d = res[e] //hash object
-            const result = cmap.get(e)
-            if(result){
-            fmap.set(d.project_id,result)
-            }
-            fhashes.push(e)
-            arr.push(d.project_id)
-             
-        }
-        const mpres = await got.get(`${this.utils.modrinth_url}/v2/projects?ids=${JSON.stringify(arr)}`,{
-            headers:{
-                "User-Agent": "DeEarth"
-            }
-        }).json<IPjs[]>()
-         const result = [] //要删除的文件
-          for(let i=0;i<mpres.length;i++){
-             const e = mpres[i]
-             if(e.client_side==="required" && e.server_side==="unsupported"){
-             const f = fmap.get(e.id)
-             result.push(f)
-             }
-          }
-          return result
-    }
+  constructor(modsPath: string, movePath: string) {
+    this.utils = new Utils();
+    this.movePath = movePath;
+    this.modsPath = modsPath;
+    this.files = [];
+    logger.debug("DeEarth instance created", { modsPath, movePath });
+  }
+
+  async Main(): Promise<void> {
+    logger.info("Starting DeEarth process");
     
-    async Check_Mixins(){
-        //const files = await this.getFile()
-        const files = this.file
-        const result:string[] = []
-        for(let i=0;i<files.length;i++){
-            const file = files[i]
-            file.mixins.forEach(e=>{
-                try{
-                const json = JSON.parse(e.data);
-                if(this._isClientMx(file,json)){
-                    result.push(file.filename)
-                }
-                }catch(e){}
-            })
-        }
-        const _result = [...new Set(result)]
-        return _result;
-    }
-    async getFile():Promise<IFile[]>{
-        const files = this.getDir()
-        const arr = []
-        for(let i=0;i<files.length;i++){
-            const _file = files[i]
-            const file = `${this.modspath}/${_file}`
-            const data = fs.readFileSync(file)
-            const sha1 = crypto.createHash('sha1').update(data).digest('hex') //Get Hash
-            const mxarr:{name:string,data:string}[] = []
-            const mixins = (Azip(data)).forEach(async e=>{ //Get Mixins Info to check
-                if(e.entryName.endsWith(".mixins.json")&&!e.entryName.includes("/")){
-                    mxarr.push({name:e.entryName,data:(await e.getData()).toString()})
-                }
-            })
-            arr.push({filename:file,hash:sha1,mixins:mxarr})
-        }
-        this.file = arr
-        return arr;
-    }
-    private getDir():string[]{
-        if(!fs.existsSync(this.movepath)){
-            fs.mkdirSync(this.movepath)
-        }
-        const dirarr = fs.readdirSync(this.modspath).filter(e=>e.endsWith(".jar")).filter(e=>e.concat(this.modspath));
-        return dirarr
+    if (!fs.existsSync(this.movePath)) {
+      logger.debug("Creating target directory", { path: this.movePath });
+      fs.mkdirSync(this.movePath, { recursive: true });
     }
 
-    private _isClientMx(file:IFile,mixins:any){
-        return (!("mixins" in mixins) || mixins.mixins.length === 0)&&(("client" in mixins) && (mixins.client.length !== 0))&&!file.filename.includes("lib")
+    await this.getFilesInfo();
+    const clientSideMods = await this.identifyClientSideMods();
+    await this.moveClientSideMods(clientSideMods);
+    
+    logger.info("DeEarth process completed");
+  }
+
+  private async identifyClientSideMods(): Promise<string[]> {
+    const clientMods: string[] = [];
+
+    if (config.filter.hashes) {
+      logger.info("Starting hash check for client-side mods");
+      clientMods.push(...await this.checkHashesForClientMods());
     }
+
+    if (config.filter.mixins) {
+      logger.info("Starting mixins check for client-side mods");
+      clientMods.push(...await this.checkMixinsForClientMods());
+    }
+
+    const uniqueMods = [...new Set(clientMods)];
+    logger.info("Client-side mods identified", { count: uniqueMods.length, mods: uniqueMods });
+    return uniqueMods;
+  }
+
+  private async checkHashesForClientMods(): Promise<string[]> {
+    const hashToFilename = new Map<string, string>();
+    const hashes = this.files.map(file => {
+      hashToFilename.set(file.hash, file.filename);
+      return file.hash;
+    });
+
+    logger.debug("Checking mod hashes with Modrinth API", { fileCount: this.files.length });
+
+    try {
+      const fileInfoResponse = await got.post(`${this.utils.modrinth_url}/v2/version_files`, {
+        headers: { "User-Agent": "DeEarth", "Content-Type": "application/json" },
+        json: { hashes, algorithm: "sha1" }
+      }).json<IHashResponse>();
+
+      const projectIdToFilename = new Map<string, string>();
+      const projectIds = Object.entries(fileInfoResponse)
+        .map(([hash, info]) => {
+          const filename = hashToFilename.get(hash);
+          if (filename) projectIdToFilename.set(info.project_id, filename);
+          return info.project_id;
+        });
+
+      const projectsResponse = await got.get(`${this.utils.modrinth_url}/v2/projects?ids=${JSON.stringify(projectIds)}`, {
+        headers: { "User-Agent": "DeEarth" }
+      }).json<IProjectInfo[]>();
+
+      const clientMods = projectsResponse
+        .filter(p => p.client_side === "required" && p.server_side === "unsupported")
+        .map(p => projectIdToFilename.get(p.id))
+        .filter(Boolean) as string[];
+
+      logger.debug("Hash check completed", { count: clientMods.length });
+      return clientMods;
+    } catch (error: any) {
+      logger.error("Hash check failed", error);
+      return [];
+    }
+  }
+
+  private async checkMixinsForClientMods(): Promise<string[]> {
+    const clientMods: string[] = [];
+
+    for (const file of this.files) {
+      for (const mixin of file.mixins) {
+        try {
+          const config = JSON.parse(mixin.data);
+          if (!config.mixins?.length && config.client?.length > 0 && !file.filename.includes("lib")) {
+            clientMods.push(file.filename);
+            break;
+          }
+        } catch (error: any) {
+          logger.warn("Failed to parse mixin config", { filename: file.filename, mixin: mixin.name, error: error.message });
+        }
+      }
+    }
+
+    logger.debug("Mixins check completed", { count: clientMods.length });
+    return [...new Set(clientMods)];
+  }
+
+  private async moveClientSideMods(clientMods: string[]): Promise<void> {
+    if (!clientMods.length) {
+      logger.info("No client-side mods to move");
+      return;
+    }
+
+    let successCount = 0, errorCount = 0;
+
+    for (const sourcePath of clientMods) {
+      try {
+        const targetPath = `${this.movePath}/${sourcePath.replace(this.modsPath, "").replace(/^\/+/, "")}`;
+        logger.info("Moving file", { source: sourcePath, target: targetPath });
+        await fs.promises.rename(sourcePath, targetPath);
+        successCount++;
+      } catch (error: any) {
+        logger.error("Failed to move file", { source: sourcePath, error: error.message });
+        errorCount++;
+      }
+    }
+
+    logger.info("File movement completed", { total: clientMods.length, success: successCount, error: errorCount });
+  }
+
+  private async getFilesInfo(): Promise<void> {
+    const jarFiles = this.getJarFiles();
+    logger.info("Getting file information", { fileCount: jarFiles.length });
+
+    for (const jarFilename of jarFiles) {
+      const fullPath = `${this.modsPath}/${jarFilename}`;
+      
+      try {
+        const fileData = fs.readFileSync(fullPath);
+        const mixins = await this.extractMixins(fileData);
+        
+        this.files.push({
+          filename: fullPath,
+          hash: crypto.createHash('sha1').update(fileData).digest('hex'),
+          mixins
+        });
+        
+        logger.debug("File processed", { filename: fullPath, mixinCount: mixins.length });
+      } catch (error: any) {
+        logger.error("Error processing file", { filename: fullPath, error: error.message });
+      }
+    }
+
+    logger.debug("File information collection completed", { processedFiles: this.files.length });
+  }
+
+  private getJarFiles(): string[] {
+    if (!fs.existsSync(this.modsPath)) fs.mkdirSync(this.modsPath, { recursive: true });
+    return fs.readdirSync(this.modsPath).filter(f => f.endsWith(".jar"));
+  }
+
+  private async extractMixins(jarData: Buffer): Promise<IMixinFile[]> {
+    const mixins: IMixinFile[] = [];
+    const zipEntries = Azip(jarData);
+
+    await Promise.all(zipEntries.map(async (entry) => {
+      if (entry.entryName.endsWith(".mixins.json") && !entry.entryName.includes("/")) {
+        try {
+          const data = await entry.getData();
+          mixins.push({ name: entry.entryName, data: data.toString() });
+        } catch (error: any) {
+          logger.error(`Error extracting ${entry.entryName}`, error);
+        }
+      }
+    }));
+
+    return mixins;
+  }
 }
