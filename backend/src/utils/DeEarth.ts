@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import crypto from "node:crypto"
-import { yauzl_promise } from "./yauzl.promise.js"
+//import { yauzl_promise } from "./yauzl.promise.js"
+import { Azip } from "./ziplib.js"
 import got from "got"
 import { Utils } from "./utils.js"
 import config from "./config.js"
@@ -56,6 +57,7 @@ export class DeEarth{
         const result = [...new Set(hash.concat(mixins))]
                 //console.log(result)
         result.forEach(async e=>{
+            console.log(e)
             await fs.promises.rename(`${e}`,`${this.movepath}/${e}`.replace(this.modspath,""))
             //await fs.promises.rename(`${this.modspath}/${e}`,`${this.movepath}/${e}`)
         })
@@ -136,9 +138,9 @@ export class DeEarth{
             const data = fs.readFileSync(file)
             const sha1 = crypto.createHash('sha1').update(data).digest('hex') //Get Hash
             const mxarr:{name:string,data:string}[] = []
-            const mixins = (await yauzl_promise(data)).forEach(async e=>{ //Get Mixins Info to check
-                if(e.fileName.endsWith(".mixins.json")&&!e.fileName.includes("/")){
-                    mxarr.push({name:e.fileName,data:(await e.ReadEntry).toString()})
+            const mixins = (Azip(data)).forEach(async e=>{ //Get Mixins Info to check
+                if(e.entryName.endsWith(".mixins.json")&&!e.entryName.includes("/")){
+                    mxarr.push({name:e.entryName,data:(await e.getData()).toString()})
                 }
             })
             arr.push({filename:file,hash:sha1,mixins:mxarr})

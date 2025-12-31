@@ -1,8 +1,8 @@
 import fs from "node:fs"
 import { fastdownload, version_compare } from "../utils/utils.js";
-import { yauzl_promise } from "../utils/yauzl.promise.js";
 import { pipeline } from "node:stream/promises";
 import got from "got";
+import { Azip } from "../utils/ziplib.js";
 
 interface ILInfo {
     libraries: {
@@ -49,12 +49,12 @@ export class Minecraft {
             // 1.18.x + MC依赖解压
             const mcpath = `${this.path}/libraries/net/minecraft/server/${this.minecraft}/server-${this.minecraft}.jar`
             await fastdownload([`https://bmclapi2.bangbang93.com/version/${this.minecraft}/server`, mcpath])
-            const zip = await yauzl_promise(await fs.promises.readFile(mcpath))
+            const zip = await Azip(await fs.promises.readFile(mcpath))
             for await (const entry of zip) {
-                if (entry.fileName.startsWith("META-INF/libraries/") && !entry.fileName.endsWith("/")) {
-                    console.log(entry.fileName)
-                    const stream = await entry.openReadStream;
-                    const write = fs.createWriteStream(`${this.path}/libraries/${entry.fileName.replace("META-INF/libraries/", "")}`);
+                if (entry.entryName.startsWith("META-INF/libraries/") && !entry.entryName.endsWith("/")) {
+                    console.log(entry.entryName)
+                    const stream = entry.getData();
+                    const write = fs.createWriteStream(`${this.path}/libraries/${entry.entryName.replace("META-INF/libraries/", "")}`);
                     await pipeline(stream, write);
                 }
             }

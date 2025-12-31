@@ -1,0 +1,89 @@
+import yauzl from "yauzl";
+import Stream from "node:stream"
+
+export interface IentryP extends yauzl.Entry {
+    openReadStream: Promise<Stream.Readable>;
+    ReadEntry: Promise<Buffer>;
+}
+
+export async function yauzl_promise(buffer: Buffer): Promise<IentryP[]>{
+   const zip = await (new Promise((resolve,reject)=>{
+    yauzl.fromBuffer(buffer, { lazyEntries: true }, (err, zipfile) => {
+      if (err){
+        reject(err);
+        return;
+      }
+      resolve(zipfile);
+    });
+  }) as Promise<yauzl.ZipFile>);
+
+   return await new Promise((resolve, reject) => {
+    const entries: IentryP[] = [];
+    let entryCount = 0;
+
+    zip.on("entry", (entry: yauzl.Entry) => {
+      // 创建新对象并复制所有entry属性，避免yauzl重用对象导致的引用问题
+      const _entry = Object.assign({}, entry) as IentryP;
+      _entry.openReadStream = _openReadStream(zip, entry);
+      _entry.ReadEntry = _ReadEntry(zip, entry);
+      
+      entries.push(_entry);
+      entryCount++;
+      //console.log(entryCount, entry.fileName);
+      // 继续读取下一个条目
+      zip.readEntry();
+    });
+
+    zip.on("end", () => {
+      zip.close();
+      console.log(entryCount, "entries read");
+      if(entryCount === zip.entryCount){
+        console.log("All entries read");
+        resolve(entries);
+      }
+    });
+
+    zip.on("error", (err) => {
+      reject(err);
+    });
+
+    // 开始读取第一个条目
+    zip.readEntry();
+  });
+}
+
+async function _openReadStream(zip: yauzl.ZipFile, entry: yauzl.Entry): Promise<Stream.Readable>{
+    return new Promise((resolve, reject) => {
+     zip.openReadStream(entry, (err, stream) => {
+         if (err) {
+            reject(err);
+            return;
+         }
+         resolve(stream);
+     });
+    });
+}
+
+async function _ReadEntry(zip: yauzl.ZipFile, entry: yauzl.Entry): Promise<Buffer>{
+  return new Promise((resolve, reject) => {
+    zip.openReadStream(entry, (err, stream) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      
+      const chunks: Buffer[] = [];
+      stream.on("data", (chunk) => {
+        chunks.push(chunk);
+      });
+      
+      stream.on("end", () => {
+        resolve(Buffer.concat(chunks));
+      });
+      
+      stream.on("error", (err) => {
+        reject(err);
+      });
+    });
+  });
+}
