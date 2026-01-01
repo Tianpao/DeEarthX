@@ -25,7 +25,7 @@ export class Dex {
   public async Main(buffer: Buffer, dser: boolean) {
     try {
       const first = Date.now();
-      const zps = await this._zps(buffer);
+      const zps = await this._zips(buffer);
       const { contain, info } = await zps._getinfo();
       const plat = what_platform(contain);
       logger.debug("Platform detected", plat);
@@ -72,7 +72,7 @@ export class Dex {
     }
   }
 
-  private async _zps(buffer: Buffer) {
+  private async _zips(buffer: Buffer) {
     const zip = await yauzl_promise(buffer);
     const _getinfo = async () => {
       const importantFiles = ["manifest.json", "modrinth.index.json"];

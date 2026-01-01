@@ -1,6 +1,7 @@
 import got, { Got } from "got";
 import fs from "node:fs"
 import { execPromise, fastdownload } from "../utils/utils.js";
+import config from "../utils/config.js";
 
 interface ILatestLoader{
     url:string,
@@ -32,7 +33,9 @@ export class Fabric{
 
     async setup():Promise<void>{
         await this.installer()
-        await this.libraries()
+        if(config.mirror.bmclapi){
+            await this.libraries()
+        }
         await this.install()
         await this.wshell()
     }

@@ -3,6 +3,7 @@ import { fastdownload, version_compare } from "../utils/utils.js";
 import { pipeline } from "node:stream/promises";
 import got from "got";
 import { Azip } from "../utils/ziplib.js";
+import config from "../utils/config.js";
 
 interface ILInfo {
     libraries: {
@@ -27,6 +28,10 @@ export class Minecraft {
     }
 
     async setup() {
+        await this.eula() //生成Eula.txt
+        if(!config.mirror.bmclapi){
+            return;
+        }
         switch (this.loader) {
             case "forge":
                 await this.forge_setup();
@@ -41,7 +46,6 @@ export class Minecraft {
                 await this.fabric_setup();
                 break;    
         }
-        await this.eula() //生成Eula.txt
     }
 
     async forge_setup() {

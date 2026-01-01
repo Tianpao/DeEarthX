@@ -4,6 +4,7 @@ import fse from "fs-extra"
 import { execPromise, fastdownload, version_compare } from "../utils/utils.js";
 import { Azip } from "../utils/ziplib.js";
 import { execSync } from "node:child_process";
+import config from "../utils/config.js";
 
 interface Iforge{
     data:{
@@ -34,14 +35,26 @@ export class Forge {
     this.loaderVersion = loaderVersion;
     this.path = path
     this.got = got.extend({
-        prefixUrl: "https://bmclapi2.bangbang93.com",
         headers: { "User-Agent": "DeEarthX" },
+        hooks: {
+            init: [
+                (options) => {
+                    if(config.mirror.bmclapi){
+                        options.prefixUrl = "https://bmclapi2.bangbang93.com";
+                    }else{
+                        options.prefixUrl = "http://maven.minecraftforge.net/";
+                    }
+                }
+            ]
+        }
     })
  }
 
  async setup(){
     await this.installer()
-    await this.library()
+    if(config.mirror.bmclapi){
+        await this.library()
+    }
     await this.install()
     if (version_compare(this.minecraft,"1.18") === -1){
         await this.wshell()
@@ -84,7 +97,11 @@ export class Forge {
  }
 
  async installer(){
-   const res = (await this.got.get(`forge/download?mcversion=${this.minecraft}&version=${this.loaderVersion}&category=installer&format=jar`)).rawBody;
+    let url = `forge/download?mcversion=${this.minecraft}&version=${this.loaderVersion}&category=installer&format=jar`
+    if(!config.mirror?.bmclapi){
+        url = `net/minecraftforge/forge/${this.minecraft}-${this.loaderVersion}/forge-${this.minecraft}-${this.loaderVersion}-installer.jar`
+    }
+   const res = (await this.got.get(url)).rawBody;
    await fse.outputFile(`${this.path}/forge-${this.minecraft}-${this.loaderVersion}-installer.jar`,res);
  }
 

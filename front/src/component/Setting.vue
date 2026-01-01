@@ -60,8 +60,8 @@ const settings: SettingCategory[] = [
       },
       {
         key: 'dexpub',
-        name: 'DeP过滤',
-        description: '过滤 DeP 平台中记录的客户端文件',
+        name: 'DePIS过滤',
+        description: '过滤 DeEarth Public Info Services 平台中记录的客户端文件',
         path: 'filter.dexpub',
         defaultValue: false
       },
