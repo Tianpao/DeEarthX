@@ -193,7 +193,7 @@ export async function fastdownload(data: [string, string]|string[][]) {
 
 export async function Wfastdownload(data: string[][], ws: MessageWS) {
   logger.info(`Starting web download of ${data.length} files`);
-  
+  let index = 0;
   return await pMap(
     data,
     async (item: string[], idx: number) => {
@@ -214,7 +214,7 @@ export async function Wfastdownload(data: string[][], ws: MessageWS) {
             }
             
             // 更新下载进度
-            ws.download(data.length, idx + 1, filePath);
+            ws.download(data.length, ++index, filePath);
           },
           { retries: 3, onFailedAttempt: (error) => {
               logger.warn(`Download attempt failed for ${url}, retrying (${error.attemptNumber}/3)`);
