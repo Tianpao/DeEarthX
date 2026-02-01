@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { inject, ref, watch } from 'vue';
 import { InboxOutlined } from '@ant-design/icons-vue';
 import { message, notification, StepsProps } from 'ant-design-vue';
 import type { UploadFile, UploadChangeParam } from 'ant-design-vue';
@@ -55,6 +55,10 @@ function resetState() {
     currentStep.value = 0;
     unzipProgress.value = { status: 'active', percent: 0, display: true };
     downloadProgress.value = { status: 'active', percent: 0, display: true };
+     const killCoreProcess = inject("killCoreProcess");
+     if (killCoreProcess && typeof killCoreProcess === 'function') {
+        killCoreProcess();
+     }
 }
 
 // 模式选择相关
@@ -90,10 +94,10 @@ const downloadProgress = ref<ProgressStatus>({ status: 'active', percent: 0, dis
 // 运行DeEarthX核心功能
 async function runDeEarthX(file: Blob) {
     message.success('开始制作，请勿切换菜单！');
-    
+
     const formData = new FormData();
     formData.append('file', file);
-    
+
     try {
         const response = await fetch(`http://localhost:37019/start?mode=${selectedMode.value}`, {
             method: 'POST',
@@ -111,11 +115,11 @@ async function runDeEarthX(file: Blob) {
 // 设置WebSocket连接
 function setupWebSocket() {
     const ws = new WebSocket('ws://localhost:37019/');
-    
+
     ws.addEventListener('message', (event) => {
         try {
             const data = JSON.parse(event.data) as WebSocketMessage;
-            
+
             // 处理不同状态的消息
             switch (data.status) {
                 case 'error':
@@ -139,7 +143,7 @@ function setupWebSocket() {
             notification.error({ message: '错误', description: '解析服务器消息失败' });
         }
     });
-    
+
     ws.addEventListener('error', () => {
         notification.error({ message: '错误', description: 'WebSocket连接失败' });
         resetState();
@@ -188,7 +192,7 @@ function handleFinish(result: number) {
     currentStep.value++;
     message.success(`服务端制作完成！共用时${timeSpent}秒！`);
     sendNotification({ title: 'DeEarthX V3', body: `服务端制作完成！共用时${timeSpent}秒！` });
-    
+
     // 8秒后自动重置状态
     setTimeout(resetState, 8000);
 }
@@ -199,10 +203,10 @@ function handleStartProcess() {
         message.warning('请先拖拽或选择文件');
         return;
     }
-    
+
     const file = uploadedFiles.value[0].originFileObj;
     if (!file) return;
-    
+
     runDeEarthX(file);
     startButtonDisabled.value = true;
     uploadDisabled.value = true;
@@ -217,9 +221,9 @@ function handleStartProcess() {
                     <h1 class="tw:text-4xl tw:text-center tw:animate-pulse">DeEarthX</h1>
                     <h1 class="tw:text-sm tw:text-gray-500 tw:text-center">让开服变成随时随地的事情！</h1>
                 </div>
-                <a-upload-dragger :disabled="uploadDisabled" class="tw:w-full tw:max-w-md tw:h-48" name="file" action="/" :multiple="false"
-            :before-upload="beforeUpload" @change="handleFileChange" @drop="handleFileDrop" v-model:fileList="uploadedFiles"
-            accept=".zip,.mrpack">
+                <a-upload-dragger :disabled="uploadDisabled" class="tw:w-full tw:max-w-md tw:h-48" name="file"
+                    action="/" :multiple="false" :before-upload="beforeUpload" @change="handleFileChange"
+                    @drop="handleFileDrop" v-model:fileList="uploadedFiles" accept=".zip,.mrpack">
                     <p class="ant-upload-drag-icon">
                         <inbox-outlined></inbox-outlined>
                     </p>
@@ -227,32 +231,33 @@ function handleStartProcess() {
                     <p class="ant-upload-hint">
                         请使用.zip（CurseForge、MCBBS）和.mrpack（Modrinth）文件
                     </p>
+                    <p class="ant-upload-hint">
+                        PCL导出的zip整合包请拖拽里面的modpack.mrpack至DeX
+                    </p>
                 </a-upload-dragger>
-                   <a-select
-          ref="select"
-          :options="modeOptions"
-          :value="selectedMode"
-          style="width: 120px;margin-top: 32px"
-          @select="handleModeSelect"
-        ></a-select>
-                <a-button :disabled="startButtonDisabled" type="primary" @click="handleStartProcess" style="margin-top: 6px">
+                <a-select ref="select" :options="modeOptions" :value="selectedMode"
+                    style="width: 120px;margin-top: 32px" @select="handleModeSelect"></a-select>
+                <a-button :disabled="startButtonDisabled" type="primary" @click="handleStartProcess"
+                    style="margin-top: 6px">
                     开始
                 </a-button>
             </div>
         </div>
-        <div v-if="showSteps" class="tw:fixed tw:bottom-2 tw:left-1/2 tw:-translate-x-1/2 tw:w-full tw:max-w-3xl tw:h-16 tw:flex tw:justify-center tw:items-center tw:text-sm">
+        <div v-if="showSteps"
+            class="tw:fixed tw:bottom-2 tw:left-1/2 tw:-translate-x-1/2 tw:w-full tw:max-w-3xl tw:h-16 tw:flex tw:justify-center tw:items-center tw:text-sm">
             <a-steps :current="currentStep" :items="stepItems" />
         </div>
-        <div v-if="showSteps" ref="logContainer" class="tw:absolute tw:right-2 tw:bottom-20 tw:h-80 tw:w-64 tw:rounded-xl tw:overflow-y-auto">
-                <a-card title="制作进度" :bordered="true" class="tw:h-full">
-                    <div v-if="unzipProgress.display">
-                  <h1 class="tw:text-sm">解压进度</h1>
-                  <a-progress :percent="unzipProgress.percent" :status="unzipProgress.status" size="small" />
-                  </div>
-                  <div v-if="downloadProgress.display">
-                  <h1 class="tw:text-sm">下载进度</h1>
-                  <a-progress :percent="downloadProgress.percent" :status="downloadProgress.status" size="small" />
-                  </div>
+        <div v-if="showSteps" ref="logContainer"
+            class="tw:absolute tw:right-2 tw:bottom-20 tw:h-80 tw:w-64 tw:rounded-xl tw:overflow-y-auto">
+            <a-card title="制作进度" :bordered="true" class="tw:h-full">
+                <div v-if="unzipProgress.display">
+                    <h1 class="tw:text-sm">解压进度</h1>
+                    <a-progress :percent="unzipProgress.percent" :status="unzipProgress.status" size="small" />
+                </div>
+                <div v-if="downloadProgress.display">
+                    <h1 class="tw:text-sm">下载进度</h1>
+                    <a-progress :percent="downloadProgress.percent" :status="downloadProgress.status" size="small" />
+                </div>
             </a-card>
         </div>
     </div>

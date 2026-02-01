@@ -6,7 +6,7 @@ const sponsors = [
   {
     id: "elfidc",
     name: "亿讯云",
-    imageUrl: "../src/assets/elfidc.svg",
+    imageUrl: "./elfidc.svg",
     type: "金牌赞助",
     url: "https://www.elfidc.com"
   }
@@ -17,18 +17,18 @@ const thanksList = [
   {
     id: "user",
     name: "天跑",
-    avatar: "../src/assets/tianpao.jpg",
+    avatar: "./tianpao.jpg",
     contribution: "作者"
   },
     {
     id: "mirror",
     name: "bangbang93",
-    avatar: "../src/assets/bb93.jpg",
+    avatar: "./bb93.jpg",
     contribution: "BMCLAPI镜像"
   },{
     id: "mirror",
     name: "z0z0r4",
-    avatar: "../src/assets/z0z0r4.jpg",
+    avatar: "./z0z0r4.jpg",
     contribution: "MCIM镜像"
   }
 ];

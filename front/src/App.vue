@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { h, ref } from 'vue';
+import { h, provide, ref } from 'vue';
 import { MenuProps, message } from 'ant-design-vue';
 import { SettingOutlined, UserOutlined, WindowsOutlined } from '@ant-design/icons-vue';
 import { useRouter } from 'vue-router';
@@ -24,22 +24,35 @@ document.oncontextmenu = (event: any) => {
 };
 
 const router = useRouter();
-
+let killCoreProcess: (() => void) | null = null;
 // 启动后端核心服务
-message.loading("DeEarthX.Core启动中，请勿操作...").then(() => {
+message.loading("DeEarthX.Core启动中，请勿操作...").then(() => runCoreProcess());
+
+function runCoreProcess() {
     shell.Command.create("core").spawn()
-        .then(() => {
+        .then((e) => {
             // 检查后端服务是否成功启动
             fetch("http://localhost:37019/", { method: "GET" })
                 .catch(() => router.push('/error'))
                 .then(() => message.success("DeEarthX.Core 启动成功"));
             console.log("DeEarthX V3 Core");
+            // 保存进程对象，用于后续终止
+            killCoreProcess = e.kill;
         })
         .catch((error) => {
             console.error(error);
             message.error("DeEarthX.Core 启动失败，请检查37019端口是否被占用！");
         });
-});
+}
+
+provide("killCoreProcess", () => {
+        if (killCoreProcess && typeof killCoreProcess === 'function') {
+            killCoreProcess();
+            killCoreProcess = null;
+            message.info("DeEarthX.Core 重新启动！");
+            runCoreProcess();
+        }
+}); //全局提供kill方法
 
 // 导航菜单配置
 const selectedKeys = ref<(string | number)[]>(['main']);
@@ -88,7 +101,7 @@ const theme = ref({
     <a-config-provider :theme="theme">
         <div class="tw:h-screen tw:w-screen tw:flex tw:flex-col">
             <a-page-header class="tw:h-16" style="border: 1px solid rgb(235, 237, 240)" title="DeEarthX"
-                sub-title="V3" :avatar="{ src: './public/dex.png' }">
+                sub-title="V3" :avatar="{ src: './dex.png' }">
                 <template #extra>
                     <a-button @click="openAuthorBilibili">作者B站</a-button>
                 </template>
