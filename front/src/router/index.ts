@@ -4,6 +4,7 @@ import Main from "../component/Main.vue";
 import Setting from "../component/Setting.vue";
 import About from "../component/About.vue";
 import Error from "../component/Error.vue";
+import Galaxy from "../component/Galaxy.vue";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -21,6 +22,9 @@ const router = createRouter({
         },{
             path: "/error",
             component: Error
+        },{
+            path: "/galaxy",
+            component: Galaxy
         }
     ]
 })

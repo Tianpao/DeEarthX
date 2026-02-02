@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { h, provide, ref } from 'vue';
 import { MenuProps, message } from 'ant-design-vue';
-import { SettingOutlined, UserOutlined, WindowsOutlined } from '@ant-design/icons-vue';
+import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined } from '@ant-design/icons-vue';
 import { useRouter } from 'vue-router';
 import * as shell from '@tauri-apps/plugin-shell';
 import { invoke } from "@tauri-apps/api/core";
@@ -70,6 +70,12 @@ const menuItems: MenuProps['items'] = [
         title: '设置',
     },
     {
+        key: 'galaxy',
+        icon: h(UploadOutlined),
+        label: '提交',
+        title: '提交',
+    },
+    {
         key: 'about',
         icon: h(UserOutlined),
         label: '关于',
@@ -83,7 +89,8 @@ const handleMenuClick: MenuProps['onClick'] = (e) => {
     const routeMap: Record<string, string> = {
         main: '/',
         setting: '/setting',
-        about: '/about'
+        about: '/about',
+        galaxy: '/galaxy'
     };
     const route = routeMap[e.key] || '/';
     router.push(route);
