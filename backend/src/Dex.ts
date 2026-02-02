@@ -11,6 +11,7 @@ import { execPromise } from "./utils/utils.js";
 import { MessageWS } from "./utils/ws.js";
 import { logger } from "./utils/logger.js";
 import { yauzl_promise } from "./utils/ziplib.js";
+import yauzl from "yauzl";
 
 export class Dex {
   wsx!: WebSocketServer;
@@ -22,11 +23,17 @@ export class Dex {
     });
   }
 
-  public async Main(buffer: Buffer, dser: boolean) {
+  public async Main(buffer: Buffer, dser: boolean, filename?: string) {
     try {
       const first = Date.now();
-      const zps = await this._zips(buffer);
+      const processedBuffer = await this._processModpack(buffer, filename);
+      const zps = await this._zips(processedBuffer);
       const { contain, info } = await zps._getinfo();
+      if (!contain || !info) {
+        logger.error("Modpack info is empty");
+        this.message.handleError(new Error("It seems that the modpack is not a valid modpack."));
+        return;
+      }
       const plat = what_platform(contain);
       logger.debug("Platform detected", plat);
       logger.debug("Modpack info", info);
@@ -72,8 +79,86 @@ export class Dex {
     }
   }
 
+  private async _processModpack(buffer: Buffer, filename?: string): Promise<Buffer> {
+    if (!filename || (!filename.endsWith('.zip') && !filename.endsWith('.mrpack'))) {
+      return buffer;
+    }
+
+    try {
+      const zip = await (new Promise((resolve, reject) => {
+        yauzl.fromBuffer(buffer, { lazyEntries: true }, (err, zipfile) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(zipfile);
+        });
+      }) as Promise<yauzl.ZipFile>);
+
+      return new Promise((resolve, reject) => {
+        let mrpackBuffer: Buffer | null = null;
+        let hasProcessed = false;
+
+        zip.on('entry', (entry: yauzl.Entry) => {
+          if (hasProcessed || !entry.fileName.endsWith('modpack.mrpack')) {
+            zip.readEntry();
+            return;
+          }
+
+          if (entry.fileName === 'modpack.mrpack') {
+            hasProcessed = true;
+            zip.openReadStream(entry, (err, stream) => {
+              if (err) {
+                zip.close();
+                reject(err);
+                return;
+              }
+
+              const chunks: Buffer[] = [];
+              stream.on('data', (chunk) => {
+                chunks.push(chunk);
+              });
+              stream.on('end', () => {
+                mrpackBuffer = Buffer.concat(chunks);
+                zip.close();
+                resolve(mrpackBuffer);
+              });
+              stream.on('error', (err) => {
+                zip.close();
+                reject(err);
+              });
+            });
+          } else {
+            zip.readEntry();
+          }
+        });
+
+        zip.on('end', () => {
+          if (!hasProcessed) {
+            zip.close();
+            resolve(buffer);
+          }
+        });
+
+        zip.on('error', (err) => {
+          zip.close();
+          reject(err);
+        });
+
+        zip.readEntry();
+      });
+    } catch (e) {
+      logger.warn('Failed to check for modpack.mrpack, using original buffer', e);
+      return buffer;
+    }
+  }
+
   private async _zips(buffer: Buffer) {
+    if (buffer.length === 0) {
+      throw new Error("zip buffer is empty");
+    }
     const zip = await yauzl_promise(buffer);
+    let index = 0;
     const _getinfo = async () => {
       const importantFiles = ["manifest.json", "modrinth.index.json"];
       for await (const entry of zip) {
@@ -83,10 +168,13 @@ export class Dex {
           logger.debug("Found important file", { fileName: entry.fileName, info });
           return { contain: entry.fileName, info };
         }
+        index++;
       }
       throw new Error("No manifest file found in modpack");
     }
-
+    if (index === zip.length) {
+      throw new Error("No manifest file found in modpack");
+    }
     const _unzip = async (instancename: string) => {
       logger.info("Starting unzip process", { instancename });
       const instancePath = `./instance/${instancename}`;

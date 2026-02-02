@@ -93,7 +93,7 @@ export class Core {
                 logger.info("Starting task", { isServerMode });
                 
                 // 非阻塞执行主要任务
-                this.dex.Main(req.file.buffer, isServerMode).catch(err => {
+                this.dex.Main(req.file.buffer, isServerMode, req.file.originalname).catch(err => {
                     logger.error("Task execution failed", err);
                 });
                 

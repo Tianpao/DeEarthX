@@ -2,6 +2,7 @@ import { Fabric } from "./fabric.js";
 import { Forge } from "./forge.js";
 import { Minecraft } from "./minecraft.js";
 import { NeoForge } from "./neoforge.js";
+import fs from "node:fs";
 
 /**
  * 模组加载器接口
@@ -54,4 +55,18 @@ export async function mlsetup(ml: string, mcv: string, mlv: string, path: string
  */
 export async function dinstall(ml: string, mcv: string, mlv: string, path: string): Promise<void> {
   await modloader(ml, mcv, mlv, path).installer();
+  
+  let cmd = '';
+  if (ml === 'forge' || ml === 'neoforge') {
+    cmd = `java -jar forge-${mcv}-${mlv}-installer.jar --installServer`;
+  } else if (ml === 'fabric' || ml === 'fabric-loader') {
+    await fs.promises.writeFile(`${path}/run.bat`,`@echo off\njava -jar fabric-server-launch.jar\n`)
+    await fs.promises.writeFile(`${path}/run.sh`,`#!/bin/bash\njava -jar fabric-server-launch.jar\n`)
+    cmd = `java -jar fabric-installer.jar server -dir . -mcversion ${mcv} -loader ${mlv} -downloadMinecraft`;
+  }
+
+  if (cmd) {
+    await fs.promises.writeFile(`${path}/install.bat`, `@echo off\n${cmd}\necho Install Successfully,Enter Some Key to Exit!\npause\n`);
+    await fs.promises.writeFile(`${path}/install.sh`, `#!/bin/bash\n${cmd}\n`);
+  }
 }

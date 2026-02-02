@@ -5,7 +5,7 @@ import pRetry from "p-retry";
 import fs from "node:fs";
 import fse from "fs-extra";
 import { WebSocket } from "ws";
-import { ExecOptions, exec} from "node:child_process";
+import { ExecOptions, exec, spawn} from "node:child_process";
 
 /**
  * Java版本信息接口
@@ -135,20 +135,43 @@ export async function checkJava(): Promise<JavaCheckResult> {
 
 export function execPromise(cmd:string,options?:ExecOptions){
   logger.debug(`Executing command: ${cmd}`);
-  return new Promise((resolve,reject)=>{
-    exec(cmd,options,(err,stdout,stderr)=>{
-      if(err){
-        logger.error(`Command execution failed: ${cmd}`, err);
+  return new Promise<number>((resolve,reject)=>{
+    const args = cmd.split(' ');
+    const command = args.shift() || '';
+    
+    const child = spawn(command, args, {
+      ...options,
+      shell: true
+    });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    child.stdout?.on('data', (data) => {
+      stdout += data.toString();
+    });
+    
+    child.stderr?.on('data', (data) => {
+      stderr += data.toString();
+    });
+    
+    child.on('close', (code) => {
+      if (code !== 0) {
+        logger.error(`Command execution failed: ${cmd}`);
         logger.debug(`Stderr: ${stderr}`);
-        reject(err)
+        reject(new Error(`Command failed with exit code ${code}`));
         return;
       }
       if (stdout) logger.debug(`Command stdout: ${stdout}`);
       if (stderr) logger.debug(`Command stderr: ${stderr}`);
-    }).on('exit',(code)=>{
       logger.debug(`Command completed with exit code: ${code}`);
-      resolve(code)
-    })
+      resolve(code || 0);
+    });
+    
+    child.on('error', (err) => {
+      logger.error(`Command execution error: ${cmd}`, err);
+      reject(err);
+    });
   })
 }
 
