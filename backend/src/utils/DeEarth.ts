@@ -1,12 +1,18 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { Azip } from "./ziplib.js";
-import got from "got";
+import got, { Got } from "got";
 import { Utils } from "./utils.js";
 import config from "./config.js";
 import { logger } from "./logger.js";
+import toml from "smol-toml";
 
 interface IMixinFile {
+  name: string;
+  data: string;
+}
+
+interface IInfoFile {
   name: string;
   data: string;
 }
@@ -15,6 +21,7 @@ interface IFileInfo {
   filename: string;
   hash: string;
   mixins: IMixinFile[];
+  infos: IInfoFile[];
 }
 
 interface IHashResponse {
@@ -27,23 +34,36 @@ interface IProjectInfo {
   server_side: string;
 }
 
+interface checkDexpubForClientMods {
+  serverMods: string[];
+  clientMods: string[];
+}
+
 export class DeEarth {
   private movePath: string;
   private modsPath: string;
   private files: IFileInfo[];
   private utils: Utils;
+  private got: Got;
 
   constructor(modsPath: string, movePath: string) {
     this.utils = new Utils();
     this.movePath = movePath;
     this.modsPath = modsPath;
     this.files = [];
+    this.got = got.extend({
+      prefixUrl: "https://galaxy.tianpao.top/",
+      headers: {
+        "User-Agent": "DeEarthX",
+      },
+      responseType: "json",
+    });
     logger.debug("DeEarth instance created", { modsPath, movePath });
   }
 
   async Main(): Promise<void> {
     logger.info("Starting DeEarth process");
-    
+
     if (!fs.existsSync(this.movePath)) {
       logger.debug("Creating target directory", { path: this.movePath });
       fs.mkdirSync(this.movePath, { recursive: true });
@@ -52,11 +72,11 @@ export class DeEarth {
     await this.getFilesInfo();
     const clientSideMods = await this.identifyClientSideMods();
     await this.moveClientSideMods(clientSideMods);
-    
+
     logger.info("DeEarth process completed");
   }
 
-  private async identifyClientSideMods(): Promise<string[]> {
+  private async identifyClientSideMods(): Promise<string[]> { // 识别客户端Mod主函数
     const clientMods: string[] = [];
 
     if (config.filter.hashes) {
@@ -69,9 +89,65 @@ export class DeEarth {
       clientMods.push(...await this.checkMixinsForClientMods());
     }
 
+    if (config.filter.dexpub) {
+      logger.info("Starting dexpub check for client-side mods");
+      const dexpubMods = await this.checkDexpubForClientMods();
+      clientMods.push(...dexpubMods.clientMods);
+      const serverModsListSet = new Set(dexpubMods.serverMods);
+      for(let i=0;i>=clientMods.length - 1;i--){
+        if (serverModsListSet.has(clientMods[i])){
+          clientMods.splice(i,1);
+        }
+      }
+
+      logger.info("Dexpub check completed", { serverMods: dexpubMods.serverMods, clientMods: dexpubMods.clientMods });
+    }
+
     const uniqueMods = [...new Set(clientMods)];
     logger.info("Client-side mods identified", { count: uniqueMods.length, mods: uniqueMods });
     return uniqueMods;
+  }
+
+  private async checkDexpubForClientMods(): Promise<checkDexpubForClientMods> {
+    const clientMods: string[] = [];
+    const serverMods: string[] = [];
+    const modIds: string[] = [];
+    const map: Map<string, string> = new Map();
+    for (const file of this.files) {
+      for (const info of file.infos) {
+        const config = JSON.parse(info.data);
+        const keys = Object.keys(config);
+        if (keys.includes("id")) {
+          modIds.push(config.id);
+          map.set(config.id, file.filename);
+        }else if(keys.includes("mods")){
+          modIds.push(config.mods[0].modId);
+          map.set(config.mods[0].modId, file.filename);
+        }
+      }
+    }
+    const modids = modIds;
+    const modIdToIsTypeMod = await this.got.post(`api/mod/check`,{
+      json: {
+        modids,
+      }
+    }).json<{[modId: string]: boolean}>()
+    const modIdToIsTypeModKeys = Object.keys(modIdToIsTypeMod);
+    for(const modId of modIdToIsTypeModKeys){
+      if(modIdToIsTypeMod[modId]){
+        const MapData = map.get(modId);
+        if(MapData){
+          clientMods.push(MapData);
+        }
+      }else{
+        const MapData = map.get(modId);
+        if(MapData){
+          serverMods.push(MapData);
+        }
+      }
+    }
+    logger.info("Galaxy check client-side mods", { count: clientMods.length, mods: clientMods });
+    return { serverMods, clientMods };
   }
 
   private async checkHashesForClientMods(): Promise<string[]> {
@@ -164,17 +240,19 @@ export class DeEarth {
 
     for (const jarFilename of jarFiles) {
       const fullPath = `${this.modsPath}/${jarFilename}`;
-      
+
       try {
         const fileData = fs.readFileSync(fullPath);
         const mixins = await this.extractMixins(fileData);
-        
+        const infos = await this.extractModInfo(fileData);
+
         this.files.push({
           filename: fullPath,
           hash: crypto.createHash('sha1').update(fileData).digest('hex'),
-          mixins
+          mixins,
+          infos,
         });
-        
+
         logger.debug("File processed", { filename: fullPath, mixinCount: mixins.length });
       } catch (error: any) {
         logger.error("Error processing file", { filename: fullPath, error: error.message });
@@ -187,6 +265,27 @@ export class DeEarth {
   private getJarFiles(): string[] {
     if (!fs.existsSync(this.modsPath)) fs.mkdirSync(this.modsPath, { recursive: true });
     return fs.readdirSync(this.modsPath).filter(f => f.endsWith(".jar"));
+  }
+
+  private async extractModInfo(jarData: Buffer): Promise<IInfoFile[]> {
+    const infos: IInfoFile[] = [];
+    const zipEntries = Azip(jarData);
+    await Promise.all(zipEntries.map(async (entry) => {
+      try {
+        if (entry.entryName.endsWith("neoforge.mods.toml") || entry.entryName.endsWith("mods.toml")) {
+          const data = await entry.getData();
+          infos.push({ name: entry.entryName, data: JSON.stringify(toml.parse(data.toString())) });
+        } else if (entry.entryName.endsWith("fabric.mod.json")) {
+          const data = await entry.getData();
+          infos.push({ name: entry.entryName, data: data.toString() });
+        }
+      } catch (error: any) {
+        logger.error(`Error extracting ${entry.entryName}`, error);
+      }
+    }
+    )
+    )
+    return infos;
   }
 
   private async extractMixins(jarData: Buffer): Promise<IMixinFile[]> {

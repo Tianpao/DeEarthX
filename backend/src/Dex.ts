@@ -80,7 +80,7 @@ export class Dex {
   }
 
   private async _processModpack(buffer: Buffer, filename?: string): Promise<Buffer> {
-    if (!filename || (!filename.endsWith('.zip') && !filename.endsWith('.mrpack'))) {
+    if (!filename || !filename.endsWith('.zip')) {
       return buffer;
     }
 
@@ -94,7 +94,7 @@ export class Dex {
           resolve(zipfile);
         });
       }) as Promise<yauzl.ZipFile>);
-
+      logger.info("Modpack zip file detected,It is a PCL packege,try to extract modpack.mrpack");
       return new Promise((resolve, reject) => {
         let mrpackBuffer: Buffer | null = null;
         let hasProcessed = false;

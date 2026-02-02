@@ -60,8 +60,8 @@ const settings: SettingCategory[] = [
       },
       {
         key: 'dexpub',
-        name: 'DePIS过滤',
-        description: '过滤 DeEarth Public Info Services 平台中记录的客户端文件',
+        name: 'Galaxy Square 过滤',
+        description: '过滤 Galaxy Square 平台中记录的客户端文件',
         path: 'filter.dexpub',
         defaultValue: false
       },

@@ -7,6 +7,7 @@ import { Config, IConfig } from "./utils/config.js";
 import { Dex } from "./Dex.js";
 import { logger } from "./utils/logger.js";
 import { checkJava, JavaCheckResult } from "./utils/utils.js";
+import { Galaxy } from "./galaxy.js";
 export class Core {
     private config: IConfig;
     private readonly app: Application;
@@ -16,16 +17,18 @@ export class Core {
     private readonly upload: multer.Multer;
     private task: {} = {};
     dex: Dex;
+    galaxy: Galaxy;
     constructor(config: IConfig) {
         this.config = config
         this.app = express();
         this.server = createServer(this.app);
-        this.upload = multer()
         this.ws = new WebSocketServer({ server: this.server })
         this.ws.on("connection",(e)=>{
             this.wsx = e
         })
         this.dex = new Dex(this.ws)
+        this.galaxy = new Galaxy()
+        this.upload = multer();
     }
 
     private async javachecker() {
@@ -129,6 +132,8 @@ export class Core {
                 res.status(500).json({ status: 500, message: "Failed to update config" });
             }
         });
+
+        this.app.use("/galaxy", this.galaxy.getRouter());
     }
 
     public async start() {

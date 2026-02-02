@@ -26,7 +26,7 @@ const DEFAULT_CONFIG: IConfig = {
   },
   filter: {
     hashes: true,
-    dexpub: false,
+    dexpub: true,
     mixins: true,
   },
   oaf: true
