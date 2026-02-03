@@ -92,15 +92,15 @@ export class DeEarth {
     if (config.filter.dexpub) {
       logger.info("Starting dexpub check for client-side mods");
       const dexpubMods = await this.checkDexpubForClientMods();
-      clientMods.push(...dexpubMods.clientMods);
       const serverModsListSet = new Set(dexpubMods.serverMods);
-      for(let i=0;i>=clientMods.length - 1;i--){
+      for(let i=clientMods.length - 1;i>=0;i--){
         if (serverModsListSet.has(clientMods[i])){
           clientMods.splice(i,1);
         }
       }
+      clientMods.push(...dexpubMods.clientMods);
 
-      logger.info("Dexpub check completed", { serverMods: dexpubMods.serverMods, clientMods: dexpubMods.clientMods });
+      logger.info("Galaxy Square check completed", { serverMods: dexpubMods.serverMods, clientMods: dexpubMods.clientMods });
     }
 
     const uniqueMods = [...new Set(clientMods)];
@@ -146,7 +146,6 @@ export class DeEarth {
         }
       }
     }
-    logger.info("Galaxy check client-side mods", { count: clientMods.length, mods: clientMods });
     return { serverMods, clientMods };
   }
 
