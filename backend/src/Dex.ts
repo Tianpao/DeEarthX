@@ -181,15 +181,21 @@ export class Dex {
       let index = 1;
       for await (const entry of zip) {
         const isDir = entry.fileName.endsWith("/");
-        console.log(index, entry.fileName);
+        logger.info(`index: ${index}, fileName: ${entry.fileName}`);
         if (isDir) {
+          if (this._ublack(entry.fileName)) {
+            this.message.unzip(entry.fileName, zip.length, index);
+            index++;
+            continue;
+          }
           await fs.promises.mkdir(`${instancePath}/${entry.fileName}`, {
             recursive: true,
           });
         } else if (entry.fileName.startsWith("overrides/")) {
           // 跳过黑名单文件
           if (this._ublack(entry.fileName)) {
-            console.log("Skip blacklist file", entry.fileName);
+            logger.info("Skip blacklist file", entry.fileName);
+            this.message.unzip(entry.fileName, zip.length, index);
             index++;
             continue;
           }
@@ -222,7 +228,10 @@ export class Dex {
       "overrides/options.txt",
       "shaderpacks",
       "essential",
-      "resourcepacks"
+      "resourcepacks",
+      "PCL",
+      "CustomSkinLoader",
+      "overrides"
     ];
     
     return blacklist.some(item => filename.includes(item));

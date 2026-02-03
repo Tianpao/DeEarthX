@@ -113,8 +113,10 @@ export class DeEarth {
     const serverMods: string[] = [];
     const modIds: string[] = [];
     const map: Map<string, string> = new Map();
+    try{
     for (const file of this.files) {
       for (const info of file.infos) {
+        try{
         const config = JSON.parse(info.data);
         const keys = Object.keys(config);
         if (keys.includes("id")) {
@@ -124,6 +126,9 @@ export class DeEarth {
           modIds.push(config.mods[0].modId);
           map.set(config.mods[0].modId, file.filename);
         }
+      }catch(error: any){
+        logger.error("Checking mod info file failed, filename: " + file.filename, error);
+      }
       }
     }
     const modids = modIds;
@@ -145,6 +150,9 @@ export class DeEarth {
           serverMods.push(MapData);
         }
       }
+    }
+    }catch(error: any){
+      logger.error("Dexpub check failed", error);
     }
     return { serverMods, clientMods };
   }
