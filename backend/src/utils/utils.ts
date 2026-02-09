@@ -39,7 +39,7 @@ export class Utils {
     this.modrinth_url = "https://api.modrinth.com";
     this.curseforge_url = "https://api.curseforge.com";
     this.modrinth_Durl = "https://cdn.modrinth.com";
-    this.curseforge_Durl = "https://media.forgecdn.net";
+    this.curseforge_Durl = "https://edge.forgecdn.net";
     if (config.mirror.mcimirror) {
       this.modrinth_url = "https://mod.mcimirror.top/modrinth";
       this.curseforge_url = "https://mod.mcimirror.top/curseforge";
@@ -141,29 +141,16 @@ export function execPromise(cmd:string,options?:ExecOptions){
     
     const child = spawn(command, args, {
       ...options,
-      shell: true
-    });
-    
-    let stdout = '';
-    let stderr = '';
-    
-    child.stdout?.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    child.stderr?.on('data', (data) => {
-      stderr += data.toString();
+      shell: true,
+      stdio: ['ignore', 'ignore', 'ignore']
     });
     
     child.on('close', (code) => {
       if (code !== 0) {
         logger.error(`Command execution failed: ${cmd}`);
-        logger.debug(`Stderr: ${stderr}`);
         reject(new Error(`Command failed with exit code ${code}`));
         return;
       }
-      if (stdout) logger.debug(`Command stdout: ${stdout}`);
-      if (stderr) logger.debug(`Command stderr: ${stderr}`);
       logger.debug(`Command completed with exit code: ${code}`);
       resolve(code || 0);
     });
@@ -175,8 +162,31 @@ export function execPromise(cmd:string,options?:ExecOptions){
   })
 }
 
+async function downloadFile(url: string, filePath: string, onProgress?: (total: number, current: number, path: string) => void) {
+  await pRetry(
+    async () => {
+      if (!fs.existsSync(filePath)) {
+        logger.debug(`Downloading ${url} to ${filePath}`);
+        const res = await got.get(url, {
+          responseType: "buffer",
+          headers: { "user-agent": "DeEarthX" },
+        });
+        fse.outputFileSync(filePath, res.rawBody);
+        logger.debug(`Downloaded ${url} successfully`);
+      } else {
+        logger.debug(`File already exists, skipping: ${filePath}`);
+      }
+    },
+    { 
+      retries: 3, 
+      onFailedAttempt: (error) => {
+        logger.warn(`Download attempt failed for ${url}, retrying (${error.attemptNumber}/3)`);
+      }
+    }
+  );
+}
+
 export async function fastdownload(data: [string, string]|string[][]) {
-  // 确保downloadList始终是[string, string][]类型
   const downloadList: [string, string][] = Array.isArray(data[0]) 
     ? (data as string[][]).map(item => item as [string, string]) 
     : [data as [string, string]];
@@ -187,24 +197,7 @@ export async function fastdownload(data: [string, string]|string[][]) {
     async (item: [string, string]) => {
       const [url, filePath] = item;
       try {
-        await pRetry(
-          async () => {
-            if (!fs.existsSync(filePath)) {
-              logger.debug(`Downloading ${url} to ${filePath}`);
-              const res = await got.get(url, {
-                responseType: "buffer",
-                headers: { "user-agent": "DeEarthX" },
-              });
-              fse.outputFileSync(filePath, res.rawBody);
-              logger.debug(`Downloaded ${url} successfully`);
-            } else {
-              logger.debug(`File already exists, skipping: ${filePath}`);
-            }
-          },
-          { retries: 3, onFailedAttempt: (error) => {
-              logger.warn(`Download attempt failed for ${url}, retrying (${error.attemptNumber}/3)`);
-            }}
-        );
+        await downloadFile(url, filePath);
       } catch (error) {
         logger.error(`Failed to download ${url} after 3 attempts`, error);
         throw error;
@@ -219,30 +212,11 @@ export async function Wfastdownload(data: string[][], ws: MessageWS) {
   let index = 0;
   return await pMap(
     data,
-    async (item: string[], idx: number) => {
+    async (item: string[]) => {
       const [url, filePath] = item;
       try {
-        await pRetry(
-          async () => {
-            if (!fs.existsSync(filePath)) {
-              logger.debug(`Downloading ${url} to ${filePath}`);
-              const res = await got.get(url, {
-                responseType: "buffer",
-                headers: { "user-agent": "DeEarthX" },
-              });
-              fse.outputFileSync(filePath, res.rawBody);
-              logger.debug(`Downloaded ${url} successfully`);
-            } else {
-              logger.debug(`File already exists, skipping: ${filePath}`);
-            }
-            
-            // 更新下载进度
-            ws.download(data.length, ++index, filePath);
-          },
-          { retries: 3, onFailedAttempt: (error) => {
-              logger.warn(`Download attempt failed for ${url}, retrying (${error.attemptNumber}/3)`);
-            }}
-        );
+        await downloadFile(url, filePath);
+        ws.download(data.length, ++index, filePath);
       } catch (error) {
         logger.error(`Failed to download ${url} after 3 attempts`, error);
         throw error;

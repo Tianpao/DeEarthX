@@ -43,7 +43,7 @@ export class Dex {
       await Promise.all([
         zps._unzip(mpname),
         platform(plat).downloadfile(info, unpath, this.message)
-      ]).catch(e=>{
+      ]).catch(e => {
         console.log(e);
       });
       this.message.statusChange(); //改变状态
@@ -70,7 +70,7 @@ export class Dex {
       if (config.oaf) {
         await execPromise(`start ${p.join("./instance")}`);
       }
-      
+
       logger.info(`Task completed in ${latest - first}ms`);
     } catch (e) {
       const err = e as Error;
@@ -182,30 +182,45 @@ export class Dex {
       for await (const entry of zip) {
         const isDir = entry.fileName.endsWith("/");
         logger.info(`index: ${index}, fileName: ${entry.fileName}`);
+
+        // 只解压 overrides/ 目录下的内容，跳过其他所有文件和目录
+        if (!entry.fileName.startsWith("overrides/")) {
+          logger.info("Skip non-overrides file", entry.fileName);
+          this.message.unzip(entry.fileName, zip.length, index);
+          index++;
+          continue;
+        }
+
+        // 跳过 overrides 目录本身
+        if (entry.fileName === "overrides/") {
+          logger.info("Skip overrides directory", entry.fileName);
+          this.message.unzip(entry.fileName, zip.length, index);
+          index++;
+          continue;
+        }
+
+        // 跳过黑名单文件/目录
+        if (this._ublack(entry.fileName)) {
+          logger.info("Skip blacklist file", entry.fileName);
+          this.message.unzip(entry.fileName, zip.length, index);
+          index++;
+          continue;
+        }
+
         if (isDir) {
-          if (this._ublack(entry.fileName)) {
-            this.message.unzip(entry.fileName, zip.length, index);
-            index++;
-            continue;
-          }
-          await fs.promises.mkdir(`${instancePath}/${entry.fileName}`, {
+          let targetPath = entry.fileName.replace("overrides/", "");
+          await fs.promises.mkdir(`${instancePath}/${targetPath}`, {
             recursive: true,
           });
-        } else if (entry.fileName.startsWith("overrides/")) {
-          // 跳过黑名单文件
-          if (this._ublack(entry.fileName)) {
-            logger.info("Skip blacklist file", entry.fileName);
-            this.message.unzip(entry.fileName, zip.length, index);
-            index++;
-            continue;
-          }
+        } else {
+          let targetPath = entry.fileName.replace("overrides/", "");
+
           // 创建目标目录
-          const targetPath = entry.fileName.replace("overrides/", "");
           const dirPath = `${instancePath}/${targetPath.substring(0, targetPath.lastIndexOf("/"))}`;
           await fs.promises.mkdir(dirPath, { recursive: true });
+
           // 解压文件
           const stream = await entry.openReadStream;
-          console.log(entry.fileName);
           const write = fs.createWriteStream(`${instancePath}/${targetPath}`);
           await pipeline(stream, write);
         }
@@ -223,17 +238,25 @@ export class Dex {
    * @returns 是否在黑名单中
    */
   private _ublack(filename: string): boolean {
-    if (filename === "overrides/") return true;
     const blacklist = [
       "overrides/options.txt",
-      "shaderpacks",
-      "essential",
-      "resourcepacks",
-      "PCL",
-      "CustomSkinLoader",
-      "overrides"
+      "overrides/shaderpacks",
+      "overrides/essential",
+      "overrides/resourcepacks",
+      "overrides/PCL",
+      "overrides/CustomSkinLoader"
     ];
-    
-    return blacklist.some(item => filename.includes(item));
+
+    // 跳过 overrides/ 目录本身
+    if (filename === "overrides/" || filename === "overrides") {
+      return true;
+    }
+
+    // 统一处理：确保黑名单项和文件名都以 / 结尾进行比较
+    return blacklist.some(item => {
+      const normalizedItem = item.endsWith("/") ? item : item + "/";
+      const normalizedFilename = filename.endsWith("/") ? filename : filename + "/";
+      return normalizedFilename === normalizedItem || normalizedFilename.startsWith(normalizedItem);
+    });
   }
 }
