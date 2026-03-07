@@ -2,7 +2,7 @@
 import { ref, watch, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
-import { DownloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
+import { UploadOutlined } from '@ant-design/icons-vue';
 import { setLanguage, type Language } from '../i18n/vue-i18n';
 
 // 配置接口定义
@@ -260,26 +260,6 @@ async function saveConfig(newConfig: AppConfig) {
   }
 }
 
-// 导出配置
-async function exportConfig() {
-  try {
-    const configJson = JSON.stringify(config.value, null, 2);
-    const blob = new Blob([configJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `deearthx_config_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    message.success(t('setting.config_exported'));
-  } catch (error) {
-    console.error('导出配置失败:', error);
-    message.error(t('setting.config_export_failed'));
-  }
-}
-
 // 导入配置
 function importConfig() {
   const input = document.createElement('input');
@@ -401,16 +381,8 @@ watch(config, (newValue) => {
         </h1>
         <p class="tw:text-gray-500 tw:text-lg">{{ t('setting.subtitle') }}</p>
         
-        <!-- 配置导入导出按钮 -->
+        <!-- 配置导入按钮 -->
         <div class="tw:flex tw:justify-center tw:gap-4 tw:mt-6">
-          <a-button 
-            type="primary" 
-            :icon="DownloadOutlined" 
-            @click="exportConfig"
-            class="tw:tw-flex tw:items-center tw:gap-2"
-          >
-            {{ t('setting.export_config') }}
-          </a-button>
           <a-button 
             :icon="UploadOutlined" 
             @click="importConfig"
