@@ -1,4 +1,6 @@
 import { formatLevel, formatTime, colorize, COLORS } from "./colors.js";
+import * as fs from "fs";
+import * as path from "path";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -9,11 +11,50 @@ interface Logger {
   error: (message: string, meta?: any) => void;
 }
 
+const logsDir = path.join(process.cwd(), "logs");
+
+const ensureLogsDir = () => {
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+};
+
+const generateLogFileName = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const timestamp = Date.now();
+  return `${year}-${month}-${day}-${timestamp}.log`;
+};
+
+const logFilePath = path.join(logsDir, generateLogFileName());
+
+const writeToFile = (level: LogLevel, message: string, meta?: any) => {
+  const timestamp = formatTime();
+  let metaStr = "";
+  if (meta) {
+    try {
+      const metaContent = typeof meta === "object" 
+        ? JSON.stringify(meta) 
+        : String(meta);
+      metaStr = ` ${metaContent}`;
+    } catch {
+      metaStr = " [元数据解析错误]";
+    }
+  }
+  const logLine = `${timestamp} [${level.toUpperCase()}] ${message}${metaStr}\n`;
+  fs.appendFileSync(logFilePath, logLine, "utf-8");
+};
+
+ensureLogsDir();
+
 const log = (level: LogLevel, message: string, meta?: any) => {
   const timestamp = formatTime();
   const levelTag = formatLevel(level);
   
-  // 格式化元数据（如果有）
+  writeToFile(level, message, meta);
+  
   let metaStr = "";
   if (meta) {
     try {
@@ -26,7 +67,6 @@ const log = (level: LogLevel, message: string, meta?: any) => {
     }
   }
   
-  // 错误级别加粗显示
   const msg = level === "error" 
     ? colorize(message, COLORS.bright) 
     : message;
