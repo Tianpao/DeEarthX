@@ -89,7 +89,7 @@ export class Dex {
         mlinfo.minecraft,
         mlinfo.loader_version,
         unpath
-      ); // 安装服务端
+      ) // 安装服务端
     } else {
       dinstall(
         mlinfo.loader,
@@ -154,7 +154,11 @@ export class Dex {
 
               const chunks: Buffer[] = [];
               stream.on('data', (chunk) => {
-                chunks.push(chunk);
+                if (Buffer.isBuffer(chunk)) {
+                  chunks.push(chunk);
+                } else if (typeof chunk === 'string') {
+                  chunks.push(Buffer.from(chunk));
+                }
               });
               stream.on('end', () => {
                 mrpackBuffer = Buffer.concat(chunks);

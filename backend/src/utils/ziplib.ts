@@ -34,7 +34,11 @@ export async function yauzl_promise(buffer: Buffer): Promise<IentryP[]> {
         }
         const chunks: Buffer[] = [];
         stream.on("data", (chunk) => {
-          chunks.push(chunk);
+          if (Buffer.isBuffer(chunk)) {
+            chunks.push(chunk);
+          } else if (typeof chunk === 'string') {
+            chunks.push(Buffer.from(chunk));
+          }
         });
         stream.on("end", () => {
           resolve(Buffer.concat(chunks));

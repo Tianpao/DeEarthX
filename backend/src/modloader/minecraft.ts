@@ -57,9 +57,9 @@ export class Minecraft {
             for await (const entry of zip) {
                 if (entry.entryName.startsWith("META-INF/libraries/") && !entry.entryName.endsWith("/")) {
                     console.log(entry.entryName)
-                    const stream = entry.getData();
-                    const write = fs.createWriteStream(`${this.path}/libraries/${entry.entryName.replace("META-INF/libraries/", "")}`);
-                    await pipeline(stream, write);
+                    const data = entry.getData();
+                    const filepath = `${this.path}/libraries/${entry.entryName.replace("META-INF/libraries/", "")}`;
+                    await fs.promises.writeFile(filepath, data);
                 }
             }
             // 1.18.x + 依赖解压

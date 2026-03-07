@@ -4,8 +4,7 @@ import got from "got";
 import pRetry from "p-retry";
 import fs from "node:fs";
 import fse from "fs-extra";
-import { WebSocket } from "ws";
-import { ExecOptions, exec, spawn} from "node:child_process";
+import { SpawnOptions, exec, spawn } from "node:child_process";
 import crypto from "node:crypto";
 
 /**
@@ -94,25 +93,25 @@ export async function checkJava(javaPath?: string): Promise<JavaCheckResult> {
     });
 
     logger.debug(`Java version output: ${output}`);
-    
+
     // 解析Java版本信息
     const versionRegex = /version "(\d+)(\.(\d+))?(\.(\d+))?/;
     const vendorRegex = /(Java\(TM\)|OpenJDK).*Runtime Environment.*by (.*)/;
-    
+
     const versionMatch = output.match(versionRegex);
     const vendorMatch = output.match(vendorRegex);
-    
+
     if (!versionMatch) {
       return {
         exists: true,
         error: "解析 Java 版本失败"
       };
     }
-    
+
     const major = parseInt(versionMatch[1], 10);
     const minor = versionMatch[3] ? parseInt(versionMatch[3], 10) : 0;
     const patch = versionMatch[5] ? parseInt(versionMatch[5], 10) : 0;
-    
+
     const versionInfo: JavaVersion = {
       major,
       minor,
@@ -120,9 +119,9 @@ export async function checkJava(javaPath?: string): Promise<JavaCheckResult> {
       fullVersion: versionMatch[0].replace("version ", ""),
       vendor: vendorMatch ? vendorMatch[2] : "Unknown"
     };
-    
+
     logger.info(`检测到 Java: ${JSON.stringify(versionInfo)}`);
-    
+
     return {
       exists: true,
       version: versionInfo
@@ -142,7 +141,7 @@ export async function checkJava(javaPath?: string): Promise<JavaCheckResult> {
  */
 export async function detectJavaPaths(): Promise<string[]> {
   const javaPaths: string[] = [];
-  
+
   // Windows 常见Java安装路径
   const windowsPaths = [
     "C:\\Program Files\\Java\\",
@@ -157,7 +156,7 @@ export async function detectJavaPaths(): Promise<string[]> {
     "C:\\Program Files\\Oracle\\",
     "C:\\Program Files\\RedHat\\",
   ];
-  
+
   // 检查Windows路径
   for (const basePath of windowsPaths) {
     try {
@@ -174,7 +173,7 @@ export async function detectJavaPaths(): Promise<string[]> {
       // 忽略权限错误
     }
   }
-  
+
   // 检查系统PATH中的java
   try {
     const pathOutput = await new Promise<string>((resolve, reject) => {
@@ -186,7 +185,7 @@ export async function detectJavaPaths(): Promise<string[]> {
         resolve(stdout);
       });
     });
-    
+
     const wherePaths = pathOutput.split('\n').filter(p => p.trim() !== '');
     for (const path of wherePaths) {
       if (!javaPaths.includes(path.trim())) {
@@ -196,40 +195,82 @@ export async function detectJavaPaths(): Promise<string[]> {
   } catch (error) {
     // 忽略错误
   }
-  
+
   // 去重
   return [...new Set(javaPaths)];
 }
 
-export function execPromise(cmd:string,options?:ExecOptions){
-  logger.debug(`执行命令: ${cmd}`);
-  return new Promise<number>((resolve,reject)=>{
-    const args = cmd.split(' ');
-    const command = args.shift() || '';
-    
-    const child = spawn(command, args, {
+/**
+ * 安全地记录日志，避免因 logger 内部类型问题导致进程崩溃
+ */
+function safeLog(level: 'debug' | 'error', message: string): void {
+  try {
+    if (level === 'debug') {
+      logger.debug(message);
+    } else {
+      logger.error(message);
+    }
+  } catch (err) {
+    // 如果 logger 抛出类型错误，降级到控制台输出
+    console.error(`[logger fallback] ${level}: ${message}`, err);
+  }
+}
+
+/**
+ * 执行命令并返回 Promise，成功时 resolve 退出码，失败时 reject 错误。
+ * @param cmd 要执行的命令
+ * @param options spawn 选项
+ * @returns Promise<number>
+ */
+export function execPromise(cmd: string, options?: SpawnOptions): Promise<number> {
+  // 安全记录命令
+  safeLog('debug', `执行命令: ${cmd}`);
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, {
       ...options,
       shell: true,
-      stdio: ['ignore', 'ignore', 'ignore']
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'] // 只捕获 stdout/stderr
     });
-    
+
+    // 处理标准输出
+    child.stdout?.on('data', (chunk: unknown) => {
+      // 诊断：打印 chunk 的类型和原始值（调试时可开启）
+      // console.log('stdout chunk type:', typeof chunk, 'value:', chunk);
+
+      // 安全地将任何类型转换为字符串
+      const text = Buffer.isBuffer(chunk) ? chunk.toString() : String(chunk);
+      safeLog('debug', text.trim());
+    });
+
+    // 处理标准错误
+    child.stderr?.on('data', (chunk: unknown) => {
+      // 诊断打印
+      // console.log('stderr chunk type:', typeof chunk, 'value:', chunk);
+
+      const text = Buffer.isBuffer(chunk) ? chunk.toString() : String(chunk);
+      safeLog('error', text.trim());
+    });
+
+    // 处理启动错误
+    child.on('error', (err) => {
+      safeLog('error', `命令执行错误: ${cmd}`);
+      // 同时也将原始错误对象传递给 reject
+      reject(err);
+    });
+
+    // 处理进程退出
     child.on('close', (code) => {
+      safeLog('debug', `命令执行完成，退出码: ${code}`);
       if (code !== 0) {
-        logger.error(`命令执行失败: ${cmd}`);
         reject(new Error(`Command failed with exit code ${code}`));
         return;
       }
-      logger.debug(`命令执行完成，退出码: ${code}`);
-      resolve(code || 0);
+      resolve(code ?? 0);
     });
-    
-    child.on('error', (err) => {
-      logger.error(`命令执行错误: ${cmd}`, err);
-      reject(err);
-    });
-  })
+  });
 }
-
 /**
  * 计算文件的 SHA-1 哈希值
  * @param filePath 文件路径
@@ -252,7 +293,7 @@ export function verifySHA1(filePath: string, expectedHash: string): boolean {
   const actualHash = calculateSHA1(filePath);
   const expectedHashLower = expectedHash.toLowerCase();
   const isMatch = actualHash === expectedHashLower;
-  
+
   if (!isMatch) {
     logger.error(`文件哈希验证失败: ${filePath}`);
     logger.error(`期望: ${expectedHashLower}`);
@@ -260,7 +301,7 @@ export function verifySHA1(filePath: string, expectedHash: string): boolean {
   } else {
     logger.debug(`文件哈希验证成功: ${filePath} (sha1: ${actualHash})`);
   }
-  
+
   return isMatch;
 }
 
@@ -289,7 +330,7 @@ async function downloadFile(url: string, filePath: string, expectedHash?: string
           return;
         }
       }
-      
+
       logger.debug(`正在下载 ${url} 到 ${filePath}`);
       let res: any = null;
       try {
@@ -300,7 +341,7 @@ async function downloadFile(url: string, filePath: string, expectedHash?: string
         });
         fse.outputFileSync(filePath, res.rawBody);
         logger.debug(`下载 ${url} 成功`);
-        
+
         // 如果提供了期望的 hash，验证下载的文件
         if (expectedHash && !verifySHA1(filePath, expectedHash)) {
           throw new Error(`文件哈希验证失败，下载的文件可能已损坏`);
@@ -310,8 +351,8 @@ async function downloadFile(url: string, filePath: string, expectedHash?: string
         res = null;
       }
     },
-    { 
-      retries: 3, 
+    {
+      retries: 3,
       onFailedAttempt: (error) => {
         logger.warn(`${url} 下载失败，正在重试 (${error.attemptNumber}/3)`);
       }
@@ -332,12 +373,12 @@ interface DownloadItem {
  * 支持带 hash 验证的快速下载
  * @param data 下载列表，可以是 [url, filePath] 或 [[url, filePath, hash?], ...]
  */
-export async function fastdownload(data: [string, string]|string[][], enableHashVerify = true) {
+export async function fastdownload(data: [string, string] | string[][], enableHashVerify = true) {
   let downloadList: Array<[string, string, string?]>;
-  
+
   if (Array.isArray(data[0])) {
     // 二维数组格式：[[url, filePath, hash?], ...]
-    downloadList = (data as string[][]).map((item): [string, string, string?] => 
+    downloadList = (data as string[][]).map((item): [string, string, string?] =>
       item.length >= 3 ? [item[0], item[1], item[2]] : [item[0], item[1]]
     );
   } else {
@@ -345,9 +386,9 @@ export async function fastdownload(data: [string, string]|string[][], enableHash
     const singleItem = data as [string, string];
     downloadList = [[singleItem[0], singleItem[1]]];
   }
-  
+
   logger.info(`开始快速下载 ${downloadList.length} 个文件${enableHashVerify ? '（启用 hash 验证）' : ''}`);
-  
+
   return await pMap(
     downloadList,
     async (item: [string, string, string?]) => {

@@ -42,8 +42,8 @@ export function modloader(ml: string, mcv: string, mlv: string, path: string): X
  */
 export async function mlsetup(ml: string, mcv: string, mlv: string, path: string): Promise<void> {
   const minecraft = new Minecraft(ml, mcv, mlv, path);
+  await minecraft.setup()
   await modloader(ml, mcv, mlv, path).setup();
-  await minecraft.setup();
 }
 
 /**

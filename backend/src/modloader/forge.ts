@@ -112,7 +112,14 @@ export class Forge {
 
  async install(){
    const javaCmd = config.javaPath || 'java';
-   await execPromise(`${javaCmd} -jar forge-${this.minecraft}-${this.loaderVersion}-installer.jar --installServer`,{cwd:this.path})
+   let cmd = `${javaCmd} -jar forge-${this.minecraft}-${this.loaderVersion}-installer.jar --installServer`
+    if (config.mirror.bmclapi){
+        cmd += ` --mirror https://bmclapi2.bangbang93.com/maven/`
+    }
+   await execPromise(cmd,{cwd:this.path}).catch((e)=>{
+    logger.error(`Forge 安装失败: ${e}`);
+    throw e;
+   })
  }
 
 async installer(){
