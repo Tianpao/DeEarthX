@@ -1,5 +1,4 @@
 import got, { Got } from "got";
-import { WebSocket } from "ws";
 import { join } from "node:path";
 import { Wfastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
@@ -15,19 +14,20 @@ export interface CurseForgeManifest {
 
 export class CurseForge implements XPlatform {
   private utils: Utils;
-  private got:Got;
+  private got: Got;
+  
   constructor() {
     this.utils = new Utils();
     this.got = got.extend({
       prefixUrl: this.utils.curseforge_url,
-      headers:{
+      headers: {
         "User-Agent": "DeEarthX",
-        "x-api-key":
-          "$2a$10$ydk0TLDG/Gc6uPMdz7mad.iisj2TaMDytVcIW4gcVP231VKngLBKy",
+        "x-api-key": "$2a$10$ydk0TLDG/Gc6uPMdz7mad.iisj2TaMDytVcIW4gcVP231VKngLBKy",
         "Content-Type": "application/json",
       }
-    })
+    });
   }
+  
   async getinfo(manifest: object): Promise<modpack_info> {
     let result: modpack_info = Object.create({});
     const local_manifest = manifest as CurseForgeManifest;
@@ -40,9 +40,9 @@ export class CurseForge implements XPlatform {
     return result;
   }
 
-  async downloadfile(manifest: object, path: string, ws:MessageWS): Promise<void> {
+  async downloadfile(manifest: object, path: string, ws: MessageWS): Promise<void> {
     const local_manifest = manifest as CurseForgeManifest;
-    if (local_manifest.files.length === 0){
+    if (local_manifest.files.length === 0) {
       return;
     }
     const FileID = JSON.stringify({
@@ -63,11 +63,11 @@ export class CurseForge implements XPlatform {
               return;
             }
             const unpath = join(path + "/mods/", e.fileName);
-            const url = e.downloadUrl.replace("https://edge.forgecdn.net", this.utils.curseforge_Durl)
-            tmp.push([url, unpath])
+            const url = e.downloadUrl.replace("https://edge.forgecdn.net", this.utils.curseforge_Durl);
+            tmp.push([url, unpath]);
           }
         );
       });
-    await Wfastdownload(tmp,ws); //下载文件
+    await Wfastdownload(tmp, ws);
   }
 }

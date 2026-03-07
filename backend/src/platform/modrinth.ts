@@ -1,8 +1,7 @@
 import fs from "node:fs";
-import { WebSocket } from "ws";
+import { join } from "node:path";
 import { Wfastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
-import { join } from "node:path";
 import { MessageWS } from "../utils/ws.js";
 
 interface ModrinthManifest {
@@ -18,9 +17,11 @@ interface ModrinthManifest {
 
 export class Modrinth implements XPlatform {
   private utils: Utils;
+  
   constructor() {
     this.utils = new Utils();
   }
+  
   async getinfo(manifest: object): Promise<modpack_info> {
     let result: modpack_info = Object.create({});
     const local_manifest = manifest as ModrinthManifest;
@@ -36,17 +37,18 @@ export class Modrinth implements XPlatform {
     }
     return result;
   }
-  async downloadfile(manifest: object,path:string,ws:MessageWS): Promise<void> {
+  
+  async downloadfile(manifest: object, path: string, ws: MessageWS): Promise<void> {
     const index = manifest as ModrinthManifest;
-    let tmp: [string, string][] = []
-    index.files.forEach(async (e: { path: string; downloads: string[]; fileSize: number;}) => {
-        if (e.path.endsWith(".zip")) {
-            return;
-          }
-    const url = e.downloads[0].replace("https://cdn.modrinth.com",this.utils.modrinth_Durl)
-    const unpath = join(path,e.path)
-    tmp.push([url,unpath])
-    });
-    await Wfastdownload(tmp,ws)
+    let tmp: [string, string][] = [];
+    for (const e of index.files) {
+      if (e.path.endsWith(".zip")) {
+        continue;
+      }
+      const url = e.downloads[0].replace("https://cdn.modrinth.com", this.utils.modrinth_Durl);
+      const unpath = join(path, e.path);
+      tmp.push([url, unpath]);
+    }
+    await Wfastdownload(tmp, ws);
   }
 }

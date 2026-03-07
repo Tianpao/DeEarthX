@@ -2,9 +2,6 @@ import got, { Got } from "got";
 import { logger } from "../../utils/logger.js";
 import { IFilterStrategy, IFileInfo, IDexpubCheckResult } from "../types.js";
 
-/**
- * Dexpub 筛选策略 - 通过 Galaxy Square API 检查模组类型
- */
 export class DexpubFilterStrategy implements IFilterStrategy {
   name = "DexpubFilter";
   private got: Got;
@@ -19,18 +16,12 @@ export class DexpubFilterStrategy implements IFilterStrategy {
     });
   }
 
-  /**
-   * 筛选客户端模组
-   */
   async filter(files: IFileInfo[]): Promise<string[]> {
     const result = await this.checkDexpubForClientMods(files);
     logger.info("Galaxy Square 检查完成", { 服务端模组: result.serverMods, 客户端模组: result.clientMods });
     return result.clientMods;
   }
 
-  /**
-   * 检查 Dexpub 获取客户端/服务端模组列表
-   */
   private async checkDexpubForClientMods(files: IFileInfo[]): Promise<IDexpubCheckResult> {
     const clientMods: string[] = [];
     const serverMods: string[] = [];
@@ -66,16 +57,13 @@ export class DexpubFilterStrategy implements IFilterStrategy {
       const modIdToIsTypeModKeys = Object.keys(modIdToIsTypeMod);
       
       for (const modId of modIdToIsTypeModKeys) {
+        const mapData = map.get(modId);
+        if (!mapData) continue;
+
         if (modIdToIsTypeMod[modId]) {
-          const mapData = map.get(modId);
-          if (mapData) {
-            clientMods.push(mapData);
-          }
+          clientMods.push(mapData);
         } else {
-          const mapData = map.get(modId);
-          if (mapData) {
-            serverMods.push(mapData);
-          }
+          serverMods.push(mapData);
         }
       }
     } catch (error: any) {
@@ -85,9 +73,6 @@ export class DexpubFilterStrategy implements IFilterStrategy {
     return { serverMods, clientMods };
   }
 
-  /**
-   * 获取服务端模组列表（用于去重）
-   */
   async getServerMods(files: IFileInfo[]): Promise<string[]> {
     const result = await this.checkDexpubForClientMods(files);
     return result.serverMods;

@@ -3,9 +3,6 @@ import { Utils } from "../../utils/utils.js";
 import { logger } from "../../utils/logger.js";
 import { IFilterStrategy, IFileInfo, IHashResponse, IProjectInfo } from "../types.js";
 
-/**
- * Hash 筛选策略 - 通过 Modrinth API 检查文件 hash 识别客户端模组
- */
 export class HashFilterStrategy implements IFilterStrategy {
   name = "HashFilter";
   private utils: Utils;
@@ -14,9 +11,6 @@ export class HashFilterStrategy implements IFilterStrategy {
     this.utils = new Utils();
   }
 
-  /**
-   * 筛选客户端模组
-   */
   async filter(files: IFileInfo[]): Promise<string[]> {
     const hashToFilename = new Map<string, string>();
     const hashes = files.map(file => {

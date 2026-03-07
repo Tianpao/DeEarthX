@@ -1,15 +1,9 @@
 import { logger } from "../../utils/logger.js";
 import { IFilterStrategy, IFileInfo } from "../types.js";
 
-/**
- * Mixin 筛选策略 - 检查 Mixin 配置识别客户端模组
- */
 export class MixinFilterStrategy implements IFilterStrategy {
   name = "MixinFilter";
 
-  /**
-   * 筛选客户端模组
-   */
   async filter(files: IFileInfo[]): Promise<string[]> {
     const clientMods: string[] = [];
 

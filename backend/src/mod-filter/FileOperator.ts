@@ -3,9 +3,6 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { logger } from "../utils/logger.js";
 
-/**
- * 文件操作器 - 负责移动客户端模组
- */
 export class FileOperator {
   private readonly movePath: string;
 
@@ -13,16 +10,12 @@ export class FileOperator {
     this.movePath = movePath;
   }
 
-  /**
-   * 移动客户端模组到回收目录
-   */
   async moveClientSideMods(clientMods: string[]): Promise<{ success: number; error: number; skipped: number }> {
     if (!clientMods.length) {
       logger.info("No client-side mods to move");
       return { success: 0, error: 0, skipped: 0 };
     }
 
-    // 确保目标目录存在
     const absoluteMovePath = path.isAbsolute(this.movePath) ? this.movePath : path.resolve(this.movePath);
     logger.debug("Target directory", { path: absoluteMovePath, exists: fsSync.existsSync(absoluteMovePath) });
 
@@ -35,12 +28,10 @@ export class FileOperator {
 
     for (const sourcePath of clientMods) {
       try {
-        // 转换为绝对路径
         const absoluteSourcePath = path.isAbsolute(sourcePath) ? sourcePath : path.resolve(sourcePath);
 
         logger.debug("Checking file", { originalPath: sourcePath, resolvedPath: absoluteSourcePath, cwd: process.cwd() });
 
-        // 检查文件是否存在
         try {
           await fs.access(absoluteSourcePath);
         } catch (accessError) {
@@ -49,13 +40,11 @@ export class FileOperator {
           continue;
         }
 
-        // 提取文件名，处理特殊字符
         const filename = path.basename(absoluteSourcePath);
         const targetPath = path.join(absoluteMovePath, filename);
 
         logger.info("Moving file", { source: absoluteSourcePath, target: targetPath, filename: filename });
 
-        // 使用 copyFile + unlink 代替 rename，避免 Windows 文件锁定问题
         await fs.copyFile(absoluteSourcePath, targetPath);
         await fs.unlink(absoluteSourcePath);
 

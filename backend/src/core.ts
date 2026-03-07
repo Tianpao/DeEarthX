@@ -16,7 +16,6 @@ export class Core {
     public ws!: WebSocketServer;
     private wsx!: websocket;
     private readonly upload: multer.Multer;
-    private task: {} = {};
     dex: Dex;
     galaxy: Galaxy;
     
@@ -30,7 +29,6 @@ export class Core {
         })
         this.dex = new Dex(this.ws)
         this.galaxy = new Galaxy()
-        // 使用内存存储，配置文件字段名
         const storage = multer.memoryStorage();
         this.upload = multer({ 
             storage: storage,
@@ -78,7 +76,7 @@ export class Core {
         }
     }
 
-    private express() {
+    private setupExpressRoutes() {
         this.setupMiddleware();
         this.setupHealthRoutes();
         this.setupTaskRoutes();
@@ -288,7 +286,7 @@ export class Core {
     }
     public async start() {
         
-        this.express();
+        this.setupExpressRoutes();
         const port = this.config.port || 37019;
         const host = this.config.host || 'localhost';
         this.server.listen(port, host, async () => {

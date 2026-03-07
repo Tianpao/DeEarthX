@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import p from "node:path";
 import websocket, { WebSocketServer } from "ws";
-//import { yauzl_promise } from "./utils/yauzl.promise.js";
 import { pipeline } from "node:stream/promises";
 import { platform, what_platform } from "./platform/index.js";
 import { ModFilterService } from "./mod-filter/index.js";
@@ -17,6 +16,7 @@ import archiver from "archiver";
 export class Dex {
   wsx!: WebSocketServer;
   message!: MessageWS;
+  
   constructor(ws: WebSocketServer) {
     this.wsx = ws;
     this.wsx.on("connection", (e) => {
@@ -53,16 +53,9 @@ export class Dex {
     const mpname = info.name;
     const unpath = `./instance/${mpname}`;
     
-    // 解压和下载（并行处理）
     await this.parallelTasks(zps, mpname, plat, info, unpath);
-    
-    // 筛选模组
     await this.filterMods(unpath, mpname);
-    
-    // 安装模组加载器
     await this.installModLoader(plat, info, unpath, isServerMode);
-    
-    // 完成任务
     await this.completeTask(startTime, unpath, mpname, isServerMode);
   }
 
@@ -73,12 +66,12 @@ export class Dex {
     ]).catch(e => {
       logger.error("并行任务执行异常", e);
     });
-    this.message.statusChange(); // 改变状态
+    this.message.statusChange();
   }
 
   private async filterMods(unpath: string, mpname: string) {
     await new ModFilterService(`${unpath}/mods`, `./.rubbish/${mpname}`, config.filter, this.message).filter();
-    this.message.statusChange(); // 改变状态 (ModFilterService筛选模组完毕)
+    this.message.statusChange();
   }
 
   private async installModLoader(plat: string | undefined, info: any, unpath: string, isServerMode: boolean) {
@@ -90,7 +83,7 @@ export class Dex {
         mlinfo.loader_version,
         unpath,
         this.message
-      ) // 安装服务端
+      )
     } else {
       dinstall(
         mlinfo.loader,
@@ -111,7 +104,6 @@ export class Dex {
       this.message.finish(startTime, latest);
     }
 
-    // 自动打包成zip（非开服模式且开启自动打包设置）
     if (!isServerMode && config.autoZip) {
       await this._createZip(unpath, mpname);
     }
@@ -204,7 +196,6 @@ export class Dex {
         try {
           zip.close();
         } catch (e) {
-          // 忽略关闭时的错误
         }
       }
     }
@@ -240,7 +231,6 @@ export class Dex {
         const isDir = entry.fileName.endsWith("/");
         logger.info(`进度: ${index}/${zip.length}, 文件: ${entry.fileName}`);
 
-        // 只解压 overrides/ 目录下的内容，跳过其他所有文件和目录
         if (!entry.fileName.startsWith("overrides/")) {
           logger.info("跳过非 overrides 文件", entry.fileName);
           this.message.unzip(entry.fileName, zip.length, index);
@@ -248,7 +238,6 @@ export class Dex {
           continue;
         }
 
-        // 跳过 overrides 目录本身
         if (entry.fileName === "overrides/") {
           logger.info("跳过 overrides 目录", entry.fileName);
           this.message.unzip(entry.fileName, zip.length, index);
@@ -256,7 +245,6 @@ export class Dex {
           continue;
         }
 
-        // 跳过黑名单文件/目录
         if (this._ublack(entry.fileName)) {
           logger.info("跳过黑名单文件", entry.fileName);
           this.message.unzip(entry.fileName, zip.length, index);
@@ -272,16 +260,13 @@ export class Dex {
         } else {
           let targetPath = entry.fileName.replace("overrides/", "");
 
-          // 创建目标目录
           const dirPath = `${instancePath}/${targetPath.substring(0, targetPath.lastIndexOf("/"))}`;
           await fs.promises.mkdir(dirPath, { recursive: true });
 
-          // 检查文件是否已存在，如果存在则跳过解压
           const fullPath = `${instancePath}/${targetPath}`;
           if (fs.existsSync(fullPath)) {
             logger.info("文件已存在，跳过解压", targetPath);
           } else {
-            // 解压文件
             const stream = await entry.openReadStream;
             const write = fs.createWriteStream(fullPath);
             await pipeline(stream, write);
@@ -295,11 +280,6 @@ export class Dex {
     return { _getinfo, _unzip };
   }
 
-  /**
-   * 检查文件是否在解压黑名单中
-   * @param filename 文件名
-   * @returns 是否在黑名单中
-   */
   private _ublack(filename: string): boolean {
     const blacklist = [
       "overrides/options.txt",
@@ -310,12 +290,10 @@ export class Dex {
       "overrides/CustomSkinLoader"
     ];
 
-    // 跳过 overrides/ 目录本身
     if (filename === "overrides/" || filename === "overrides") {
       return true;
     }
 
-    // 统一处理：确保黑名单项和文件名都以 / 结尾进行比较
     return blacklist.some(item => {
       const normalizedItem = item.endsWith("/") ? item : item + "/";
       const normalizedFilename = filename.endsWith("/") ? filename : filename + "/";
@@ -323,11 +301,6 @@ export class Dex {
     });
   }
 
-  /**
-   * 将服务端目录打包成zip
-   * @param sourcePath 源目录路径
-   * @param mpname 整合包名称
-   */
   private async _createZip(sourcePath: string, mpname: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const outputPath = `./instance/${mpname}.zip`;

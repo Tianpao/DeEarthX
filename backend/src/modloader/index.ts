@@ -5,21 +5,11 @@ import { NeoForge } from "./neoforge.js";
 import fs from "node:fs";
 import { MessageWS } from "../utils/ws.js";
 
-/**
- * 模组加载器接口
- */
 interface XModloader {
   setup(): Promise<void>;
   installer(): Promise<void>;
 }
-/**
- * 创建模组加载器实例
- * @param ml 加载器类型
- * @param mcv Minecraft版本
- * @param mlv 加载器版本
- * @param path 安装路径
- * @returns 加载器实例
- */
+
 export function modloader(ml: string, mcv: string, mlv: string, path: string): XModloader {
   switch (ml) {
     case "fabric":
@@ -34,14 +24,6 @@ export function modloader(ml: string, mcv: string, mlv: string, path: string): X
   }
 }
 
-/**
- * 设置模组加载器
- * @param ml 加载器类型
- * @param mcv Minecraft版本
- * @param mlv 加载器版本
- * @param path 安装路径
- * @param messageWS WebSocket消息实例（可选）
- */
 export async function mlsetup(ml: string, mcv: string, mlv: string, path: string, messageWS?: MessageWS): Promise<void> {
   const totalSteps = 2;
   
@@ -72,13 +54,6 @@ export async function mlsetup(ml: string, mcv: string, mlv: string, path: string
   }
 }
 
-/**
- * 安装模组加载器
- * @param ml 加载器类型
- * @param mcv Minecraft版本
- * @param mlv 加载器版本
- * @param path 安装路径
- */
 export async function dinstall(ml: string, mcv: string, mlv: string, path: string): Promise<void> {
   await modloader(ml, mcv, mlv, path).installer();
   

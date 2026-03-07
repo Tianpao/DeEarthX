@@ -3,7 +3,8 @@ import { HashFilterStrategy } from "./strategies/HashFilterStrategy.js";
 import { MixinFilterStrategy } from "./strategies/MixinFilterStrategy.js";
 import { DexpubFilterStrategy } from "./strategies/DexpubFilterStrategy.js";
 import { ModrinthFilterStrategy } from "./strategies/ModrinthFilterStrategy.js";
-import { IModCheckResult, IModCheckConfig, IFileInfo, IInfoFile, IMixinFile, ModSide } from "./types.js";
+import { IModCheckResult, IModCheckConfig, IFileInfo, ModSide } from "./types.js";
+import { JarParser } from "../utils/jar-parser.js";
 import { logger } from "../utils/logger.js";
 import * as fs from "fs";
 import * as path from "path";
@@ -28,9 +29,7 @@ export class ModCheckService {
 
   async checkMods(): Promise<IModCheckResult[]> {
     logger.info("开始模组检查流程");
-
     const files = await this.extractor.extractFilesInfo();
-
     const results: IModCheckResult[] = [];
 
     for (const file of files) {
@@ -44,14 +43,13 @@ export class ModCheckService {
 
   async checkUploadedFiles(uploadedFiles: Array<{ originalname: string; buffer: Buffer }>): Promise<IModCheckResult[]> {
     logger.info("开始检查上传文件", { 文件数量: uploadedFiles.length });
-
     const results: IModCheckResult[] = [];
 
     for (const uploadedFile of uploadedFiles) {
       try {
         const fileData = uploadedFile.buffer;
-        const mixins = await this.extractMixins(fileData);
-        const infos = await this.extractModInfo(fileData);
+        const mixins = await JarParser.extractMixins(fileData);
+        const infos = await JarParser.extractModInfo(fileData);
 
         const fileInfo: IFileInfo = {
           filename: uploadedFile.originalname,
@@ -80,50 +78,6 @@ export class ModCheckService {
 
     logger.info("上传文件模组检查完成", { 总模组数: results.length });
     return results;
-  }
-
-  private async extractModInfo(jarData: Buffer): Promise<IInfoFile[]> {
-    const { Azip } = await import("../utils/ziplib.js");
-    const { default: toml } = await import("smol-toml");
-    
-    const infos: IInfoFile[] = [];
-    const zipEntries = Azip(jarData);
-    
-      for (const entry of zipEntries) {
-      try {
-        if (entry.entryName.endsWith("neoforge.mods.toml") || entry.entryName.endsWith("mods.toml")) {
-          const data = await entry.getData();
-          infos.push({ name: entry.entryName, data: JSON.stringify(toml.parse(data.toString())) });
-        } else if (entry.entryName.endsWith("fabric.mod.json")) {
-          const data = await entry.getData();
-          infos.push({ name: entry.entryName, data: data.toString() });
-        }
-      } catch (error: any) {
-        logger.error(`提取 ${entry.entryName} 时出错`, error);
-      }
-    }
-
-    return infos;
-  }
-
-  private async extractMixins(jarData: Buffer): Promise<IMixinFile[]> {
-    const { Azip } = await import("../utils/ziplib.js");
-    
-    const mixins: IMixinFile[] = [];
-    const zipEntries = Azip(jarData);
-
-    for (const entry of zipEntries) {
-      if (entry.entryName.endsWith(".mixins.json") && !entry.entryName.includes("/")) {
-        try {
-          const data = await entry.getData();
-          mixins.push({ name: entry.entryName, data: data.toString() });
-        } catch (error: any) {
-          logger.error(`提取 ${entry.entryName} 时出错`, error);
-        }
-      }
-    }
-
-    return mixins;
   }
 
   async checkSingleMod(filePath: string): Promise<IModCheckResult> {
@@ -199,138 +153,63 @@ export class ModCheckService {
     }>[] = [];
 
     if (this.config.enableDexpub) {
-      checkPromises.push(
-        this.runWithTimeout(
-          this.checkDexpub(file),
-          `Dexpub 检查超时: ${file.filename}`
-        ).then(result => {
-          if (result) {
-            return {
-              clientSide: result.clientSide as ModSide,
-              serverSide: result.serverSide as ModSide,
-              source: "Dexpub",
-              checked: true,
-            };
-          }
-          return {
-            clientSide: "unknown" as ModSide,
-            serverSide: "unknown" as ModSide,
-            source: "Dexpub",
-            checked: false,
-          };
-        }).catch((error: any) => {
-          logger.warn(`${file.filename} 的 Dexpub 检查失败`, { 错误: error.message });
-          return {
-            clientSide: "unknown" as ModSide,
-            serverSide: "unknown" as ModSide,
-            source: "Dexpub",
-            checked: false,
-            error: error.message,
-          };
-        })
-      );
+      checkPromises.push(this.runCheckWithTimeout(this.checkDexpub, file, "Dexpub"));
     }
 
     if (this.config.enableModrinth) {
-      checkPromises.push(
-        this.runWithTimeout(
-          this.checkModrinth(file),
-          `Modrinth 检查超时: ${file.filename}`
-        ).then(result => {
-          if (result) {
-            return {
-              clientSide: result.clientSide as ModSide,
-              serverSide: result.serverSide as ModSide,
-              source: "Modrinth",
-              checked: true,
-            };
-          }
-          return {
-            clientSide: "unknown" as ModSide,
-            serverSide: "unknown" as ModSide,
-            source: "Modrinth",
-            checked: false,
-          };
-        }).catch((error: any) => {
-          logger.warn(`${file.filename} 的 Modrinth 检查失败`, { 错误: error.message });
-          return {
-            clientSide: "unknown" as ModSide,
-            serverSide: "unknown" as ModSide,
-            source: "Modrinth",
-            checked: false,
-            error: error.message,
-          };
-        })
-      );
+      checkPromises.push(this.runCheckWithTimeout(this.checkModrinth, file, "Modrinth"));
     }
 
     if (this.config.enableMixin) {
-      checkPromises.push(
-        this.runWithTimeout(
-          this.checkMixin(file),
-          `Mixin 检查超时: ${file.filename}`
-        ).then(result => {
-          if (result) {
-            return {
-              clientSide: result.clientSide as ModSide,
-              serverSide: result.serverSide as ModSide,
-              source: "Mixin",
-              checked: true,
-            };
-          }
-          return {
-            clientSide: "unknown" as ModSide,
-            serverSide: "unknown" as ModSide,
-            source: "Mixin",
-            checked: false,
-          };
-        }).catch((error: any) => {
-          logger.warn(`${file.filename} 的 Mixin 检查失败`, { 错误: error.message });
-          return {
-            clientSide: "unknown" as ModSide,
-            serverSide: "unknown" as ModSide,
-            source: "Mixin",
-            checked: false,
-            error: error.message,
-          };
-        })
-      );
+      checkPromises.push(this.runCheckWithTimeout(this.checkMixin, file, "Mixin"));
     }
 
     if (this.config.enableHash) {
-      checkPromises.push(
-        this.runWithTimeout(
-          this.checkHash(file),
-          `Hash 检查超时: ${file.filename}`
-        ).then(result => {
-          if (result) {
-            return {
-              clientSide: result.clientSide as ModSide,
-              serverSide: result.serverSide as ModSide,
-              source: "Hash",
-              checked: true,
-            };
-          }
-          return {
-            clientSide: "unknown" as ModSide,
-            serverSide: "unknown" as ModSide,
-            source: "Hash",
-            checked: false,
-          };
-        }).catch((error: any) => {
-          logger.warn(`${file.filename} 的 Hash 检查失败`, { 错误: error.message });
-          return {
-            clientSide: "unknown" as ModSide,
-            serverSide: "unknown" as ModSide,
-            source: "Hash",
-            checked: false,
-            error: error.message,
-          };
-        })
-      );
+      checkPromises.push(this.runCheckWithTimeout(this.checkHash, file, "Hash"));
     }
 
     return Promise.all(checkPromises);
+  }
+
+  private async runCheckWithTimeout(
+    checkFn: (file: IFileInfo) => Promise<{ clientSide: ModSide; serverSide: ModSide } | null>,
+    file: IFileInfo,
+    source: string
+  ): Promise<{
+    clientSide: ModSide;
+    serverSide: ModSide;
+    source: string;
+    checked: boolean;
+    error?: string;
+  }> {
+    return this.runWithTimeout(
+      checkFn(file),
+      `${source} 检查超时: ${file.filename}`
+    ).then(result => {
+      if (result) {
+        return {
+          clientSide: result.clientSide,
+          serverSide: result.serverSide,
+          source,
+          checked: true,
+        };
+      }
+      return {
+        clientSide: "unknown" as ModSide,
+        serverSide: "unknown" as ModSide,
+        source,
+        checked: false,
+      };
+    }).catch((error: any) => {
+      logger.warn(`${file.filename} 的 ${source} 检查失败`, { 错误: error.message });
+      return {
+        clientSide: "unknown" as ModSide,
+        serverSide: "unknown" as ModSide,
+        source,
+        checked: false,
+        error: error.message,
+      };
+    });
   }
 
   private mergeResults(results: Array<{
@@ -373,7 +252,6 @@ export class ModCheckService {
     };
 
     successfulResults.sort((a, b) => priority[a.source] - priority[b.source]);
-
     const best = successfulResults[0];
 
     return {
@@ -391,7 +269,6 @@ export class ModCheckService {
     
     const clientMods = await strategy.filter(files);
     const serverMods = await strategy.getServerMods(files);
-
     const filename = path.basename(file.filename);
     
     if (clientMods.some(f => path.basename(f) === filename)) {
@@ -406,10 +283,9 @@ export class ModCheckService {
   private async checkModrinth(file: IFileInfo): Promise<{ clientSide: ModSide; serverSide: ModSide } | null> {
     const strategy = new ModrinthFilterStrategy();
     const files = [file];
-
     const clientMods = await strategy.filter(files);
-
     const filename = path.basename(file.filename);
+    
     if (clientMods.some(f => path.basename(f) === filename)) {
       return { clientSide: "required", serverSide: "unsupported" };
     }
@@ -447,10 +323,9 @@ export class ModCheckService {
   private async checkHash(file: IFileInfo): Promise<{ clientSide: ModSide; serverSide: ModSide } | null> {
     const strategy = new HashFilterStrategy();
     const files = [file];
-
     const clientMods = await strategy.filter(files);
-
     const filename = path.basename(file.filename);
+    
     if (clientMods.some(f => path.basename(f) === filename)) {
       return { clientSide: "required", serverSide: "unsupported" };
     }
