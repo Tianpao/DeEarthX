@@ -31,7 +31,6 @@
     "title": "¡Crea servidores donde quieras, cuando quieras!",
     "upload_title": "Arrastra o haz clic para subir archivos",
     "upload_hint": "Por favor usa archivos .zip (CurseForge, MCBBS) y .mrpack (Modrinth)",
-    "upload_hint2": "Para packs zip exportados por PCL, arrastra modpack.mrpack a DeX",
     "mode_server": "Modo servidor",
     "mode_upload": "Modo subida",
     "preparing": "Preparando...",

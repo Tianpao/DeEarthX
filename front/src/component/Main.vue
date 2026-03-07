@@ -422,9 +422,6 @@ function handleStartProcess() {
                     <p class="ant-upload-hint">
                         {{ t('home.upload_hint') }}
                     </p>
-                    <p class="ant-upload-hint">
-                        {{ t('home.upload_hint2') }}
-                    </p>
                 </a-upload-dragger>
                 <a-select ref="select" :options="modeOptions" :value="selectedMode"
                     style="width: 120px;margin-top: 32px" @select="handleModeSelect"></a-select>

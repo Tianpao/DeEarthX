@@ -1,15 +1,19 @@
 import { createI18n } from 'vue-i18n';
 import zhCn from '../../lang/zh_cn.json';
+import zhHk from '../../lang/zh_hk.json';
+import zhTw from '../../lang/zh_tw.json';
 import enUs from '../../lang/en_us.json';
 import jaJp from '../../lang/ja_jp.json';
 import frFr from '../../lang/fr_fr.json';
 import deDe from '../../lang/de_de.json';
 import esEs from '../../lang/es_es.json';
 
-export type Language = 'zh_cn' | 'en_us' | 'ja_jp' | 'fr_fr' | 'de_de' | 'es_es';
+export type Language = 'zh_cn' | 'zh_hk' | 'zh_tw' | 'en_us' | 'ja_jp' | 'fr_fr' | 'de_de' | 'es_es';
 
 const messages = {
   zh_cn: zhCn,
+  zh_hk: zhHk,
+  zh_tw: zhTw,
   en_us: enUs,
   ja_jp: jaJp,
   fr_fr: frFr,
@@ -20,7 +24,7 @@ const messages = {
 const LANGUAGE_STORAGE_KEY = 'deearthx_language';
 
 const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language;
-const defaultLocale = savedLanguage && messages[savedLanguage] ? savedLocale : 'zh_cn';
+const defaultLocale = savedLanguage && messages[savedLanguage] ? savedLanguage : 'zh_cn';
 
 const i18n = createI18n({
   legacy: false,

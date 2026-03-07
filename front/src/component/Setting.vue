@@ -2,7 +2,6 @@
 import { ref, watch, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
-import { UploadOutlined } from '@ant-design/icons-vue';
 import { setLanguage, type Language } from '../utils/i18n';
 import axios from '../utils/axios';
 
@@ -170,6 +169,8 @@ const settings = computed<SettingCategory[]>(() => {
 const languageOptions = computed(() => {
   return [
     { label: '简体中文', value: 'zh_cn' },
+    { label: '繁體中文（香港）', value: 'zh_hk' },
+    { label: '繁體中文（台灣）', value: 'zh_tw' },
     { label: 'English', value: 'en_us' },
     { label: '日本語', value: 'ja_jp' },
     { label: 'Français', value: 'fr_fr' },
@@ -250,39 +251,6 @@ async function saveConfig(newConfig: AppConfig) {
     console.error('保存配置失败:', error);
     message.error(t('setting.config_save_failed'));
   }
-}
-
-// 导入配置
-function importConfig() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'application/json';
-  input.onchange = async (event) => {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const importedConfig = JSON.parse(text) as AppConfig;
-      
-      // 验证配置格式
-      if (!importedConfig.mirror || !importedConfig.filter || 
-          typeof importedConfig.oaf !== 'boolean' || 
-          typeof importedConfig.autoZip !== 'boolean') {
-        message.error(t('setting.config_invalid_format'));
-        return;
-      }
-
-      // 应用导入的配置
-      config.value = importedConfig;
-      await saveConfig(importedConfig);
-      message.success(t('setting.config_imported'));
-    } catch (error) {
-      console.error('导入配置失败:', error);
-      message.error(t('setting.config_import_failed'));
-    }
-  };
-  input.click();
 }
 
 // 检测Java路径
@@ -372,17 +340,6 @@ watch(config, (newValue) => {
           <span class="tw:text-gray-800">{{ t('menu.setting') }}</span>
         </h1>
         <p class="tw:text-gray-500 tw:text-lg">{{ t('setting.subtitle') }}</p>
-        
-        <!-- 配置导入按钮 -->
-        <div class="tw:flex tw:justify-center tw:gap-4 tw:mt-6">
-          <a-button 
-            :icon="UploadOutlined" 
-            @click="importConfig"
-            class="tw:tw-flex tw:items-center tw:gap-2"
-          >
-            {{ t('setting.import_config') }}
-          </a-button>
-        </div>
       </div>
 
       <!-- 动态渲染设置卡片 -->

@@ -31,7 +31,6 @@
     "title": "サーバー設定をいつでもどこで！",
     "upload_title": "ドラッグまたはクリックしてファイルをアップロード",
     "upload_hint": ".zip（CurseForge、MCBBS）と.mrpack（Modrinth）ファイルを使用してください",
-    "upload_hint2": "PCLからエクスポートしたzip整合パックのmodpack.mrpackをDeXにドラッグしてください",
     "mode_server": "サーバー設定モード",
     "mode_upload": "アップロードモード",
     "preparing": "準備中...",

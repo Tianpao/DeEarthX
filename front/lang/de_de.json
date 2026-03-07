@@ -31,7 +31,6 @@
     "title": "Server-Einrichtung überall und jederzeit!",
     "upload_title": "Dateien per Drag & Drop oder Klick hochladen",
     "upload_hint": "Bitte verwenden Sie .zip (CurseForge, MCBBS) und .mrpack (Modrinth) Dateien",
-    "upload_hint2": "Für von PCL exportierte zip-Packs ziehen Sie modpack.mrpack nach DeX",
     "mode_server": "Server-Modus",
     "mode_upload": "Upload-Modus",
     "preparing": "Wird vorbereitet...",

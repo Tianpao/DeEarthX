@@ -30,8 +30,7 @@
   "home": {
     "title": "Make server hosting available anytime, anywhere!",
     "upload_title": "Drag and drop files here or click to upload",
-    "upload_hint": "Please use .zip (CurseForge, MCBBS) and .mrpack (Modrinth) files",
-    "upload_hint2": "For zip modpacks exported from PCL, drag and drop the modpack.mrpack file inside to DeX",
+    "upload_hint": "Supports .zip (CurseForge, MCBBS) and .mrpack (Modrinth) files",
     "mode_server": "Server Mode",
     "mode_upload": "Upload Mode",
     "preparing": "Preparing...",
@@ -58,7 +57,7 @@
     "start_production": "Starting production, please do not switch menus!",
     "production_complete": "Server production completed! Total time: {time} seconds!",
     "please_select_file": "Please drag and drop or select a file first",
-    "only_zip_mrpack": "Only .zip and .mrpack files are allowed",
+    "only_zip_mrpack": "Only .zip and .mrpack files are supported",
     "file_prepared": "File preparation completed",
     "preparing_file": "Preparing file...",
     "ws_connecting": "Establishing WebSocket connection...",
