@@ -3,6 +3,7 @@ import { Forge } from "./forge.js";
 import { Minecraft } from "./minecraft.js";
 import { NeoForge } from "./neoforge.js";
 import fs from "node:fs";
+import { MessageWS } from "../utils/ws.js";
 
 /**
  * 模组加载器接口
@@ -39,11 +40,36 @@ export function modloader(ml: string, mcv: string, mlv: string, path: string): X
  * @param mcv Minecraft版本
  * @param mlv 加载器版本
  * @param path 安装路径
+ * @param messageWS WebSocket消息实例（可选）
  */
-export async function mlsetup(ml: string, mcv: string, mlv: string, path: string): Promise<void> {
-  const minecraft = new Minecraft(ml, mcv, mlv, path);
-  await minecraft.setup()
-  await modloader(ml, mcv, mlv, path).setup();
+export async function mlsetup(ml: string, mcv: string, mlv: string, path: string, messageWS?: MessageWS): Promise<void> {
+  const totalSteps = 2;
+  
+  try {
+    if (messageWS) {
+      messageWS.serverInstallStart("Server Installation", mcv, ml, mlv);
+      messageWS.serverInstallStep("Installing Minecraft Server", 1, totalSteps);
+    }
+    
+    const minecraft = new Minecraft(ml, mcv, mlv, path);
+    await minecraft.setup();
+    
+    if (messageWS) {
+      messageWS.serverInstallProgress("Installing Minecraft Server", 100);
+      messageWS.serverInstallStep(`Installing ${ml} Loader`, 2, totalSteps);
+    }
+    
+    await modloader(ml, mcv, mlv, path).setup();
+    
+    if (messageWS) {
+      messageWS.serverInstallProgress(`Installing ${ml} Loader`, 100);
+    }
+  } catch (error) {
+    if (messageWS) {
+      messageWS.serverInstallError(error instanceof Error ? error.message : String(error));
+    }
+    throw error;
+  }
 }
 
 /**

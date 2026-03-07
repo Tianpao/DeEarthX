@@ -77,7 +77,7 @@ export class Dex {
   }
 
   private async filterMods(unpath: string, mpname: string) {
-    await new ModFilterService(`${unpath}/mods`, `./.rubbish/${mpname}`, config.filter).filter();
+    await new ModFilterService(`${unpath}/mods`, `./.rubbish/${mpname}`, config.filter, this.message).filter();
     this.message.statusChange(); // 改变状态 (ModFilterService筛选模组完毕)
   }
 
@@ -88,7 +88,8 @@ export class Dex {
         mlinfo.loader,
         mlinfo.minecraft,
         mlinfo.loader_version,
-        unpath
+        unpath,
+        this.message
       ) // 安装服务端
     } else {
       dinstall(
@@ -102,7 +103,13 @@ export class Dex {
 
   private async completeTask(startTime: number, unpath: string, mpname: string, isServerMode: boolean) {
     const latest = Date.now();
-    this.message.finish(startTime, latest); // 完成
+    const duration = latest - startTime;
+    
+    if (isServerMode) {
+      this.message.serverInstallComplete(unpath, duration);
+    } else {
+      this.message.finish(startTime, latest);
+    }
 
     // 自动打包成zip（非开服模式且开启自动打包设置）
     if (!isServerMode && config.autoZip) {
@@ -113,7 +120,7 @@ export class Dex {
       await execPromise(`start ${p.join("./instance")}`);
     }
 
-    logger.info(`任务完成，耗时 ${latest - startTime}ms`);
+    logger.info(`任务完成，耗时 ${duration}ms`);
   }
 
   private async _processModpack(buffer: Buffer, filename?: string): Promise<Buffer> {

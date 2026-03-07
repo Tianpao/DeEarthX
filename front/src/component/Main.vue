@@ -111,7 +111,35 @@ interface ProgressStatus {
 const unzipProgress = ref<ProgressStatus>({ status: 'active', percent: 0, display: true });
 const downloadProgress = ref<ProgressStatus>({ status: 'active', percent: 0, display: true });
 const uploadProgress = ref<ProgressStatus>({ status: 'active', percent: 0, display: false });
+const serverInstallProgress = ref<ProgressStatus>({ status: 'active', percent: 0, display: false });
+const filterModsProgress = ref<ProgressStatus>({ status: 'active', percent: 0, display: false });
 const startTime = ref<number>(0);
+
+const serverInstallInfo = ref({
+  modpackName: '',
+  minecraftVersion: '',
+  loaderType: '',
+  loaderVersion: '',
+  currentStep: '',
+  stepIndex: 0,
+  totalSteps: 0,
+  message: '',
+  status: 'idle' as 'idle' | 'installing' | 'completed' | 'error',
+  error: '',
+  installPath: '',
+  duration: 0
+});
+
+const filterModsInfo = ref({
+  totalMods: 0,
+  currentMod: 0,
+  modName: '',
+  filteredCount: 0,
+  movedCount: 0,
+  status: 'idle' as 'idle' | 'filtering' | 'completed' | 'error',
+  error: '',
+  duration: 0
+});
 
 // 格式化文件大小
 function formatFileSize(bytes: number): string {
@@ -247,6 +275,33 @@ function setupWebSocket() {
                     case 'finish':
                         handleFinish(data.result);
                         break;
+                    case 'server_install_start':
+                        handleServerInstallStart(data.result);
+                        break;
+                    case 'server_install_step':
+                        handleServerInstallStep(data.result);
+                        break;
+                    case 'server_install_progress':
+                        handleServerInstallProgress(data.result);
+                        break;
+                    case 'server_install_complete':
+                        handleServerInstallComplete(data.result);
+                        break;
+                    case 'server_install_error':
+                        handleServerInstallError(data.result);
+                        break;
+                    case 'filter_mods_start':
+                        handleFilterModsStart(data.result);
+                        break;
+                    case 'filter_mods_progress':
+                        handleFilterModsProgress(data.result);
+                        break;
+                    case 'filter_mods_complete':
+                        handleFilterModsComplete(data.result);
+                        break;
+                    case 'filter_mods_error':
+                        handleFilterModsError(data.result);
+                        break;
                 }
             }
         } catch (error) {
@@ -376,6 +431,133 @@ function handleFinish(result: number) {
     setTimeout(resetState, 8000);
 }
 
+// 处理服务端安装开始
+function handleServerInstallStart(result: any) {
+    serverInstallInfo.value = {
+        modpackName: result.modpackName,
+        minecraftVersion: result.minecraftVersion,
+        loaderType: result.loaderType,
+        loaderVersion: result.loaderVersion,
+        currentStep: '',
+        stepIndex: 0,
+        totalSteps: 0,
+        message: 'Starting installation...',
+        status: 'installing',
+        error: '',
+        installPath: '',
+        duration: 0
+    };
+    serverInstallProgress.value = { status: 'active', percent: 0, display: true };
+}
+
+// 处理服务端安装步骤
+function handleServerInstallStep(result: any) {
+    serverInstallInfo.value.currentStep = result.step;
+    serverInstallInfo.value.stepIndex = result.stepIndex;
+    serverInstallInfo.value.totalSteps = result.totalSteps;
+    serverInstallInfo.value.message = result.message || result.step;
+    
+    // 计算总体进度
+    const overallProgress = (result.stepIndex / result.totalSteps) * 100;
+    serverInstallProgress.value.percent = Math.round(overallProgress);
+}
+
+// 处理服务端安装进度
+function handleServerInstallProgress(result: any) {
+    serverInstallInfo.value.currentStep = result.step;
+    serverInstallInfo.value.message = result.message || result.step;
+    serverInstallProgress.value.percent = result.progress;
+}
+
+// 处理服务端安装完成
+function handleServerInstallComplete(result: any) {
+    serverInstallInfo.value.status = 'completed';
+    serverInstallInfo.value.installPath = result.installPath;
+    serverInstallInfo.value.duration = result.duration;
+    serverInstallInfo.value.message = t('home.server_install_completed');
+    serverInstallProgress.value = { status: 'success', percent: 100, display: true };
+    
+    // 跳转到完成步骤
+    currentStep.value++;
+    
+    const timeSpent = Math.round(result.duration / 1000);
+    message.success(t('home.server_install_completed') + ` ${t('home.server_install_duration')}: ${timeSpent}s`);
+    sendNotification({ title: t('common.app_name'), body: t('home.production_complete', { time: timeSpent }) });
+    
+    // 8秒后隐藏进度
+    setTimeout(() => {
+        serverInstallProgress.value.display = false;
+    }, 8000);
+}
+
+// 处理服务端安装错误
+function handleServerInstallError(result: any) {
+    serverInstallInfo.value.status = 'error';
+    serverInstallInfo.value.error = result.error;
+    serverInstallInfo.value.message = result.error;
+    serverInstallProgress.value = { status: 'exception', percent: serverInstallProgress.value.percent, display: true };
+    
+    notification.error({
+        message: t('home.server_install_error'),
+        description: result.error,
+        duration: 0
+    });
+}
+
+// 处理筛选模组开始
+function handleFilterModsStart(result: any) {
+    filterModsInfo.value = {
+        totalMods: result.totalMods,
+        currentMod: 0,
+        modName: '',
+        filteredCount: 0,
+        movedCount: 0,
+        status: 'filtering',
+        error: '',
+        duration: 0
+    };
+    filterModsProgress.value = { status: 'active', percent: 0, display: true };
+}
+
+// 处理筛选模组进度
+function handleFilterModsProgress(result: any) {
+    filterModsInfo.value.currentMod = result.current;
+    filterModsInfo.value.modName = result.modName;
+    
+    const percent = Math.round((result.current / result.total) * 100);
+    filterModsProgress.value.percent = percent;
+}
+
+// 处理筛选模组完成
+function handleFilterModsComplete(result: any) {
+    filterModsInfo.value.status = 'completed';
+    filterModsInfo.value.filteredCount = result.filteredCount;
+    filterModsInfo.value.movedCount = result.movedCount;
+    filterModsInfo.value.duration = result.duration;
+    filterModsProgress.value = { status: 'success', percent: 100, display: true };
+    
+    const timeSpent = Math.round(result.duration / 1000);
+    message.success(t('home.filter_mods_completed', { filtered: result.filteredCount, moved: result.movedCount }) + ` ${t('home.server_install_duration')}: ${timeSpent}s`);
+    
+    // 8秒后隐藏进度
+    setTimeout(() => {
+        filterModsProgress.value.display = false;
+    }, 8000);
+}
+
+// 处理筛选模组错误
+function handleFilterModsError(result: any) {
+    filterModsInfo.value.status = 'error';
+    filterModsInfo.value.error = result.error;
+    filterModsProgress.value = { status: 'exception', percent: filterModsProgress.value.percent, display: true };
+    
+    notification.error({
+        message: t('home.filter_mods_error'),
+        description: result.error,
+        duration: 0
+    });
+}
+
 // 开始处理文件
 function handleStartProcess() {
     if (uploadedFiles.value.length === 0) {
@@ -446,6 +628,41 @@ function handleStartProcess() {
                 <div v-if="downloadProgress.display" class="tw:mb-4">
                     <h1 class="tw:text-sm">{{ t('home.download_progress') }}</h1>
                     <a-progress :percent="downloadProgress.percent" :status="downloadProgress.status" size="small" />
+                </div>
+                <div v-if="serverInstallProgress.display" class="tw:mb-4">
+                    <h1 class="tw:text-sm">{{ t('home.server_install_progress') }}</h1>
+                    <a-progress :percent="serverInstallProgress.percent" :status="serverInstallProgress.status" size="small" />
+                    <div v-if="serverInstallInfo.currentStep" class="tw:text-xs tw:text-gray-500 tw:mt-1">
+                        {{ t('home.server_install_step') }}: {{ serverInstallInfo.currentStep }}
+                        <span v-if="serverInstallInfo.totalSteps > 0">
+                            ({{ serverInstallInfo.stepIndex }}/{{ serverInstallInfo.totalSteps }})
+                        </span>
+                    </div>
+                    <div v-if="serverInstallInfo.message" class="tw:text-xs tw:text-gray-600 tw:mt-1 tw:break-words">
+                        {{ t('home.server_install_message') }}: {{ serverInstallInfo.message }}
+                    </div>
+                    <div v-if="serverInstallInfo.status === 'completed'" class="tw:text-xs tw:text-green-600 tw:mt-1">
+                        {{ t('home.server_install_completed') }} {{ t('home.server_install_duration') }}: {{ (serverInstallInfo.duration / 1000).toFixed(2) }}s
+                    </div>
+                    <div v-if="serverInstallInfo.status === 'error'" class="tw:text-xs tw:text-red-600 tw:mt-1 tw:break-words">
+                        {{ t('home.server_install_error') }}: {{ serverInstallInfo.error }}
+                    </div>
+                </div>
+                <div v-if="filterModsProgress.display" class="tw:mb-4">
+                    <h1 class="tw:text-sm">{{ t('home.filter_mods_progress') }}</h1>
+                    <a-progress :percent="filterModsProgress.percent" :status="filterModsProgress.status" size="small" />
+                    <div v-if="filterModsInfo.totalMods > 0" class="tw:text-xs tw:text-gray-500 tw:mt-1">
+                        {{ t('home.filter_mods_total') }}: {{ filterModsInfo.totalMods }}
+                    </div>
+                    <div v-if="filterModsInfo.modName" class="tw:text-xs tw:text-gray-600 tw:mt-1 tw:break-words">
+                        {{ t('home.filter_mods_current') }}: {{ filterModsInfo.modName }}
+                    </div>
+                    <div v-if="filterModsInfo.status === 'completed'" class="tw:text-xs tw:text-green-600 tw:mt-1">
+                        {{ t('home.filter_mods_completed', { filtered: filterModsInfo.filteredCount, moved: filterModsInfo.movedCount }) }}
+                    </div>
+                    <div v-if="filterModsInfo.status === 'error'" class="tw:text-xs tw:text-red-600 tw:mt-1 tw:break-words">
+                        {{ t('home.filter_mods_error') }}: {{ filterModsInfo.error }}
+                    </div>
                 </div>
             </a-card>
         </div>

@@ -6,6 +6,7 @@ import { DexpubFilterStrategy } from "./strategies/DexpubFilterStrategy.js";
 import { ModrinthFilterStrategy } from "./strategies/ModrinthFilterStrategy.js";
 import { IFilterConfig } from "./types.js";
 import { logger } from "../utils/logger.js";
+import { MessageWS } from "../utils/ws.js";
 import path from "node:path";
 
 /**
@@ -15,11 +16,13 @@ export class ModFilterService {
   private readonly extractor: FileExtractor;
   private readonly operator: FileOperator;
   private readonly config: IFilterConfig;
+  private messageWS?: MessageWS;
 
-  constructor(modsPath: string, movePath: string, config: IFilterConfig) {
+  constructor(modsPath: string, movePath: string, config: IFilterConfig, messageWS?: MessageWS) {
     this.extractor = new FileExtractor(modsPath);
     this.operator = new FileOperator(movePath);
     this.config = config;
+    this.messageWS = messageWS;
   }
 
   /**
@@ -27,22 +30,40 @@ export class ModFilterService {
    */
   async filter(): Promise<void> {
     logger.info("开始模组筛选流程");
+    const startTime = Date.now();
 
-    // 获取所有模组文件信息
-    const files = await this.extractor.extractFilesInfo();
+    try {
+      // 获取所有模组文件信息
+      const files = await this.extractor.extractFilesInfo();
 
-    // 识别客户端模组
-    const clientMods = await this.identifyClientSideMods(files);
+      if (this.messageWS) {
+        this.messageWS.filterModsStart(files.length);
+      }
 
-    // 移动客户端模组
-    const result = await this.operator.moveClientSideMods(clientMods);
-    
-    logger.info("模组筛选流程完成", { 
-      识别到的客户端模组: clientMods.length,
-      成功移动: result.success,
-      跳过: result.skipped,
-      失败: result.error
-    });
+      // 识别客户端模组
+      const clientMods = await this.identifyClientSideMods(files);
+
+      // 移动客户端模组
+      const result = await this.operator.moveClientSideMods(clientMods);
+
+      const duration = Date.now() - startTime;
+
+      if (this.messageWS) {
+        this.messageWS.filterModsComplete(clientMods.length, result.success, duration);
+      }
+
+      logger.info("模组筛选流程完成", { 
+        识别到的客户端模组: clientMods.length,
+        成功移动: result.success,
+        跳过: result.skipped,
+        失败: result.error
+      });
+    } catch (error) {
+      if (this.messageWS) {
+        this.messageWS.filterModsError(error instanceof Error ? error.message : String(error));
+      }
+      throw error;
+    }
   }
 
   /**
@@ -65,6 +86,11 @@ export class ModFilterService {
       serverModsListSet.forEach(mod => processedFiles.add(mod));
 
       clientMods.push(...dexpubMods);
+
+      // 发送进度
+      if (this.messageWS) {
+        this.messageWS.filterModsProgress(processedFiles.size, files.length, "Galaxy Square (dexpub) 检查");
+      }
     }
 
     // 优先级2: Modrinth API 检查（只处理未标记为服务端且未被识别为客户端的文件）
@@ -87,6 +113,11 @@ export class ModFilterService {
       modrinthMods.forEach(mod => processedFiles.add(mod));
 
       clientMods.push(...modrinthMods);
+
+      // 发送进度
+      if (this.messageWS) {
+        this.messageWS.filterModsProgress(processedFiles.size, files.length, "Modrinth API 检查");
+      }
     }
 
     // 优先级3: Mixin 检查（只处理未被识别的文件）
@@ -102,6 +133,11 @@ export class ModFilterService {
       mixinMods.forEach(mod => processedFiles.add(mod));
 
       clientMods.push(...mixinMods);
+
+      // 发送进度
+      if (this.messageWS) {
+        this.messageWS.filterModsProgress(processedFiles.size, files.length, "Mixin 检查");
+      }
     }
 
     // 优先级4: Hash 检查（只处理未被识别的文件）
@@ -114,6 +150,11 @@ export class ModFilterService {
       const hashMods = await new HashFilterStrategy().filter(unprocessedFiles);
 
       clientMods.push(...hashMods);
+
+      // 发送进度
+      if (this.messageWS) {
+        this.messageWS.filterModsProgress(processedFiles.size, files.length, "Hash 检查");
+      }
     }
 
     // 去重
