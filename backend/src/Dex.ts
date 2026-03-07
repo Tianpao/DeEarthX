@@ -4,7 +4,7 @@ import websocket, { WebSocketServer } from "ws";
 //import { yauzl_promise } from "./utils/yauzl.promise.js";
 import { pipeline } from "node:stream/promises";
 import { platform, what_platform } from "./platform/index.js";
-import { DeEarth } from "./utils/DeEarth.js";
+import { ModFilterService } from "./mod-filter/index.js";
 import { dinstall, mlsetup } from "./modloader/index.js";
 import config from "./utils/config.js";
 import { execPromise } from "./utils/utils.js";
@@ -12,6 +12,7 @@ import { MessageWS } from "./utils/ws.js";
 import { logger } from "./utils/logger.js";
 import { yauzl_promise } from "./utils/ziplib.js";
 import yauzl from "yauzl";
+import archiver from "archiver";
 
 export class Dex {
   wsx!: WebSocketServer;
@@ -26,57 +27,93 @@ export class Dex {
   public async Main(buffer: Buffer, dser: boolean, filename?: string) {
     try {
       const first = Date.now();
-      const processedBuffer = await this._processModpack(buffer, filename);
-      const zps = await this._zips(processedBuffer);
-      const { contain, info } = await zps._getinfo();
-      if (!contain || !info) {
-        logger.error("Modpack info is empty");
-        this.message.handleError(new Error("It seems that the modpack is not a valid modpack."));
-        return;
-      }
-      const plat = what_platform(contain);
-      logger.debug("Platform detected", plat);
-      logger.debug("Modpack info", info);
-      const mpname = info.name;
-      const unpath = `./instance/${mpname}`;
-      // 解压和下载（并行处理）
-      await Promise.all([
-        zps._unzip(mpname),
-        platform(plat).downloadfile(info, unpath, this.message)
-      ]).catch(e => {
-        console.log(e);
-      });
-      this.message.statusChange(); //改变状态
-      await new DeEarth(`${unpath}/mods`, `./.rubbish/${mpname}`).Main();
-      this.message.statusChange(); //改变状态(DeEarth筛选模组完毕)
-      const mlinfo = await platform(plat).getinfo(info);
-      if (dser) {
-        await mlsetup(
-          mlinfo.loader,
-          mlinfo.minecraft,
-          mlinfo.loader_version,
-          unpath
-        ); // 安装服务端
-      } else {
-        dinstall(
-          mlinfo.loader,
-          mlinfo.minecraft,
-          mlinfo.loader_version,
-          unpath
-        );
-      }
-      const latest = Date.now();
-      this.message.finish(first, latest); //完成
-      if (config.oaf) {
-        await execPromise(`start ${p.join("./instance")}`);
-      }
-
-      logger.info(`Task completed in ${latest - first}ms`);
+      await this.processModpack(buffer, filename, first, dser);
     } catch (e) {
       const err = e as Error;
-      logger.error("Main process failed", err);
+      logger.error("主流程执行失败", err);
       this.message.handleError(err);
     }
+  }
+
+  private async processModpack(buffer: Buffer, filename: string | undefined, startTime: number, isServerMode: boolean) {
+    const processedBuffer = await this._processModpack(buffer, filename);
+    const zps = await this._zips(processedBuffer);
+    const { contain, info } = await zps._getinfo();
+    
+    if (!contain || !info) {
+      logger.error("整合包信息为空");
+      this.message.handleError(new Error("该整合包似乎不是有效的整合包。"));
+      return;
+    }
+    
+    const plat = what_platform(contain);
+    logger.debug("检测到平台", { 平台: plat });
+    logger.debug("整合包信息", info);
+    
+    const mpname = info.name;
+    const unpath = `./instance/${mpname}`;
+    
+    // 解压和下载（并行处理）
+    await this.parallelTasks(zps, mpname, plat, info, unpath);
+    
+    // 筛选模组
+    await this.filterMods(unpath, mpname);
+    
+    // 安装模组加载器
+    await this.installModLoader(plat, info, unpath, isServerMode);
+    
+    // 完成任务
+    await this.completeTask(startTime, unpath, mpname, isServerMode);
+  }
+
+  private async parallelTasks(zps: any, mpname: string, plat: string | undefined, info: any, unpath: string) {
+    await Promise.all([
+      zps._unzip(mpname),
+      platform(plat).downloadfile(info, unpath, this.message)
+    ]).catch(e => {
+      logger.error("并行任务执行异常", e);
+    });
+    this.message.statusChange(); // 改变状态
+  }
+
+  private async filterMods(unpath: string, mpname: string) {
+    await new ModFilterService(`${unpath}/mods`, `./.rubbish/${mpname}`, config.filter).filter();
+    this.message.statusChange(); // 改变状态 (ModFilterService筛选模组完毕)
+  }
+
+  private async installModLoader(plat: string | undefined, info: any, unpath: string, isServerMode: boolean) {
+    const mlinfo = await platform(plat).getinfo(info);
+    if (isServerMode) {
+      await mlsetup(
+        mlinfo.loader,
+        mlinfo.minecraft,
+        mlinfo.loader_version,
+        unpath
+      ); // 安装服务端
+    } else {
+      dinstall(
+        mlinfo.loader,
+        mlinfo.minecraft,
+        mlinfo.loader_version,
+        unpath
+      );
+    }
+  }
+
+  private async completeTask(startTime: number, unpath: string, mpname: string, isServerMode: boolean) {
+    const latest = Date.now();
+    this.message.finish(startTime, latest); // 完成
+
+    // 自动打包成zip（非开服模式且开启自动打包设置）
+    if (!isServerMode && config.autoZip) {
+      await this._createZip(unpath, mpname);
+    }
+
+    if (config.oaf) {
+      await execPromise(`start ${p.join("./instance")}`);
+    }
+
+    logger.info(`任务完成，耗时 ${latest - startTime}ms`);
   }
 
   private async _processModpack(buffer: Buffer, filename?: string): Promise<Buffer> {
@@ -84,8 +121,9 @@ export class Dex {
       return buffer;
     }
 
+    let zip: yauzl.ZipFile | null = null;
     try {
-      const zip = await (new Promise((resolve, reject) => {
+      zip = await (new Promise((resolve, reject) => {
         yauzl.fromBuffer(buffer, { lazyEntries: true }, (err, zipfile) => {
           if (err) {
             reject(err);
@@ -94,22 +132,22 @@ export class Dex {
           resolve(zipfile);
         });
       }) as Promise<yauzl.ZipFile>);
-      logger.info("Modpack zip file detected,It is a PCL packege,try to extract modpack.mrpack");
+      logger.info("检测到整合包为 zip 文件，疑似 PCL 格式，尝试提取 modpack.mrpack");
       return new Promise((resolve, reject) => {
         let mrpackBuffer: Buffer | null = null;
         let hasProcessed = false;
 
-        zip.on('entry', (entry: yauzl.Entry) => {
+        zip!.on('entry', (entry: yauzl.Entry) => {
           if (hasProcessed || !entry.fileName.endsWith('modpack.mrpack')) {
-            zip.readEntry();
+            zip!.readEntry();
             return;
           }
 
           if (entry.fileName === 'modpack.mrpack') {
             hasProcessed = true;
-            zip.openReadStream(entry, (err, stream) => {
+            zip!.openReadStream(entry, (err, stream) => {
               if (err) {
-                zip.close();
+                zip!.close();
                 reject(err);
                 return;
               }
@@ -120,42 +158,50 @@ export class Dex {
               });
               stream.on('end', () => {
                 mrpackBuffer = Buffer.concat(chunks);
-                zip.close();
+                zip!.close();
                 resolve(mrpackBuffer);
               });
               stream.on('error', (err) => {
-                zip.close();
+                zip!.close();
                 reject(err);
               });
             });
           } else {
-            zip.readEntry();
+            zip!.readEntry();
           }
         });
 
-        zip.on('end', () => {
+        zip!.on('end', () => {
           if (!hasProcessed) {
-            zip.close();
+            zip!.close();
             resolve(buffer);
           }
         });
 
-        zip.on('error', (err) => {
-          zip.close();
+        zip!.on('error', (err) => {
+          zip!.close();
           reject(err);
         });
 
-        zip.readEntry();
+        zip!.readEntry();
       });
     } catch (e) {
-      logger.warn('Failed to check for modpack.mrpack, using original buffer', e);
+      logger.warn('检查 modpack.mrpack 失败，使用原始文件', e);
       return buffer;
+    } finally {
+      if (zip) {
+        try {
+          zip.close();
+        } catch (e) {
+          // 忽略关闭时的错误
+        }
+      }
     }
   }
 
   private async _zips(buffer: Buffer) {
     if (buffer.length === 0) {
-      throw new Error("zip buffer is empty");
+      throw new Error("zip 数据为空");
     }
     const zip = await yauzl_promise(buffer);
     let index = 0;
@@ -165,27 +211,27 @@ export class Dex {
         if (importantFiles.includes(entry.fileName)) {
           const content = await entry.ReadEntry;
           const info = JSON.parse(content.toString());
-          logger.debug("Found important file", { fileName: entry.fileName, info });
+          logger.debug("找到关键文件", { fileName: entry.fileName, info });
           return { contain: entry.fileName, info };
         }
         index++;
       }
-      throw new Error("No manifest file found in modpack");
+      throw new Error("整合包中未找到清单文件");
     }
     if (index === zip.length) {
-      throw new Error("No manifest file found in modpack");
+      throw new Error("整合包中未找到清单文件");
     }
     const _unzip = async (instancename: string) => {
-      logger.info("Starting unzip process", { instancename });
+      logger.info("开始解压流程", { 实例名称: instancename });
       const instancePath = `./instance/${instancename}`;
       let index = 1;
       for await (const entry of zip) {
         const isDir = entry.fileName.endsWith("/");
-        logger.info(`index: ${index}, fileName: ${entry.fileName}`);
+        logger.info(`进度: ${index}/${zip.length}, 文件: ${entry.fileName}`);
 
         // 只解压 overrides/ 目录下的内容，跳过其他所有文件和目录
         if (!entry.fileName.startsWith("overrides/")) {
-          logger.info("Skip non-overrides file", entry.fileName);
+          logger.info("跳过非 overrides 文件", entry.fileName);
           this.message.unzip(entry.fileName, zip.length, index);
           index++;
           continue;
@@ -193,7 +239,7 @@ export class Dex {
 
         // 跳过 overrides 目录本身
         if (entry.fileName === "overrides/") {
-          logger.info("Skip overrides directory", entry.fileName);
+          logger.info("跳过 overrides 目录", entry.fileName);
           this.message.unzip(entry.fileName, zip.length, index);
           index++;
           continue;
@@ -201,7 +247,7 @@ export class Dex {
 
         // 跳过黑名单文件/目录
         if (this._ublack(entry.fileName)) {
-          logger.info("Skip blacklist file", entry.fileName);
+          logger.info("跳过黑名单文件", entry.fileName);
           this.message.unzip(entry.fileName, zip.length, index);
           index++;
           continue;
@@ -227,7 +273,7 @@ export class Dex {
         this.message.unzip(entry.fileName, zip.length, index);
         index++;
       }
-      logger.info("Unzip process completed", { instancename, totalFiles: zip.length });
+      logger.info("解压流程完成", { 实例名称: instancename, 总文件数: zip.length });
     }
     return { _getinfo, _unzip };
   }
@@ -257,6 +303,44 @@ export class Dex {
       const normalizedItem = item.endsWith("/") ? item : item + "/";
       const normalizedFilename = filename.endsWith("/") ? filename : filename + "/";
       return normalizedFilename === normalizedItem || normalizedFilename.startsWith(normalizedItem);
+    });
+  }
+
+  /**
+   * 将服务端目录打包成zip
+   * @param sourcePath 源目录路径
+   * @param mpname 整合包名称
+   */
+  private async _createZip(sourcePath: string, mpname: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const outputPath = `./instance/${mpname}.zip`;
+      const output = fs.createWriteStream(outputPath);
+      const archive = archiver('zip', {
+        zlib: { level: 9 }
+      });
+
+      output.on('close', () => {
+        logger.info(`打包成功: ${outputPath} (${archive.pointer()} 字节)`);
+        this.message.info(`服务端已打包: ${mpname}.zip`);
+        resolve();
+      });
+
+      archive.on('error', (err: Error) => {
+        logger.error('打包失败', err);
+        reject(err);
+      });
+
+      archive.on('warning', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'ENOENT') {
+          logger.warn('打包警告', err);
+        } else {
+          reject(err);
+        }
+      });
+
+      archive.pipe(output);
+      archive.directory(sourcePath, false);
+      archive.finalize();
     });
   }
 }

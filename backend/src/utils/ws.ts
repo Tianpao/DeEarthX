@@ -61,7 +61,15 @@ export class MessageWS {
   handleError(error: Error) {
     this.send("error", error.message);
   }
-  
+
+  /**
+   * 发送信息消息
+   * @param message 消息内容
+   */
+  info(message: string) {
+    this.send("info", message);
+  }
+
   /**
    * 通用消息发送方法
    * @param status 消息状态

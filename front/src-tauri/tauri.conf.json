@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "DeEarthX-V3",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "top.tianpao.dex-v3-ui",
   "build": {
     "beforeDevCommand": "npm run dev",
