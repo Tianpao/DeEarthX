@@ -269,10 +269,16 @@ export class Dex {
           const dirPath = `${instancePath}/${targetPath.substring(0, targetPath.lastIndexOf("/"))}`;
           await fs.promises.mkdir(dirPath, { recursive: true });
 
-          // 解压文件
-          const stream = await entry.openReadStream;
-          const write = fs.createWriteStream(`${instancePath}/${targetPath}`);
-          await pipeline(stream, write);
+          // 检查文件是否已存在，如果存在则跳过解压
+          const fullPath = `${instancePath}/${targetPath}`;
+          if (fs.existsSync(fullPath)) {
+            logger.info("文件已存在，跳过解压", targetPath);
+          } else {
+            // 解压文件
+            const stream = await entry.openReadStream;
+            const write = fs.createWriteStream(fullPath);
+            await pipeline(stream, write);
+          }
         }
         this.message.unzip(entry.fileName, zip.length, index);
         index++;

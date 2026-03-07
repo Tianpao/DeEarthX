@@ -111,15 +111,7 @@ interface ProgressStatus {
 const unzipProgress = ref<ProgressStatus>({ status: 'active', percent: 0, display: true });
 const downloadProgress = ref<ProgressStatus>({ status: 'active', percent: 0, display: true });
 const uploadProgress = ref<ProgressStatus>({ status: 'active', percent: 0, display: false });
-const currentTask = ref('准备中...');
-const taskDetails = ref('');
 const startTime = ref<number>(0);
-
-// 更新当前任务信息
-function updateTaskInfo(task: string, details: string = '') {
-    currentTask.value = task;
-    taskDetails.value = details;
-}
 
 // 格式化文件大小
 function formatFileSize(bytes: number): string {
@@ -152,7 +144,6 @@ async function runDeEarthX(file: File) {
         const url = `http://${apiHost}:${apiPort}/start?mode=${selectedMode.value}`;
 
         uploadProgress.value = { status: 'active', percent: 0, display: true };
-        updateTaskInfo(t('home.task_uploading'), `${t('home.task_uploading')}: ${file.name || ''}`);
         startTime.value = Date.now();
 
         await new Promise((resolve, reject) => {
@@ -246,15 +237,12 @@ function setupWebSocket() {
                         currentStep.value++;
                         const stepTitle = stepItems.value[currentStep.value - 1]?.title ?? t('home.unknown_step');
                         message.info(`${t('home.step_changed')}: ${stepTitle}`);
-                        updateTaskInfo(stepTitle);
                         break;
                     case 'unzip':
                         updateUnzipProgress(data.result);
-                        updateTaskInfo(t('home.task_unzip'), `${t('home.task_unzip')}: ${data.result.file || t('home.task_unzip')}`);
                         break;
                     case 'downloading':
                         updateDownloadProgress(data.result);
-                        updateTaskInfo(t('home.task_download'), `${t('home.task_download')}: ${data.result.path || t('home.task_download')}`);
                         break;
                     case 'finish':
                         handleFinish(data.result);
@@ -432,17 +420,12 @@ function handleStartProcess() {
             </div>
         </div>
         <div v-if="showSteps"
-            class="tw:fixed tw:bottom-2 tw:left-1/2 tw:-translate-x-1/2 tw:w-full tw:max-w-3xl tw:h-16 tw:flex tw:justify-center tw:items-center tw:text-sm">
-            <a-steps :current="currentStep" :items="stepItems" />
+            class="tw:fixed tw:bottom-2 tw:left-1/2 tw:-translate-x-1/2 tw:w-[65%] tw:h-20 tw:flex tw:justify-center tw:items-center tw:text-sm tw:bg-white tw:rounded-xl tw:shadow-lg tw:px-4 tw:ml-10">
+            <a-steps :current="currentStep" :items="stepItems" size="small" />
         </div>
         <div v-if="showSteps" ref="logContainer"
-            class="tw:absolute tw:right-2 tw:bottom-20 tw:h-80 tw:w-64 tw:rounded-xl tw:overflow-y-auto">
+            class="tw:absolute tw:right-2 tw:bottom-32 tw:h-80 tw:w-64 tw:rounded-xl tw:overflow-y-auto">
             <a-card :title="t('home.progress_title')" :bordered="true" class="tw:h-full">
-                <div class="tw:mb-4">
-                    <h1 class="tw:text-sm tw:font-bold">{{ t('home.current_task') }}</h1>
-                    <p class="tw:text-xs tw:text-gray-600">{{ currentTask }}</p>
-                    <p v-if="taskDetails" class="tw:text-xs tw:text-gray-500">{{ taskDetails }}</p>
-                </div>
                 <div v-if="uploadProgress.display" class="tw:mb-4">
                     <h1 class="tw:text-sm">{{ t('home.upload_progress') }}</h1>
                     <a-progress :percent="uploadProgress.percent" :status="uploadProgress.status" size="small" />
@@ -459,20 +442,10 @@ function handleStartProcess() {
                 <div v-if="unzipProgress.display" class="tw:mb-4">
                     <h1 class="tw:text-sm">{{ t('home.unzip_progress') }}</h1>
                     <a-progress :percent="unzipProgress.percent" :status="unzipProgress.status" size="small" />
-                    <div v-if="taskDetails" class="tw:text-xs tw:text-gray-500 tw:mt-1">
-                        {{ taskDetails }}
-                    </div>
                 </div>
                 <div v-if="downloadProgress.display" class="tw:mb-4">
                     <h1 class="tw:text-sm">{{ t('home.download_progress') }}</h1>
                     <a-progress :percent="downloadProgress.percent" :status="downloadProgress.status" size="small" />
-                    <div v-if="taskDetails" class="tw:text-xs tw:text-gray-500 tw:mt-1">
-                        {{ taskDetails }}
-                    </div>
-                </div>
-                <div class="tw:mt-auto">
-                    <h1 class="tw:text-sm">{{ t('home.current_step') }}</h1>
-                    <p class="tw:text-xs tw:text-gray-600">{{ stepItems[currentStep]?.title || t('home.preparing') }}</p>
                 </div>
             </a-card>
         </div>
