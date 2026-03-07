@@ -3,7 +3,7 @@ import App from "./App.vue";
 import "./tailwind.css"
 import Antd from 'ant-design-vue';
 import 'ant-design-vue/dist/reset.css';
-import router from "./router";
+import router from "./utils/router";
 import i18n from "./utils/i18n";
 
 const app = createApp(App);
