@@ -7,7 +7,7 @@
     "url": "https://github.com/Tianpao/DeEarthX.git"
   },
   "license": "ISC",
-  "author": "Tianpao",
+  "author": "DexV3 Team",
   "type": "module",
   "main": "./.build/build.js",
   "scripts": {
