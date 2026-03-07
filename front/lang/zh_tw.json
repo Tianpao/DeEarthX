@@ -30,6 +30,7 @@
   },
   "home": {
     "title": "讓開伺服器變得隨時隨地！",
+    "mode_title": "模式選擇",
     "upload_title": "拖曳或點擊上傳檔案",
     "upload_hint": "支援 .zip（CurseForge、MCBBS）和 .mrpack（Modrinth）格式檔案",
     "mode_server": "開伺服器模式",

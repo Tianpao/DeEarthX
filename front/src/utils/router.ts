@@ -1,12 +1,11 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import Main from "../component/Main.vue";
-import Setting from "../component/Setting.vue";
-import About from "../component/About.vue";
-import Error from "../component/Error.vue";
-import Galaxy from "../component/Galaxy.vue";
-import DeEarth from "../component/DeEarth.vue";
-// import Logs from "../component/Logs.vue";
+import Main from "../views/Main.vue";
+import SettingView from "../views/SettingView.vue";
+import AboutView from "../views/AboutView.vue";
+import ErrorView from "../views/ErrorView.vue";
+import GalaxyView from "../views/GalaxyView.vue";
+import DeEarthView from "../views/DeEarthView.vue";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -17,29 +16,27 @@ const router = createRouter({
         },
         {
             path: "/setting",
-            component: Setting,
+            component: SettingView,
             meta: {
                 requiresConfigRefresh: true
             }
-        },{
+        },
+        {
             path: "/about",
-            component: About
-        },{
+            component: AboutView
+        },
+        {
             path: "/error",
-            component: Error
+            component: ErrorView
         },
         {
             path: "/galaxy",
-            component: Galaxy
+            component: GalaxyView
         },
         {
             path: "/deearth",
-            component: DeEarth
+            component: DeEarthView
         }
-        // ,{
-        //     path: "/logs",
-        //     component: Logs
-        // }
     ]
 })
 

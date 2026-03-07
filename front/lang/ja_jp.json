@@ -30,6 +30,7 @@
   },
   "home": {
     "title": "サーバー設定をいつでもどこで！",
+    "mode_title": "モード選択",
     "upload_title": "ドラッグまたはクリックしてファイルをアップロード",
     "upload_hint": ".zip（CurseForge、MCBBS）と.mrpack（Modrinth）ファイルを使用してください",
     "mode_server": "サーバー設定モード",

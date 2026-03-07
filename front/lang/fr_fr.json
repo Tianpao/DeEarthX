@@ -30,6 +30,7 @@
   },
   "home": {
     "title": "Créez des serveurs n'importe où, n'importe quand !",
+    "mode_title": "Sélection du mode",
     "upload_title": "Glissez-déposez ou cliquez pour télécharger un fichier",
     "upload_hint": "Veuillez utiliser des fichiers .zip (CurseForge, MCBBS) et .mrpack (Modrinth)",
     "mode_server": "Mode serveur",

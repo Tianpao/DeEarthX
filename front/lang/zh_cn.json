@@ -30,6 +30,7 @@
   },
   "home": {
     "title": "让开服变得随时随地！",
+    "mode_title": "模式选择",
     "upload_title": "拖拽或点击上传文件",
     "upload_hint": "支持 .zip（CurseForge、MCBBS）和 .mrpack（Modrinth）格式文件",
     "mode_server": "开服模式",

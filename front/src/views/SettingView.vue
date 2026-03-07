@@ -5,7 +5,6 @@ import { useI18n } from 'vue-i18n';
 import { setLanguage, type Language } from '../utils/i18n';
 import axios from '../utils/axios';
 
-// 配置接口定义
 interface AppConfig {
   mirror: {
     bmclapi: boolean;
@@ -17,12 +16,11 @@ interface AppConfig {
     mixins: boolean;
     modrinth: boolean;
   };
-  oaf: boolean; // 操作完成后打开目录
-  autoZip: boolean; // 自动打包成zip
-  javaPath?: string; // Java路径
+  oaf: boolean;
+  autoZip: boolean;
+  javaPath?: string;
 }
 
-// 设置项接口
 interface SettingItem {
   key: string;
   name: string;
@@ -31,7 +29,6 @@ interface SettingItem {
   defaultValue: boolean;
 }
 
-// 设置分类接口
 interface SettingCategory {
   id: string;
   title: string;
@@ -39,28 +36,10 @@ interface SettingCategory {
   bgColor: string;
   textColor: string;
   items: SettingItem[];
-  hasJava?: boolean; // 是否包含Java配置
-  hasLanguage?: boolean; // 是否包含语言配置
+  hasJava?: boolean;
+  hasLanguage?: boolean;
 }
 
-// Java版本信息接口
-// interface JavaVersion {
-//   major: number;
-//   minor: number;
-//   patch: number;
-//   fullVersion: string;
-//   vendor: string;
-//   runtimeVersion?: string;
-// }
-//
-// // Java检测结果接口
-// interface JavaCheckResult {
-//   exists: boolean;
-//   version?: JavaVersion;
-//   error?: string;
-// }
-
-// 配置状态
 const config = ref<AppConfig>({
   mirror: { bmclapi: false, mcimirror: false },
   filter: { hashes: false, dexpub: false, mixins: false, modrinth: false },
@@ -69,13 +48,6 @@ const config = ref<AppConfig>({
   javaPath: undefined
 });
 
-// Java相关状态
-// const javaPaths = ref<string[]>([]);
-// const javaCheckResult = ref<JavaCheckResult | null>(null);
-// const javaChecking = ref(false);
-// const javaDetecting = ref(false);
-
-// 设置分类和选项数组（使用computed以便响应式更新）
 const settings = computed<SettingCategory[]>(() => {
   return [
     {
@@ -165,7 +137,6 @@ const settings = computed<SettingCategory[]>(() => {
   ];
 });
 
-// 语言选项（使用computed以响应翻译变化）
 const languageOptions = computed(() => {
   return [
     { label: '简体中文', value: 'zh_cn' },
@@ -179,51 +150,39 @@ const languageOptions = computed(() => {
   ];
 });
 
-// 切换语言
 function handleLanguageChange(value: Language) {
   setLanguage(value);
 }
 
-// i18n
 const { t, locale } = useI18n();
 
-// 获取配置值
 function getConfigValue(path: string): boolean {
   const keys = path.split('.');
   let value = config.value;
 
   for (const key of keys) {
-    // @ts-expect-error - 动态访问对象属性
-    value = value[key];
+    value = value[key as keyof AppConfig];
   }
 
-  // 确保返回值是boolean类型
   if (typeof value === 'boolean') {
     return value;
   }
 
-  // 如果类型不是boolean，返回默认值false
   console.warn(`Config value at path "${path}" is not a boolean:`, value);
   return false;
 }
 
-// 设置配置值
 function setConfigValue(path: string, value: boolean): void {
   const keys = path.split('.');
   let obj = config.value;
 
-  // 遍历到倒数第二个key
   for (let i = 0; i < keys.length - 1; i++) {
-    // @ts-expect-error - 动态访问对象属性
-    obj = obj[keys[i]];
+    obj = obj[keys[i] as keyof AppConfig] as any;
   }
 
-  // 设置最后一个key的值
-  // @ts-expect-error - 动态访问对象属性
-  obj[keys[keys.length - 1]] = value;
+  obj[keys[keys.length - 1] as keyof AppConfig] = value as any;
 }
 
-// 从后端加载配置
 async function loadConfig() {
   try {
     const response = await axios.get('/config/get');
@@ -235,12 +194,10 @@ async function loadConfig() {
   }
 }
 
-// 暴露刷新配置的方法给外部调用
 defineExpose({
   refreshConfig: loadConfig
 });
 
-// 保存配置到后端
 async function saveConfig(newConfig: AppConfig) {
   try {
     await axios.post('/config/post', newConfig, {
@@ -253,71 +210,10 @@ async function saveConfig(newConfig: AppConfig) {
   }
 }
 
-// 检测Java路径
-// async function detectJavaPaths() {
-//   javaDetecting.value = true;
-//   try {
-//     const response = await fetch('http://localhost:37019/java/detect');
-//     if (response.ok) {
-//       const result = await response.json();
-//       javaPaths.value = result.data || [];
-//       if (javaPaths.value.length === 0) {
-//         message.warning('未检测到Java安装');
-//       } else {
-//         message.success(`检测到 ${javaPaths.value.length} 个Java安装`);
-//       }
-//     } else {
-//       message.error('检测Java路径失败');
-//     }
-//   } catch (error) {
-//     console.error('检测Java路径失败:', error);
-//     message.error('检测Java路径失败');
-//   } finally {
-//     javaDetecting.value = false;
-//   }
-// }
-
-// 检查Java版本
-// async function checkJavaVersion(javaPath?: string) {
-//   javaChecking.value = true;
-//   javaCheckResult.value = null;
-//   try {
-//     const url = javaPath
-//       ? `http://localhost:37019/java/check?path=${encodeURIComponent(javaPath)}`
-//       : 'http://localhost:37019/java/check';
-//
-//     const response = await fetch(url);
-//     if (response.ok) {
-//       const result = await response.json();
-//       javaCheckResult.value = result.data;
-//
-//       if (result.data.exists && result.data.version) {
-//         message.success(`检测到 Java ${result.data.version.fullVersion}`);
-//       } else {
-//         message.error(result.data.error || 'Java检查失败');
-//       }
-//     } else {
-//       message.error('Java检查失败');
-//     }
-//   } catch (error) {
-//     console.error('Java检查失败:', error);
-//     message.error('Java检查失败');
-//   } finally {
-//     javaChecking.value = false;
-//   }
-// }
-
-// 选择Java路径
-// function selectJavaPath(path: string) {
-//   config.value.javaPath = path;
-//   checkJavaVersion(path);
-// }
-
 onMounted(() => {
   loadConfig();
 });
 
-// 监听配置变化并保存
 let isInitialLoad = true;
 watch(config, (newValue) => {
   if (isInitialLoad) {
@@ -331,7 +227,6 @@ watch(config, (newValue) => {
 <template>
   <div class="tw:h-full tw:w-full tw:p-8 tw:overflow-auto tw:bg-gradient-to-br tw:from-slate-50 tw:via-blue-50 tw:to-indigo-50">
     <div class="tw:max-w-3xl tw:mx-auto">
-      <!-- 标题区域 -->
       <div class="tw:text-center tw:mb-10 tw:animate-fade-in">
         <h1 class="tw:text-4xl tw:font-bold tw:tracking-tight tw:mb-3">
           <span class="tw:bg-gradient-to-r tw:from-emerald-500 tw:to-cyan-500 tw:bg-clip-text tw:text-transparent">
@@ -342,14 +237,13 @@ watch(config, (newValue) => {
         <p class="tw:text-gray-500 tw:text-lg">{{ t('setting.subtitle') }}</p>
       </div>
 
-      <!-- 动态渲染设置卡片 -->
       <div
         v-for="(category, index) in settings"
         :key="category.id"
         class="tw-bg-white tw:rounded-2xl tw:shadow-lg tw:p-7 tw:mb-6 tw:animate-fade-in-up tw:group tw:border tw:border-gray-100 tw:hover:tw:border-emerald-200 tw:transition-all duration-300"
         :style="{ animationDelay: `${index * 0.1}s` }"
       >
-        <h2 class="tw:text-xl tw:font-bold tw:text-gray-800 tw-mb-6 tw:flex tw-items-center tw:group-hover:tw:translate-x-2 tw:transition-transform duration-300">
+        <h2 class="tw:text-xl tw:font-bold tw:text-gray-800 tw-mb-6 tw:flex tw:items-center tw:group-hover:tw:translate-x-2 tw:transition-transform duration-300">
           <span :class="[category.bgColor, category.textColor, 'tw-w-10 tw:h-10 tw:rounded-xl tw:flex tw:items-center tw:justify-center tw-mr-3 tw:shadow-md']">
             {{ category.icon }}
           </span>
@@ -357,7 +251,6 @@ watch(config, (newValue) => {
         </h2>
 
         <div class="tw:grid tw:grid-cols-1 md:tw:grid-cols-2 lg:tw:grid-cols-3 tw:gap-4">
-          <!-- 语言选择器 (仅系统管理设置显示) -->
           <div
             v-if="category.hasLanguage"
             class="tw:flex tw:flex-col tw-justify-between tw-p-4 tw:border tw:border-gray-100 tw:rounded-xl tw-hover:bg-gradient-to-r tw:hover:from-emerald-50 tw:hover:to-cyan-50 tw:hover:border-emerald-200 tw:transition-all duration-300 tw:group/item"
@@ -377,69 +270,10 @@ watch(config, (newValue) => {
               </div>
             </div>
           </div>
-          <!-- Java设置项 (仅系统管理设置显示) - 已注释 -->
-          <!-- <div
-            v-if="category.hasJava"
-            class="tw:flex tw-col tw-justify-between tw-p-4 tw:border tw:border-gray-100 tw:rounded-xl tw-hover:bg-gradient-to-r tw:hover:from-emerald-50 tw:hover:to-cyan-50 tw:hover:border-emerald-200 tw:transition-all duration-300 tw:group/item"
-          >
-            <div class="tw:flex-1">
-              <p class="tw:text-gray-700 tw:font-semibold tw:text-sm tw:group-hover/item:tw:text-emerald-700 tw:transition-colors tw:flex tw-items-center tw-gap-2">
-                <span>☕</span> Java 设置
-              </p>
-              <div class="tw-mt-3 tw-space-y-2">
-                <a-input
-                  v-model:value="config.javaPath"
-                  placeholder="Java 路径"
-                  size="small"
-                  class="tw-font-mono tw:text-xs"
-                />
-                <div class="tw:flex tw-gap-2">
-                  <a-button
-                    size="small"
-                    :icon="h(SearchOutlined)"
-                    @click="detectJavaPaths"
-                    :loading="javaDetecting"
-                    block
-                  >
-                    检测
-                  </a-button>
-                  <a-button
-                    size="small"
-                    @click="checkJavaVersion(config.javaPath)"
-                    :loading="javaChecking"
-                    block
-                  >
-                    检查
-                  </a-button>
-                </div>
-                <div v-if="javaCheckResult" class="tw-p-2 tw:bg-gray-50 tw-rounded tw:text-xs tw:border tw:border-gray-200">
-                  <div v-if="javaCheckResult.exists && javaCheckResult.version" class="tw-flex tw-items-center tw-gap-1">
-                    <CheckOutlined class="tw-text-green-600" />
-                    <span class="tw:text-gray-700 tw-font-medium">Java {{ javaCheckResult.version.fullVersion }}</span>
-                  </div>
-                  <div v-else class="tw-flex tw-items-center tw-gap-1">
-                    <span class="tw:text-red-500">✗</span>
-                    <span class="tw:text-red-600 tw-break-all">{{ javaCheckResult.error || 'Java 检查失败' }}</span>
-                  </div>
-                </div>
-                <div v-if="javaPaths.length > 0" class="tw-max-h-32 tw-overflow-auto tw-space-y-1 tw:border tw:border-gray-200 tw-rounded tw-p-1 tw:bg-gray-50">
-                  <div
-                    v-for="(path, index) in javaPaths"
-                    :key="index"
-                    class="tw-p-1.5 tw-cursor-pointer tw-hover:tw:bg-emerald-100 tw-transition-colors tw:text-xs tw-font-mono tw-break-all tw-rounded"
-                    :class="{ 'tw:bg-emerald-100': config.javaPath === path }"
-                    @click="selectJavaPath(path)"
-                  >
-                    {{ path }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div> -->
           <div
             v-for="item in category.items"
             :key="item.key"
-            class="tw:flex tw:items-center tw-justify-between tw-p-4 tw:border tw:border-gray-100 tw-rounded-xl tw-hover:bg-gradient-to-r tw:hover:from-emerald-50 tw:hover:to-cyan-50 tw:hover:border-emerald-200 tw:transition-all duration-300 tw:group/item"
+            class="tw:flex tw:items-center tw:justify-between tw-p-4 tw:border tw:border-gray-100 tw:rounded-xl tw-hover:bg-gradient-to-r tw:hover:from-emerald-50 tw:hover:to-cyan-50 tw:hover:border-emerald-200 tw:transition-all duration-300 tw:group/item"
           >
             <div class="tw:flex-1">
               <p class="tw:text-gray-700 tw:font-semibold tw:text-sm tw:group-hover/item:tw:text-emerald-700 tw:transition-colors">{{ item.name }}</p>
@@ -459,7 +293,6 @@ watch(config, (newValue) => {
 </template>
 
 <style scoped>
-/* 淡入动画 */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -469,7 +302,6 @@ watch(config, (newValue) => {
     }
 }
 
-/* 向上淡入动画 */
 @keyframes fadeInUp {
     from {
         opacity: 0;

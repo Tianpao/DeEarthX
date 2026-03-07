@@ -162,8 +162,6 @@ router.beforeEach((to, _from, next) => {
         '/error': 'main',
         '/galaxy': 'galaxy',
         '/deearth': 'deearth'
-        // '/logs': 'logs'
-        // '/modcheck': 'modcheck'
     };
     selectedKeys.value[0] = routeToKey[to.path] || 'main';
     next();
@@ -211,11 +209,9 @@ const handleMenuClick: MenuProps['onClick'] = (e) => {
     const routeMap: Record<string, string> = {
         main: '/',
         deearth: '/deearth',
-        // logs: '/logs',
         setting: '/setting',
         about: '/about',
         galaxy: '/galaxy'
-        // modcheck: '/modcheck'
     };
     const route = routeMap[e.key] || '/';
     router.push(route);

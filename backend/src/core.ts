@@ -5,7 +5,7 @@ import websocket, { WebSocketServer } from "ws"
 import { createServer, Server } from "node:http";
 import { Config, IConfig } from "./utils/config.js";
 import { Dex } from "./Dex.js";
-import { logger, getLogBuffer, clearLogBuffer } from "./utils/logger.js";
+import { logger } from "./utils/logger.js";
 import { checkJava, JavaCheckResult, detectJavaPaths } from "./utils/utils.js";
 import { Galaxy } from "./galaxy.js";
 
@@ -85,7 +85,6 @@ export class Core {
         this.setupConfigRoutes();
         this.setupModCheckRoutes();
         this.setupGalaxyRoutes();
-        this.setupLogsRoutes();
         this.setupJavaRoutes();
     }
 
@@ -251,49 +250,6 @@ export class Core {
 
     private setupGalaxyRoutes() {
         this.app.use("/galaxy", this.galaxy.getRouter());
-    }
-
-    private setupLogsRoutes() {
-        // 获取日志列表
-        this.app.get('/logs', (req, res) => {
-            try {
-                const limit = parseInt(req.query.limit as string) || 100;
-                const level = req.query.level as string;
-                
-                let logs = getLogBuffer();
-                
-                // 按级别过滤
-                if (level && ['debug', 'info', 'warn', 'error'].includes(level)) {
-                    logs = logs.filter(log => log.level === level);
-                }
-                
-                // 返回最近的日志
-                const recentLogs = logs.slice(-limit);
-                
-                res.json({
-                    status: 200,
-                    data: recentLogs,
-                    total: logs.length
-                });
-            } catch (err) {
-                const error = err as Error;
-                logger.error("/logs 路由错误", error);
-                res.status(500).json({ status: 500, message: "获取日志失败" });
-            }
-        });
-
-        // 清空日志
-        this.app.post('/logs/clear', (req, res) => {
-            try {
-                clearLogBuffer();
-                logger.info("日志已清空");
-                res.json({ status: 200, message: "日志已清空" });
-            } catch (err) {
-                const error = err as Error;
-                logger.error("/logs/clear 路由错误", error);
-                res.status(500).json({ status: 500, message: "清空日志失败" });
-            }
-        });
     }
 
     private setupJavaRoutes() {

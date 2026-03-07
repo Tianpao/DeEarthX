@@ -30,6 +30,7 @@
   },
   "home": {
     "title": "Make server hosting available anytime, anywhere!",
+    "mode_title": "Mode Selection",
     "upload_title": "Drag and drop files here or click to upload",
     "upload_hint": "Supports .zip (CurseForge, MCBBS) and .mrpack (Modrinth) files",
     "mode_server": "Server Mode",

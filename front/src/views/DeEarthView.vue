@@ -133,11 +133,9 @@ function getSingleCheckResult(allResults: SingleCheckResult[], source: string): 
 }
 
 function getSideText(clientSide: string, serverSide: string): string {
-    // 如果服务端支持（required或optional），则显示"服务端"
     if (serverSide === 'required' || serverSide === 'optional') {
         return '服务端';
     }
-    // 否则显示"客户端"
     if (clientSide === 'required' || clientSide === 'optional') {
         return '客户端';
     }

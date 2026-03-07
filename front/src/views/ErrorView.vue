@@ -20,5 +20,3 @@ const route = useRoute();
 const errorReason = route.query.e as string;
 const errorMessage = errorReason ? `错误原因：${errorReason}` : 'DeEarthX.Core 启动失败！';
 </script>
-
-<style lang="css" scoped></style>

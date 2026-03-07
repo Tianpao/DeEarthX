@@ -1,7 +1,6 @@
 <template>
     <div class="tw:h-full tw:w-full tw:p-4 tw:overflow-auto tw:bg-gray-50">
         <div class="tw:max-w-2xl tw:mx-auto">
-            <!-- 标题区域 -->
             <div class="tw:text-center tw:mb-8">
                 <h1 class="tw:text-2xl tw:font-bold tw:tracking-tight">
                     <span
@@ -12,7 +11,6 @@
                 <p class="tw:text-gray-500 tw:mt-2">{{ t('galaxy.subtitle') }}</p>
             </div>
 
-            <!-- 模组提交 -->
             <div class="tw:bg-white tw:rounded-lg tw:shadow-sm tw:p-6 tw:mb-6">
                 <h2 class="tw:text-lg tw:font-semibold tw:text-gray-800 tw:mb-4 tw:flex tw:items-center tw:gap-2">
                     <span class="tw:w-2 tw:h-2 tw:bg-purple-500 tw:rounded-full"></span>

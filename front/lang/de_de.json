@@ -30,6 +30,7 @@
   },
   "home": {
     "title": "Server-Einrichtung überall und jederzeit!",
+    "mode_title": "Modus-Auswahl",
     "upload_title": "Dateien per Drag & Drop oder Klick hochladen",
     "upload_hint": "Bitte verwenden Sie .zip (CurseForge, MCBBS) und .mrpack (Modrinth) Dateien",
     "mode_server": "Server-Modus",
