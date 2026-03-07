@@ -4,7 +4,7 @@ import "./tailwind.css"
 import Antd from 'ant-design-vue';
 import 'ant-design-vue/dist/reset.css';
 import router from "./router";
-import i18n from "./i18n/vue-i18n";
+import i18n from "./utils/i18n";
 
 const app = createApp(App);
 

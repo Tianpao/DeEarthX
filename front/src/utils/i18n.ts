@@ -20,7 +20,7 @@ const messages = {
 const LANGUAGE_STORAGE_KEY = 'deearthx_language';
 
 const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language;
-const defaultLocale = savedLanguage && messages[savedLanguage] ? savedLanguage : 'zh_cn';
+const defaultLocale = savedLanguage && messages[savedLanguage] ? savedLocale : 'zh_cn';
 
 const i18n = createI18n({
   legacy: false,

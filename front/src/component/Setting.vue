@@ -3,7 +3,8 @@ import { ref, watch, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { UploadOutlined } from '@ant-design/icons-vue';
-import { setLanguage, type Language } from '../i18n/vue-i18n';
+import { setLanguage, type Language } from '../utils/i18n';
+import axios from '../utils/axios';
 
 // 配置接口定义
 interface AppConfig {
@@ -224,14 +225,9 @@ function setConfigValue(path: string, value: boolean): void {
 // 从后端加载配置
 async function loadConfig() {
   try {
-    const response = await fetch('http://localhost:37019/config/get', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (response.ok) {
-      config.value = await response.json();
-      console.log('[Setting] 配置已从后端刷新');
-    }
+    const response = await axios.get('/config/get');
+    config.value = response.data;
+    console.log('[Setting] 配置已从后端刷新');
   } catch (error) {
     console.error('加载配置失败:', error);
     message.error(t('setting.config_load_failed'));
@@ -246,14 +242,10 @@ defineExpose({
 // 保存配置到后端
 async function saveConfig(newConfig: AppConfig) {
   try {
-    const response = await fetch('http://localhost:37019/config/post', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newConfig)
+    await axios.post('/config/post', newConfig, {
+      headers: { 'Content-Type': 'application/json' }
     });
-    if (response.ok) {
-      message.success(t('setting.config_saved'));
-    }
+    message.success(t('setting.config_saved'));
   } catch (error) {
     console.error('保存配置失败:', error);
     message.error(t('setting.config_save_failed'));
