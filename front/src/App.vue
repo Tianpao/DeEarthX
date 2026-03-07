@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { h, provide, ref, onMounted, computed } from 'vue';
 import { MenuProps, message, Modal } from 'ant-design-vue';
-import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined, FileSearchOutlined } from '@ant-design/icons-vue';
+import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined, FileSearchOutlined, FolderOutlined } from '@ant-design/icons-vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Command } from '@tauri-apps/plugin-shell';
 import { useI18n } from 'vue-i18n';
@@ -161,7 +161,8 @@ router.beforeEach((to, _from, next) => {
         '/about': 'about',
         '/error': 'main',
         '/galaxy': 'galaxy',
-        '/deearth': 'deearth'
+        '/deearth': 'deearth',
+        '/template': 'template'
     };
     selectedKeys.value[0] = routeToKey[to.path] || 'main';
     next();
@@ -189,6 +190,12 @@ const menuItems = computed<MenuProps['items']>(() => {
             title: t('menu.galaxy'),
         },
         {
+            key: 'template',
+            icon: h(FolderOutlined),
+            label: t('menu.template'),
+            title: t('menu.template'),
+        },
+        {
             key: 'setting',
             icon: h(SettingOutlined),
             label: t('menu.setting'),
@@ -211,7 +218,8 @@ const handleMenuClick: MenuProps['onClick'] = (e) => {
         deearth: '/deearth',
         setting: '/setting',
         about: '/about',
-        galaxy: '/galaxy'
+        galaxy: '/galaxy',
+        template: '/template'
     };
     const route = routeMap[e.key] || '/';
     router.push(route);

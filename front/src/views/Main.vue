@@ -9,9 +9,27 @@ import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
 
+interface Template {
+    id: string;
+    metadata: {
+        name: string;
+        version: string;
+        description: string;
+        author: string;
+        created: string;
+        type: string;
+    };
+}
+
 // 进度步骤配置
 const showSteps = ref(false);
 const currentStep = ref(0);
+
+// 模板选择相关
+const showTemplateModal = ref(false);
+const templates = ref<Template[]>([]);
+const loadingTemplates = ref(false);
+const selectedTemplate = ref<string>('0');
 
 // 步骤项（使用computed自动响应语言变化）
 const stepItems = computed<Required<StepsProps>['items']>(() => {
@@ -98,6 +116,57 @@ function handleModeSelect(value: string) {
     selectedMode.value = value;
 }
 
+// 加载模板列表
+async function loadTemplates() {
+    loadingTemplates.value = true;
+    try {
+        const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
+        const apiPort = import.meta.env.VITE_API_PORT || '37019';
+        const response = await fetch(`http://${apiHost}:${apiPort}/templates`);
+        const result = await response.json();
+        
+        if (result.status === 200 && result.data) {
+            templates.value = result.data;
+        } else {
+            message.error(t('home.template_load_failed'));
+        }
+    } catch (error) {
+        console.error('加载模板列表失败:', error);
+        message.error(t('home.template_load_failed'));
+    } finally {
+        loadingTemplates.value = false;
+    }
+}
+
+// 打开模板选择弹窗
+function openTemplateModal() {
+    loadTemplates();
+    showTemplateModal.value = true;
+}
+
+// 选择模板
+function selectTemplate(templateId: string) {
+    selectedTemplate.value = templateId;
+    showTemplateModal.value = false;
+    if (templateId === '0') {
+        message.success(t('home.template_selected') + ': ' + t('home.template_official_loader'));
+    } else {
+        const template = templates.value.find(t => t.id === templateId);
+        if (template) {
+            message.success(t('home.template_selected') + ': ' + template.metadata.name);
+        }
+    }
+}
+
+// 获取当前选择的模板名称
+const currentTemplateName = computed(() => {
+    if (selectedTemplate.value === '0' || !selectedTemplate.value) {
+        return t('home.template_official_loader');
+    }
+    const template = templates.value.find(t => t.id === selectedTemplate.value);
+    return template ? template.metadata.name : t('home.template_official_loader');
+});
+
 // 进度显示相关
 interface ProgressStatus {
     status: 'active' | 'success' | 'exception' | 'normal';
@@ -169,7 +238,11 @@ async function runDeEarthX(file: File) {
         message.loading(t('home.task_preparing'));
         const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
         const apiPort = import.meta.env.VITE_API_PORT || '37019';
-        const url = `http://${apiHost}:${apiPort}/start?mode=${selectedMode.value}`;
+        let url = `http://${apiHost}:${apiPort}/start?mode=${selectedMode.value}`;
+        
+        if (selectedMode.value === 'server' && selectedTemplate.value) {
+            url += `&template=${encodeURIComponent(selectedTemplate.value)}`;
+        }
 
         uploadProgress.value = { status: 'active', percent: 0, display: true };
         startTime.value = Date.now();
@@ -593,8 +666,16 @@ function handleStartProcess() {
                         {{ t('home.upload_hint') }}
                     </p>
                 </a-upload-dragger>
-                <a-select ref="select" :options="modeOptions" :value="selectedMode"
-                    style="width: 120px;margin-top: 32px" @select="handleModeSelect"></a-select>
+                <div class="tw:flex tw:items-center tw:gap-2 tw:mt-8">
+                    <a-select ref="select" :options="modeOptions" :value="selectedMode"
+                        style="width: 120px;" @select="handleModeSelect"></a-select>
+                    <a-button v-if="selectedMode === 'server'" @click="openTemplateModal">
+                        {{ t('home.template_select_button') }}
+                    </a-button>
+                </div>
+                <div v-if="selectedMode === 'server'" class="tw:text-xs tw:text-gray-500 tw:mt-2">
+                    {{ t('home.template_selected') }}: {{ currentTemplateName }}
+                </div>
                 <a-button :disabled="startButtonDisabled" type="primary" @click="handleStartProcess"
                     style="margin-top: 6px">
                     {{ t('common.start') }}
@@ -666,6 +747,54 @@ function handleStartProcess() {
                 </div>
             </a-card>
         </div>
+        
+        <a-modal v-model:open="showTemplateModal" :title="t('home.template_select_title')" :footer="null" width="700px">
+            <a-spin :spinning="loadingTemplates">
+                <p class="tw:mb-4 tw:text-gray-600">{{ t('home.template_select_desc') }}</p>
+                
+                <div class="tw:max-h-96 tw:overflow-y-auto tw:pr-2">
+                    <div class="tw:grid tw:grid-cols-2 tw:gap-3">
+                        <div 
+                            @click="selectTemplate('0')"
+                            :class="[
+                                'tw:p-3 tw:rounded-lg tw:cursor-pointer tw:border-2 tw:transition-all tw:tw:h-32 tw:flex tw:flex-col tw:justify-between',
+                                selectedTemplate === '0' ? 'tw:border-blue-500 tw:bg-blue-50' : 'tw:border-gray-200 hover:tw:border-gray-300'
+                            ]"
+                        >
+                            <div>
+                                <h3 class="tw:text-base tw:font-semibold tw:mb-1">{{ t('home.template_official_loader') }}</h3>
+                                <p class="tw:text-xs tw:text-gray-600 tw:line-clamp-2">{{ t('home.template_official_loader_desc') }}</p>
+                            </div>
+                        </div>
+                        
+                        <div 
+                            v-for="template in templates" 
+                            :key="template.id"
+                            @click="selectTemplate(template.id)"
+                            :class="[
+                                'tw:p-3 tw:rounded-lg tw:cursor-pointer tw:border-2 tw:transition-all tw:h-32 tw:flex tw:flex-col tw:justify-between',
+                                selectedTemplate === template.id ? 'tw:border-blue-500 tw:bg-blue-50' : 'tw:border-gray-200 hover:tw:border-gray-300'
+                            ]"
+                        >
+                            <div class="tw:flex-1 tw:overflow-hidden">
+                                <div class="tw:flex tw:justify-between tw:items-start tw:mb-1">
+                                    <h3 class="tw:text-base tw:font-semibold tw:truncate tw:flex-1">{{ template.metadata.name }}</h3>
+                                </div>
+                                <p class="tw:text-xs tw:text-gray-600 tw:line-clamp-2 tw:mb-2">{{ template.metadata.description }}</p>
+                            </div>
+                            <div class="tw:flex tw:justify-between tw:text-xs tw:text-gray-500 tw:mt-1">
+                                <span class="tw:truncate tw:max-w-[50%]">{{ template.metadata.author }}</span>
+                                <a-tag color="blue" size="small" class="tw:text-xs tw:px-1 tw:py-0.5 tw:truncate tw:max-w-[45%]">{{ template.metadata.version }}</a-tag>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="templates.length === 0 && !loadingTemplates" class="tw:text-center tw:py-8 tw:text-gray-500">
+                        {{ t('home.template_load_failed') }}
+                    </div>
+                </div>
+            </a-spin>
+        </a-modal>
     </div>
 
 </template>

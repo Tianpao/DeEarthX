@@ -24,10 +24,10 @@ export class Dex {
     });
   }
 
-  public async Main(buffer: Buffer, dser: boolean, filename?: string) {
+  public async Main(buffer: Buffer, dser: boolean, filename?: string, template?: string) {
     try {
       const first = Date.now();
-      await this.processModpack(buffer, filename, first, dser);
+      await this.processModpack(buffer, filename, first, dser, template);
     } catch (e) {
       const err = e as Error;
       logger.error("主流程执行失败", err);
@@ -35,7 +35,7 @@ export class Dex {
     }
   }
 
-  private async processModpack(buffer: Buffer, filename: string | undefined, startTime: number, isServerMode: boolean) {
+  private async processModpack(buffer: Buffer, filename: string | undefined, startTime: number, isServerMode: boolean, template?: string) {
     const processedBuffer = await this._processModpack(buffer, filename);
     const zps = await this._zips(processedBuffer);
     const { contain, info } = await zps._getinfo();
@@ -55,7 +55,7 @@ export class Dex {
     
     await this.parallelTasks(zps, mpname, plat, info, unpath);
     await this.filterMods(unpath, mpname);
-    await this.installModLoader(plat, info, unpath, isServerMode);
+    await this.installModLoader(plat, info, unpath, isServerMode, template);
     await this.completeTask(startTime, unpath, mpname, isServerMode);
   }
 
@@ -74,7 +74,7 @@ export class Dex {
     this.message.statusChange();
   }
 
-  private async installModLoader(plat: string | undefined, info: any, unpath: string, isServerMode: boolean) {
+  private async installModLoader(plat: string | undefined, info: any, unpath: string, isServerMode: boolean, template?: string) {
     const mlinfo = await platform(plat).getinfo(info);
     if (isServerMode) {
       await mlsetup(
@@ -82,7 +82,8 @@ export class Dex {
         mlinfo.minecraft,
         mlinfo.loader_version,
         unpath,
-        this.message
+        this.message,
+        template
       )
     } else {
       dinstall(

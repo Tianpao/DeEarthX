@@ -24,27 +24,82 @@ export function modloader(ml: string, mcv: string, mlv: string, path: string): X
   }
 }
 
-export async function mlsetup(ml: string, mcv: string, mlv: string, path: string, messageWS?: MessageWS): Promise<void> {
-  const totalSteps = 2;
+export async function mlsetup(ml: string, mcv: string, mlv: string, path: string, messageWS?: MessageWS, template?: string): Promise<void> {
+  const totalSteps = template && template !== '0' ? 1 : (template ? 3 : 2);
   
   try {
     if (messageWS) {
       messageWS.serverInstallStart("Server Installation", mcv, ml, mlv);
-      messageWS.serverInstallStep("Installing Minecraft Server", 1, totalSteps);
     }
     
-    const minecraft = new Minecraft(ml, mcv, mlv, path);
-    await minecraft.setup();
-    
-    if (messageWS) {
-      messageWS.serverInstallProgress("Installing Minecraft Server", 100);
-      messageWS.serverInstallStep(`Installing ${ml} Loader`, 2, totalSteps);
-    }
-    
-    await modloader(ml, mcv, mlv, path).setup();
-    
-    if (messageWS) {
-      messageWS.serverInstallProgress(`Installing ${ml} Loader`, 100);
+    if (template && template !== '0') {
+      if (messageWS) {
+        messageWS.serverInstallStep(`Applying Template: ${template}`, 1, totalSteps);
+      }
+      
+      const templateModule = await import('../template/index.js');
+      const TemplateManager = (templateModule as any).TemplateManager;
+      const templateManager = new TemplateManager();
+      const templates = await templateManager.getTemplates();
+      const selectedTemplate = templates.find((t: { id: string; metadata: any }) => t.id === template);
+      
+      if (selectedTemplate) {
+        const templatePath = `./templates/${template}`;
+        const fs = await import('node:fs/promises');
+        const pathModule = await import('node:path');
+        
+        try {
+          const dataPath = pathModule.join(templatePath, 'data');
+          const files = await fs.readdir(dataPath, { recursive: true });
+          
+          for (const file of files) {
+            const srcPath = pathModule.join(dataPath, file);
+            const stat = await fs.stat(srcPath);
+            
+            if (stat.isFile()) {
+              const destPath = pathModule.join(path, file);
+              const destDir = pathModule.dirname(destPath);
+              await fs.mkdir(destDir, { recursive: true });
+              await fs.copyFile(srcPath, destPath);
+            }
+          }
+          
+          if (messageWS) {
+            messageWS.serverInstallProgress(`Applied Template: ${template}`, 100);
+          }
+        } catch (error) {
+          console.error(`Failed to apply template ${template}:`, error);
+          if (messageWS) {
+            messageWS.serverInstallError(`Failed to apply template: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+      } else {
+        console.warn(`Template ${template} not found`);
+      }
+    } else {
+      if (messageWS) {
+        messageWS.serverInstallStep("Installing Minecraft Server", 1, totalSteps);
+      }
+      
+      const minecraft = new Minecraft(ml, mcv, mlv, path);
+      await minecraft.setup();
+      
+      if (messageWS) {
+        messageWS.serverInstallProgress("Installing Minecraft Server", 100);
+        messageWS.serverInstallStep(`Installing ${ml} Loader`, 2, totalSteps);
+      }
+      
+      await modloader(ml, mcv, mlv, path).setup();
+      
+      if (messageWS) {
+        messageWS.serverInstallProgress(`Installing ${ml} Loader`, 100);
+      }
+      
+      if (template && template === '0') {
+        if (messageWS) {
+          messageWS.serverInstallStep(`No template selected, using official mod loader`, 3, totalSteps);
+        }
+      }
     }
   } catch (error) {
     if (messageWS) {

@@ -6,6 +6,7 @@ import AboutView from "../views/AboutView.vue";
 import ErrorView from "../views/ErrorView.vue";
 import GalaxyView from "../views/GalaxyView.vue";
 import DeEarthView from "../views/DeEarthView.vue";
+import TemplateView from "../views/TemplateView.vue";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -36,6 +37,10 @@ const router = createRouter({
         {
             path: "/deearth",
             component: DeEarthView
+        },
+        {
+            path: "/template",
+            component: TemplateView
         }
     ]
 })
