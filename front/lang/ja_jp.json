@@ -192,14 +192,6 @@
     "submit_failed": "送信に失敗しました",
     "submit_error": "送信エラー、再試行してください"
   },
-  "modal": {
-    "backend_loading_title": "バックエンド状態",
-    "backend_loading_content": "バックエンドサービスを起動中、しばらくお待ちください...",
-    "backend_success_title": "バックエンド状態",
-    "backend_success_content": "バックエンドサービスは正常に実行されています",
-    "backend_error_title": "バックエンド状態",
-    "backend_error_content": "バックエンド接続失敗\nエラー情報：{error}\n\n提案：\n1. バックエンドサービスが起動しているか確認\n2. ポート37019が使用されているか確認\n3. アプリを再起動してみてください"
-  },
   "message": {
     "backend_running": "DeEarthX.Coreは実行中です",
     "backend_started": "DeEarthX.Coreの起動に成功しました",

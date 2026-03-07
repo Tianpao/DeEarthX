@@ -134,28 +134,6 @@ async function runCoreProcess() {
         });
 }
 
-// 显示详细信息
-function showBackendDetails() {
-    if (backendStatus.value === 'loading') {
-        Modal.info({
-            title: t('modal.backend_loading_title'),
-            content: t('modal.backend_loading_content'),
-            okText: t('common.confirm')
-        });
-    } else if (backendStatus.value === 'success') {
-        Modal.success({
-            title: t('modal.backend_success_title'),
-            content: t('modal.backend_success_content'),
-            okText: t('common.confirm')
-        });
-    } else {
-        Modal.error({
-            title: t('modal.backend_error_title'),
-            content: t('modal.backend_error_content', { error: backendErrorInfo.value }),
-            okText: t('common.confirm')
-        });
-    }
-}
 
 // 组件挂载时启动后端
 onMounted(async () => {
@@ -279,8 +257,7 @@ const theme = ref({
                             <span style="color: #888888; font-size: 12px; margin-left: 5px;">{{ version }}</span>
                         </span>
                         <span
-                            @click="showBackendDetails"
-                            class="tw:cursor-pointer tw:transition-all tw:duration-300 hover:tw:opacity-80 tw:flex tw:items-center tw:gap-2"
+                            class="tw:flex tw:items-center tw:gap-2"
                             :title="backendErrorInfo || t('message.backend_running')"
                         >
                             <LoadingOutlined v-if="backendStatus === 'loading'" style="color: #1890ff; font-size: 18px;" />

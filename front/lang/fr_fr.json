@@ -192,14 +192,6 @@
     "submit_failed": "Échec de la soumission",
     "submit_error": "Erreur de soumission, veuillez réessayer"
   },
-  "modal": {
-    "backend_loading_title": "État du backend",
-    "backend_loading_content": "Démarrage du service backend, veuillez patienter...",
-    "backend_success_title": "État du backend",
-    "backend_success_content": "Le service backend fonctionne normalement",
-    "backend_error_title": "État du backend",
-    "backend_error_content": "Échec de la connexion au backend\nInformations d'erreur : {error}\n\nSuggestions :\n1. Vérifiez que le service backend est démarré\n2. Vérifiez que le port 37019 n'est pas utilisé\n3. Essayez de redémarrer l'application"
-  },
   "message": {
     "backend_running": "DeEarthX.Core est déjà en cours d'exécution",
     "backend_started": "DeEarthX.Core démarré avec succès",

@@ -188,14 +188,6 @@
     "submit_failed": "提交失败",
     "submit_error": "提交出错，请重试"
   },
-  "modal": {
-    "backend_loading_title": "后端状态",
-    "backend_loading_content": "正在启动后端服务，请稍候...",
-    "backend_success_title": "后端状态",
-    "backend_success_content": "后端服务运行正常",
-    "backend_error_title": "后端状态",
-    "backend_error_content": "后端连接失败\n错误信息：{error}\n\n建议：\n1. 检查后端服务是否启动\n2. 检查端口 37019 是否被占用\n3. 尝试重启应用"
-  },
   "message": {
     "backend_running": "DeEarthX.Core 已在运行",
     "backend_started": "DeEarthX.Core 启动成功",

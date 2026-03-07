@@ -192,14 +192,6 @@
     "submit_failed": "Senden fehlgeschlagen",
     "submit_error": "Sendefehler, bitte erneut versuchen"
   },
-  "modal": {
-    "backend_loading_title": "Backend-Status",
-    "backend_loading_content": "Backend-Dienst wird gestartet, bitte warten...",
-    "backend_success_title": "Backend-Status",
-    "backend_success_content": "Backend-Dienst läuft normal",
-    "backend_error_title": "Backend-Status",
-    "backend_error_content": "Backend-Verbindung fehlgeschlagen\nFehlerinformationen: {error}\n\nVorschläge:\n1. Prüfen Sie, ob der Backend-Dienst gestartet ist\n2. Prüfen Sie, ob Port 37019 belegt ist\n3. Versuchen Sie, die Anwendung neu zu starten"
-  },
   "message": {
     "backend_running": "DeEarthX.Core läuft bereits",
     "backend_started": "DeEarthX.Core erfolgreich gestartet",

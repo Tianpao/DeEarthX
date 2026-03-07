@@ -192,14 +192,6 @@
     "submit_failed": "Fallo al enviar",
     "submit_error": "Error al enviar, por favor intenta de nuevo"
   },
-  "modal": {
-    "backend_loading_title": "Estado del backend",
-    "backend_loading_content": "Iniciando servicio backend, por favor espera...",
-    "backend_success_title": "Estado del backend",
-    "backend_success_content": "El servicio backend se está ejecutando normalmente",
-    "backend_error_title": "Estado del backend",
-    "backend_error_content": "Fallo en la conexión al backend\nInformación de error: {error}\n\nSugerencias:\n1. Verifica que el servicio backend esté iniciado\n2. Verifica que el puerto 37019 no esté en uso\n3. Intenta reiniciar la aplicación"
-  },
   "message": {
     "backend_running": "DeEarthX.Core ya se está ejecutando",
     "backend_started": "DeEarthX.Core iniciado exitosamente",

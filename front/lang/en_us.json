@@ -188,14 +188,6 @@
     "submit_failed": "Submission failed",
     "submit_error": "Submission error, please try again"
   },
-  "modal": {
-    "backend_loading_title": "Backend Status",
-    "backend_loading_content": "Starting backend service, please wait...",
-    "backend_success_title": "Backend Status",
-    "backend_success_content": "Backend service is running normally",
-    "backend_error_title": "Backend Status",
-    "backend_error_content": "Backend connection failed\nError: {error}\n\nSuggestions:\n1. Check if backend service is started\n2. Check if port 37019 is occupied\n3. Try restarting the application"
-  },
   "message": {
     "backend_running": "DeEarthX.Core is already running",
     "backend_started": "DeEarthX.Core started successfully",
