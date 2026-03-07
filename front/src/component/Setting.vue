@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import { ref, watch, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
-import { useI18n, type Language } from '../i18n';
+import { useI18n } from 'vue-i18n';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
+import { setLanguage, type Language } from '../i18n/vue-i18n';
 
 // 配置接口定义
 interface AppConfig {
@@ -76,10 +77,6 @@ const config = ref<AppConfig>({
 
 // 设置分类和选项数组（使用computed以便响应式更新）
 const settings = computed<SettingCategory[]>(() => {
-  // 访问 currentLang 和 translationVersion 以建立响应式依赖
-  currentLang.value;
-  translationVersion.value;
-
   return [
     {
       id: 'filter',
@@ -170,9 +167,6 @@ const settings = computed<SettingCategory[]>(() => {
 
 // 语言选项（使用computed以响应翻译变化）
 const languageOptions = computed(() => {
-  // 访问 translationVersion 以建立响应式依赖
-  translationVersion.value;
-
   return [
     { label: '简体中文', value: 'zh_cn' },
     { label: 'English', value: 'en_us' },
@@ -186,11 +180,10 @@ const languageOptions = computed(() => {
 // 切换语言
 function handleLanguageChange(value: Language) {
   setLanguage(value);
-  // 重新加载页面以应用语言更改
-  setTimeout(() => {
-    window.location.reload();
-  }, 300);
 }
+
+// i18n
+const { t, locale } = useI18n();
 
 // 获取配置值
 function getConfigValue(path: string): boolean {
@@ -380,9 +373,6 @@ function importConfig() {
 //   checkJavaVersion(path);
 // }
 
-// i18n
-const { t, setLanguage, language: currentLang, translationVersion } = useI18n();
-
 onMounted(() => {
   loadConfig();
 });
@@ -458,7 +448,7 @@ watch(config, (newValue) => {
               <p class="tw:text-xs tw:text-gray-500 tw:mt-2">{{ t('setting.language_desc') }}</p>
               <div class="tw-mt-3">
                 <a-select
-                  :value="currentLang"
+                  :value="locale"
                   :options="languageOptions"
                   @change="handleLanguageChange"
                   class="tw:w-full"

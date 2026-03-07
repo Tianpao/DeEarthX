@@ -111,13 +111,9 @@ import { ref, computed } from 'vue';
 import { UploadOutlined, InboxOutlined, SendOutlined } from '@ant-design/icons-vue';
 import { message, Modal } from 'ant-design-vue';
 import type { UploadFile, UploadProps } from 'ant-design-vue';
-import { useI18n } from '../i18n';
+import { useI18n } from 'vue-i18n';
 
-// i18n
-const { t, translationVersion } = useI18n();
-
-// 访问 translationVersion 以建立响应式依赖
-translationVersion.value;
+const { t } = useI18n();
 
 const modType = ref<'client' | 'server'>('client');
 const modidList = ref<string[]>([]);

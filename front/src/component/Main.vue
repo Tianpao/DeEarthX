@@ -1,17 +1,13 @@
 <script lang="ts" setup>
-import { inject, ref, watch, onMounted, computed } from 'vue';
+import { inject, ref, onMounted, computed } from 'vue';
 import { InboxOutlined } from '@ant-design/icons-vue';
 import { message, notification, StepsProps } from 'ant-design-vue';
 import type { UploadFile, UploadChangeParam } from 'ant-design-vue';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { SelectProps } from 'ant-design-vue/es/vc-select';
-import { useI18n } from '../i18n';
+import { useI18n } from 'vue-i18n';
 
-// i18n
-const { t, translationVersion } = useI18n();
-
-// 访问 translationVersion 以建立响应式依赖
-translationVersion.value;
+const { t } = useI18n();
 
 // 进度步骤配置
 const showSteps = ref(false);
@@ -19,9 +15,6 @@ const currentStep = ref(0);
 
 // 步骤项（使用computed自动响应语言变化）
 const stepItems = computed<Required<StepsProps>['items']>(() => {
-    // 访问 translationVersion 以建立响应式依赖
-    translationVersion.value;
-
     return [
         { title: t('home.step1_title'), description: t('home.step1_desc') },
         { title: t('home.step2_title'), description: t('home.step2_desc') },
@@ -94,31 +87,10 @@ const selectedMode = ref(javaAvailable.value ? 'server' : 'upload');
 
 // 模式选项（使用computed自动响应语言变化）
 const modeOptions = computed<SelectProps['options']>(() => {
-    // 访问 translationVersion 以建立响应式依赖
-    translationVersion.value;
-
     return [
         { label: t('home.mode_server'), value: 'server', disabled: !javaAvailable.value },
         { label: t('home.mode_upload'), value: 'upload', disabled: false }
     ];
-});
-
-// 更新模式选项文本（保留用于监听javaAvailable变化）
-function updateModeOptions() {
-    // modeOptions 是computed，不需要手动更新
-}
-
-// 监听Java可用性变化，更新模式选项
-watch(javaAvailable, (newValue) => {
-    // modeOptions 是computed，会自动更新
-    if (!newValue && selectedMode.value === 'server') {
-        selectedMode.value = 'upload';
-    }
-});
-
-// 监听语言变化，更新翻译文本
-watch(translationVersion, () => {
-    updateModeOptions();
 });
 
 // 处理模式选择

@@ -4,34 +4,13 @@ import { MenuProps, message, Modal } from 'ant-design-vue';
 import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Command } from '@tauri-apps/plugin-shell';
-import { initI18n, useI18n } from './i18n';
-
-// i18n 加载状态
-const isI18nReady = ref(false);
-
-// // 打开作者B站空间
-// async function openAuthorBilibili() {
-//     await shell.open("https://space.bilibili.com/1728953419");
-// }
-
-// 屏蔽右键菜单（输入框和文本域除外）
-document.oncontextmenu = (event: any) => {
-    try {
-        const target = event.srcElement;
-        const isInput = target.tagName === 'INPUT' && target.type.toLowerCase() === 'text';
-        const isTextarea = target.tagName === 'TEXTAREA';
-        return isInput || isTextarea;
-    } catch {
-        return false;
-    }
-};
+import { useI18n } from 'vue-i18n';
 
 const router = useRouter();
 const route = useRoute();
 let killCoreProcess: (() => void) | null = null;
 
-// i18n - 在最顶层声明，确保所有地方都能访问
-const { t, language, translationVersion } = useI18n();
+const { t } = useI18n();
 
 // 版本号相关
 const version = ref<string>('V3');
@@ -180,9 +159,6 @@ function showBackendDetails() {
 
 // 组件挂载时启动后端
 onMounted(async () => {
-    // 初始化i18n
-    await initI18n();
-    isI18nReady.value = true;
     loadVersion();
     runCoreProcess();
 });
@@ -194,10 +170,7 @@ provide("killCoreProcess", () => {
             message.info(t('message.backend_restart'));
             runCoreProcess();
         }
-}); //全局提供kill方法
-
-// 提供 i18n 给所有子组件
-provide('i18n', { t });
+});
 
 // 导航菜单配置
 const selectedKeys = ref<(string | number)[]>(['main']);
@@ -219,10 +192,6 @@ router.beforeEach((to, _from, next) => {
 
 // 菜单项配置（使用计算属性使其响应语言变化）
 const menuItems = computed<MenuProps['items']>(() => {
-    // 访问 language 和 translationVersion 以建立响应式依赖
-    language.value;
-    translationVersion.value;
-
     return [
         {
             key: 'main',
@@ -230,18 +199,6 @@ const menuItems = computed<MenuProps['items']>(() => {
             label: t('menu.home'),
             title: t('menu.home'),
         },
-        // {
-        //     key: 'logs',
-        //     icon: h(FileTextOutlined),
-        //     label: '日志',
-        //     title: '日志',
-        // },
-        // {
-        //     key: 'modcheck',
-        //     icon: h(FileSearchOutlined),
-        //     label: '模组检查',
-        //     title: '模组检查',
-        // },
         {
             key: 'setting',
             icon: h(SettingOutlined),
@@ -296,11 +253,7 @@ const theme = ref({
 
 <template>
     <a-config-provider :theme="theme">
-        <!-- i18n 加载遮罩 -->
-        <div v-if="!isI18nReady" class="tw:h-screen tw:w-screen tw:flex tw:items-center tw:justify-center">
-            <a-spin size="large" />
-        </div>
-        <div v-else class="tw:h-screen tw:w-screen tw:flex tw:flex-col tw:overflow-hidden">
+        <div class="tw:h-screen tw:w-screen tw:flex tw:flex-col tw:overflow-hidden">
             <!-- 顶部导航栏 -->
             <a-page-header
                 class="tw:h-14 tw:px-6 tw:flex tw:items-center tw:bg-white tw:shadow-sm tw:z-10 tw:transition-all tw:duration-300"

@@ -1,10 +1,9 @@
 <script lang="ts" setup>
 import { open } from "@tauri-apps/plugin-shell";
 import { ref, onMounted, computed } from "vue";
-import { useI18n } from '../i18n';
+import { useI18n } from 'vue-i18n';
 
-// i18n
-const { t, language, translationVersion } = useI18n();
+const { t } = useI18n();
 // 赞助商数据接口定义
 interface Sponsor {
     id: string;
@@ -102,9 +101,6 @@ async function fetchSponsors() {
 
 // 感谢列表数据数组
 const thanksList = computed(() => {
-  // 访问 language 和 translationVersion 以建立响应式依赖
-  language.value;
-  translationVersion.value;
   return [
     {
       id: "user",
