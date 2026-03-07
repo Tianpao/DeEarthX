@@ -211,36 +211,37 @@ export class Core {
             }
         });
 
-        // 模组检查路由 - 通过上传文件检查
-        this.app.post('/modcheck/upload', this.upload.array('files'), async (req, res) => {
+
+
+        // 模组检查路由 - 通过文件夹路径和整合包名字检查
+        this.app.post('/modcheck/folder', async (req, res) => {
             try {
-                logger.info("收到模组检查上传请求", { 
-                    filesCount: req.files ? (req.files as Express.Multer.File[]).length : 0 
-                });
-                
-                if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-                    logger.warn("请求中未包含文件");
-                    return res.status(400).json({ status: 400, message: "未上传文件" });
+                const { folderPath, bundleName } = req.body;
+
+                if (!folderPath) {
+                    logger.warn("请求中缺少文件夹路径");
+                    return res.status(400).json({ status: 400, message: "缺少文件夹路径" });
                 }
 
-                // 文件类型检查
-                const allowedExtensions = ['.jar'];
-                for (const file of req.files as Express.Multer.File[]) {
-                    const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
-                    if (!allowedExtensions.includes(fileExtension)) {
-                        return res.status(400).json({ status: 400, message: `只支持 .jar 文件，${file.originalname} 不是有效的模组文件` });
-                    }
+                if (!bundleName || !bundleName.trim()) {
+                    logger.warn("请求中缺少整合包名字");
+                    return res.status(400).json({ status: 400, message: "缺少整合包名字" });
                 }
+
+                logger.info("收到模组检查文件夹请求", { 
+                    folderPath, 
+                    bundleName: bundleName.trim() 
+                });
 
                 const { ModCheckService } = await import('./dearth/index.js');
-                const checkService = new ModCheckService('');
-                const results = await checkService.checkUploadedFiles(req.files as Express.Multer.File[]);
+                const checkService = new ModCheckService(folderPath);
+                const results = await checkService.checkModsWithBundle(bundleName.trim());
 
                 logger.info("模组检查完成", { resultsCount: results.length });
                 res.json(results);
             } catch (err) {
                 const error = err as Error;
-                logger.error("/modcheck/upload 路由错误", error);
+                logger.error("/modcheck/folder 路由错误", error);
                 res.status(500).json({ status: 500, message: "模组检查失败: " + error.message });
             }
         });

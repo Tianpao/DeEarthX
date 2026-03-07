@@ -8,7 +8,7 @@ export default {
 	input: 'src/main.ts',
 	output: {
 		file: 'dist/bundle.js',
-		format: 'cjs',
+		format: 'es',
 		inlineDynamicImports: true,
 		sourcemap: false
 	},

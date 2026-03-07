@@ -41,6 +41,122 @@ export class ModCheckService {
     return results;
   }
 
+  async checkModsWithBundle(bundleName: string): Promise<IModCheckResult[]> {
+    logger.info("开始模组检查流程（带整合包）", { bundleName });
+    const files = await this.extractor.extractFilesInfo();
+    const results: IModCheckResult[] = [];
+
+    const clientMods = await this.identifyClientSideMods(files);
+    
+    for (const file of files) {
+      const filename = file.filename;
+      const isClient = clientMods.includes(filename);
+      
+      results.push({
+        filename: path.basename(filename),
+        filePath: filename,
+        clientSide: isClient ? 'required' : 'unknown',
+        serverSide: isClient ? 'unsupported' : 'unknown',
+        source: isClient ? 'Multiple' : 'none',
+        checked: isClient,
+        allResults: isClient ? [{
+          source: 'Multiple',
+          clientSide: 'required',
+          serverSide: 'unsupported',
+          checked: true
+        }] : []
+      });
+    }
+
+    if (clientMods.length > 0) {
+      await this.moveClientMods(clientMods, bundleName);
+      logger.info(`已移动 ${clientMods.length} 个客户端模组到 .rubbish/${bundleName}`);
+    }
+
+    logger.info("模组检查流程完成", { 总模组数: results.length, 客户端模组数: clientMods.length });
+    return results;
+  }
+
+  private async identifyClientSideMods(files: IFileInfo[]): Promise<string[]> {
+    const clientMods: string[] = [];
+    const processedFiles = new Set<string>();
+
+    if (this.config.enableDexpub) {
+      logger.info("开始 Galaxy Square (dexpub) 检查客户端模组");
+      const dexpubStrategy = new DexpubFilter();
+      const dexpubMods = await dexpubStrategy.filter(files);
+      const serverModsListSet = new Set(await dexpubStrategy.getServerMods(files));
+
+      dexpubMods.forEach(mod => processedFiles.add(mod));
+      serverModsListSet.forEach(mod => processedFiles.add(mod));
+      clientMods.push(...dexpubMods);
+    }
+
+    if (this.config.enableModrinth) {
+      logger.info("开始 Modrinth API 检查客户端模组");
+
+      let serverModsSet = new Set<string>();
+      if (this.config.enableDexpub) {
+        const dexpubStrategy = new DexpubFilter();
+        serverModsSet = new Set(await dexpubStrategy.getServerMods(files));
+      }
+
+      const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
+      const modrinthMods = await new ModrinthFilter().filter(unprocessedFiles);
+
+      modrinthMods.forEach(mod => processedFiles.add(mod));
+      clientMods.push(...modrinthMods);
+    }
+
+    if (this.config.enableMixin) {
+      logger.info("开始 Mixin 检查客户端模组");
+
+      const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
+      const mixinMods = await new MixinFilter().filter(unprocessedFiles);
+
+      mixinMods.forEach(mod => processedFiles.add(mod));
+      clientMods.push(...mixinMods);
+    }
+
+    if (this.config.enableHash) {
+      logger.info("开始 Hash 检查客户端模组");
+
+      const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
+      const hashMods = await new HashFilter().filter(unprocessedFiles);
+
+      clientMods.push(...hashMods);
+    }
+
+    const uniqueMods = [...new Set(clientMods)];
+    logger.info("识别到客户端模组", { 数量: uniqueMods.length });
+
+    return uniqueMods;
+  }
+
+  private async moveClientMods(clientModFilePaths: string[], bundleName: string): Promise<void> {
+    const rubbishDir = path.join('.rubbish', bundleName);
+    
+    try {
+      await fs.promises.mkdir(rubbishDir, { recursive: true });
+      logger.info(`创建目录: ${rubbishDir}`);
+    } catch (error: any) {
+      logger.error(`创建目录失败: ${rubbishDir}`, error);
+      throw error;
+    }
+
+    for (const filePath of clientModFilePaths) {
+      const filename = path.basename(filePath);
+      const destPath = path.join(rubbishDir, filename);
+
+      try {
+        await fs.promises.rename(filePath, destPath);
+        logger.debug(`移动模组: ${filename} -> ${destPath}`);
+      } catch (error: any) {
+        logger.error(`移动模组失败: ${filename}`, error);
+      }
+    }
+  }
+
   async checkUploadedFiles(uploadedFiles: Array<{ originalname: string; buffer: Buffer }>): Promise<IModCheckResult[]> {
     logger.info("开始检查上传文件", { 文件数量: uploadedFiles.length });
     const results: IModCheckResult[] = [];
