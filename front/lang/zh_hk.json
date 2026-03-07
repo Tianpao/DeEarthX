@@ -23,7 +23,8 @@
   },
   "menu": {
     "home": "主頁",
-    "setting": "設定",
+    "deearth": "篩選",
+    "setting": "設置",
     "galaxy": "提交",
     "about": "關於"
   },

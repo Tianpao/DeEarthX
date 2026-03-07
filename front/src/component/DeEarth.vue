@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { message } from 'ant-design-vue';
-import { InboxOutlined, FileSearchOutlined } from '@ant-design/icons-vue';
+import { InboxOutlined, FileSearchOutlined, FolderOpenOutlined } from '@ant-design/icons-vue';
 import type { UploadFile, UploadProps } from 'ant-design-vue';
 import { Upload } from 'ant-design-vue';
+import { open } from '@tauri-apps/plugin-dialog';
 
 interface SingleCheckResult {
     source: string;
@@ -142,6 +143,24 @@ function getSideText(clientSide: string, serverSide: string): string {
     }
     return '未知';
 }
+
+async function selectFolder() {
+    try {
+        const selected = await open({
+            directory: true,
+            multiple: false,
+            title: '选择文件夹'
+        });
+        
+        if (selected) {
+            console.log('选择的文件夹路径:', selected);
+            message.success(`已选择文件夹: ${selected}`);
+        }
+    } catch (error) {
+        console.error('选择文件夹失败:', error);
+        message.error('选择文件夹失败');
+    }
+}
 </script>
 
 <template>
@@ -152,6 +171,21 @@ function getSideText(clientSide: string, serverSide: string): string {
         </div>
 
         <a-card class="tw:mb-4 md:tw:mb-6">
+            <div class="tw:mb-4">
+                <a-button 
+                    type="default" 
+                    size="large" 
+                    block 
+                    @click="selectFolder"
+                    class="tw:mb-4"
+                >
+                    <template #icon>
+                        <FolderOpenOutlined />
+                    </template>
+                    选择文件夹
+                </a-button>
+            </div>
+
             <a-upload-dragger
                 v-model:fileList="fileList"
                 :before-upload="beforeUpload"

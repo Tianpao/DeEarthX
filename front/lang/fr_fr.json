@@ -23,6 +23,7 @@
   },
   "menu": {
     "home": "Accueil",
+    "deearth": "Filtre",
     "setting": "Paramètres",
     "galaxy": "Soumettre",
     "about": "À propos"

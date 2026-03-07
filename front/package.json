@@ -16,6 +16,7 @@
     "@ant-design/icons-vue": "^7.0.1",
     "@tailwindcss/vite": "^4.2.1",
     "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "~2",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@tauri-apps/plugin-shell": "^2.3.5",

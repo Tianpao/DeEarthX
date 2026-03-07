@@ -5,8 +5,8 @@ import Setting from "../component/Setting.vue";
 import About from "../component/About.vue";
 import Error from "../component/Error.vue";
 import Galaxy from "../component/Galaxy.vue";
+import DeEarth from "../component/DeEarth.vue";
 // import Logs from "../component/Logs.vue";
-// import ModCheck from "../component/ModCheck.vue";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -31,14 +31,14 @@ const router = createRouter({
         {
             path: "/galaxy",
             component: Galaxy
+        },
+        {
+            path: "/deearth",
+            component: DeEarth
         }
         // ,{
         //     path: "/logs",
         //     component: Logs
-        // }
-        // ,{
-        //     path: "/modcheck",
-        //     component: ModCheck
         // }
     ]
 })

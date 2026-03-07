@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { h, provide, ref, onMounted, computed } from 'vue';
 import { MenuProps, message, Modal } from 'ant-design-vue';
-import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
+import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined, FileSearchOutlined } from '@ant-design/icons-vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Command } from '@tauri-apps/plugin-shell';
 import { useI18n } from 'vue-i18n';
@@ -183,6 +183,7 @@ router.beforeEach((to, _from, next) => {
         '/about': 'about',
         '/error': 'main',
         '/galaxy': 'galaxy',
+        '/deearth': 'deearth'
         // '/logs': 'logs'
         // '/modcheck': 'modcheck'
     };
@@ -200,16 +201,22 @@ const menuItems = computed<MenuProps['items']>(() => {
             title: t('menu.home'),
         },
         {
-            key: 'setting',
-            icon: h(SettingOutlined),
-            label: t('menu.setting'),
-            title: t('menu.setting'),
+            key: 'deearth',
+            icon: h(FileSearchOutlined),
+            label: t('menu.deearth'),
+            title: t('menu.deearth'),
         },
         {
             key: 'galaxy',
             icon: h(UploadOutlined),
             label: t('menu.galaxy'),
             title: t('menu.galaxy'),
+        },
+        {
+            key: 'setting',
+            icon: h(SettingOutlined),
+            label: t('menu.setting'),
+            title: t('menu.setting'),
         },
         {
             key: 'about',
@@ -225,6 +232,7 @@ const handleMenuClick: MenuProps['onClick'] = (e) => {
     selectedKeys.value[0] = e.key;
     const routeMap: Record<string, string> = {
         main: '/',
+        deearth: '/deearth',
         // logs: '/logs',
         setting: '/setting',
         about: '/about',
