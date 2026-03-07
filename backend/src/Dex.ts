@@ -3,7 +3,7 @@ import p from "node:path";
 import websocket, { WebSocketServer } from "ws";
 import { pipeline } from "node:stream/promises";
 import { platform, what_platform } from "./platform/index.js";
-import { ModFilterService } from "./mod-filter/index.js";
+import { ModFilterService } from "./dearth/index.js";
 import { dinstall, mlsetup } from "./modloader/index.js";
 import config from "./utils/config.js";
 import { execPromise } from "./utils/utils.js";

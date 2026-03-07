@@ -199,7 +199,7 @@ export class Core {
                     return res.status(400).json({ status: 400, message: "缺少 path 参数" });
                 }
 
-                const { ModCheckService } = await import('./mod-filter/index.js');
+                const { ModCheckService } = await import('./dearth/index.js');
                 const checkService = new ModCheckService(modsPath);
                 const results = await checkService.checkMods();
 
@@ -232,7 +232,7 @@ export class Core {
                     }
                 }
 
-                const { ModCheckService } = await import('./mod-filter/index.js');
+                const { ModCheckService } = await import('./dearth/index.js');
                 const checkService = new ModCheckService('');
                 const results = await checkService.checkUploadedFiles(req.files as Express.Multer.File[]);
 

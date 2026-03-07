@@ -1,4 +1,4 @@
-import { IInfoFile, IMixinFile } from "../mod-filter/types.js";
+import { IInfoFile, IMixinFile } from "../dearth/types.js";
 import { Azip } from "./ziplib.js";
 import toml from "smol-toml";
 
