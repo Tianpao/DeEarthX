@@ -1,8 +1,8 @@
 [package]
 name = "dex-v3-ui"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "1.0.0"
+description = "DeEarthX V3 - Minecraft整合包服务端制作工具"
+authors = ["Tianpao"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

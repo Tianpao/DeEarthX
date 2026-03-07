@@ -6,6 +6,7 @@ import fs from "node:fs";
 import fse from "fs-extra";
 import { WebSocket } from "ws";
 import { ExecOptions, exec, spawn} from "node:child_process";
+import crypto from "node:crypto";
 
 /**
  * Java版本信息接口
@@ -74,14 +75,16 @@ export function version_compare(v1: string, v2: string) {
 
 /**
  * 检测Java是否安装并获取版本信息
+ * @param javaPath Java路径（可选，默认使用系统PATH中的java）
  * @returns Java检测结果
  */
-export async function checkJava(): Promise<JavaCheckResult> {
+export async function checkJava(javaPath?: string): Promise<JavaCheckResult> {
   try {
+    const javaCmd = javaPath || "java";
     const output = await new Promise<string>((resolve, reject) => {
-      exec("java -version", (err, stdout, stderr) => {
+      exec(`${javaCmd} -version`, (err, stdout, stderr) => {
         if (err) {
-          logger.error("Java check failed", err);
+          logger.error("Java 检查失败", err);
           reject(new Error("Java not found"));
           return;
         }
@@ -102,7 +105,7 @@ export async function checkJava(): Promise<JavaCheckResult> {
     if (!versionMatch) {
       return {
         exists: true,
-        error: "Failed to parse Java version"
+        error: "解析 Java 版本失败"
       };
     }
     
@@ -118,14 +121,14 @@ export async function checkJava(): Promise<JavaCheckResult> {
       vendor: vendorMatch ? vendorMatch[2] : "Unknown"
     };
     
-    logger.info(`Java detected: ${JSON.stringify(versionInfo)}`);
+    logger.info(`检测到 Java: ${JSON.stringify(versionInfo)}`);
     
     return {
       exists: true,
       version: versionInfo
     };
   } catch (error) {
-    logger.error("Java check error", error as Error);
+    logger.error("Java 检查异常", error as Error);
     return {
       exists: false,
       error: (error as Error).message
@@ -133,8 +136,73 @@ export async function checkJava(): Promise<JavaCheckResult> {
   }
 }
 
+/**
+ * 自动检测系统中的Java安装路径
+ * @returns Java路径列表
+ */
+export async function detectJavaPaths(): Promise<string[]> {
+  const javaPaths: string[] = [];
+  
+  // Windows 常见Java安装路径
+  const windowsPaths = [
+    "C:\\Program Files\\Java\\",
+    "C:\\Program Files (x86)\\Java\\",
+    "C:\\Program Files\\Eclipse Adoptium\\",
+    "C:\\Program Files\\Eclipse Foundation\\",
+    "C:\\Program Files\\Microsoft\\",
+    "C:\\Program Files\\Amazon Corretto\\",
+    "C:\\Program Files\\BellSoft\\",
+    "C:\\Program Files\\Zulu\\",
+    "C:\\Program Files\\Semeru\\",
+    "C:\\Program Files\\Oracle\\",
+    "C:\\Program Files\\RedHat\\",
+  ];
+  
+  // 检查Windows路径
+  for (const basePath of windowsPaths) {
+    try {
+      if (fs.existsSync(basePath)) {
+        const versions = fs.readdirSync(basePath);
+        for (const version of versions) {
+          const javaExe = `${basePath}${version}\\bin\\java.exe`;
+          if (fs.existsSync(javaExe)) {
+            javaPaths.push(javaExe);
+          }
+        }
+      }
+    } catch (error) {
+      // 忽略权限错误
+    }
+  }
+  
+  // 检查系统PATH中的java
+  try {
+    const pathOutput = await new Promise<string>((resolve, reject) => {
+      exec("where java", (err, stdout, stderr) => {
+        if (err) {
+          resolve("");
+          return;
+        }
+        resolve(stdout);
+      });
+    });
+    
+    const wherePaths = pathOutput.split('\n').filter(p => p.trim() !== '');
+    for (const path of wherePaths) {
+      if (!javaPaths.includes(path.trim())) {
+        javaPaths.push(path.trim());
+      }
+    }
+  } catch (error) {
+    // 忽略错误
+  }
+  
+  // 去重
+  return [...new Set(javaPaths)];
+}
+
 export function execPromise(cmd:string,options?:ExecOptions){
-  logger.debug(`Executing command: ${cmd}`);
+  logger.debug(`执行命令: ${cmd}`);
   return new Promise<number>((resolve,reject)=>{
     const args = cmd.split(' ');
     const command = args.shift() || '';
@@ -147,57 +215,145 @@ export function execPromise(cmd:string,options?:ExecOptions){
     
     child.on('close', (code) => {
       if (code !== 0) {
-        logger.error(`Command execution failed: ${cmd}`);
+        logger.error(`命令执行失败: ${cmd}`);
         reject(new Error(`Command failed with exit code ${code}`));
         return;
       }
-      logger.debug(`Command completed with exit code: ${code}`);
+      logger.debug(`命令执行完成，退出码: ${code}`);
       resolve(code || 0);
     });
     
     child.on('error', (err) => {
-      logger.error(`Command execution error: ${cmd}`, err);
+      logger.error(`命令执行错误: ${cmd}`, err);
       reject(err);
     });
   })
 }
 
-async function downloadFile(url: string, filePath: string, onProgress?: (total: number, current: number, path: string) => void) {
+/**
+ * 计算文件的 SHA-1 哈希值
+ * @param filePath 文件路径
+ * @returns 文件的 SHA-1 哈希值（小写）
+ */
+export function calculateSHA1(filePath: string): string {
+  const hash = crypto.createHash('sha1');
+  const fileBuffer = fs.readFileSync(filePath);
+  hash.update(fileBuffer);
+  return hash.digest('hex').toLowerCase();
+}
+
+/**
+ * 验证文件的 SHA-1 哈希值
+ * @param filePath 文件路径
+ * @param expectedHash 期望的哈希值
+ * @returns 是否验证通过
+ */
+export function verifySHA1(filePath: string, expectedHash: string): boolean {
+  const actualHash = calculateSHA1(filePath);
+  const expectedHashLower = expectedHash.toLowerCase();
+  const isMatch = actualHash === expectedHashLower;
+  
+  if (!isMatch) {
+    logger.error(`文件哈希验证失败: ${filePath}`);
+    logger.error(`期望: ${expectedHashLower}`);
+    logger.error(`实际: ${actualHash}`);
+  } else {
+    logger.debug(`文件哈希验证成功: ${filePath} (sha1: ${actualHash})`);
+  }
+  
+  return isMatch;
+}
+
+/**
+ * 下载文件配置接口
+ */
+interface DownloadOptions {
+  url: string;
+  filePath: string;
+  expectedHash?: string;
+  forceDownload?: boolean;
+}
+
+async function downloadFile(url: string, filePath: string, expectedHash?: string, forceDownload = false) {
   await pRetry(
     async () => {
-      if (!fs.existsSync(filePath)) {
-        logger.debug(`Downloading ${url} to ${filePath}`);
-        const res = await got.get(url, {
+      // 如果文件已存在且不强制下载，则跳过
+      if (fs.existsSync(filePath) && !forceDownload) {
+        logger.debug(`文件已存在，跳过: ${filePath}`);
+        // 如果提供了期望的 hash，验证已存在的文件
+        if (expectedHash && !verifySHA1(filePath, expectedHash)) {
+          logger.warn(`已存在文件哈希不匹配，将重新下载: ${filePath}`);
+          fs.unlinkSync(filePath);
+          // 继续下载流程
+        } else {
+          return;
+        }
+      }
+      
+      logger.debug(`正在下载 ${url} 到 ${filePath}`);
+      let res: any = null;
+      try {
+        res = await got.get(url, {
           responseType: "buffer",
           headers: { "user-agent": "DeEarthX" },
+          followRedirect: true, // 跟随重定向
         });
         fse.outputFileSync(filePath, res.rawBody);
-        logger.debug(`Downloaded ${url} successfully`);
-      } else {
-        logger.debug(`File already exists, skipping: ${filePath}`);
+        logger.debug(`下载 ${url} 成功`);
+        
+        // 如果提供了期望的 hash，验证下载的文件
+        if (expectedHash && !verifySHA1(filePath, expectedHash)) {
+          throw new Error(`文件哈希验证失败，下载的文件可能已损坏`);
+        }
+      } finally {
+        // 释放响应对象
+        res = null;
       }
     },
     { 
       retries: 3, 
       onFailedAttempt: (error) => {
-        logger.warn(`Download attempt failed for ${url}, retrying (${error.attemptNumber}/3)`);
+        logger.warn(`${url} 下载失败，正在重试 (${error.attemptNumber}/3)`);
       }
     }
   );
 }
 
-export async function fastdownload(data: [string, string]|string[][]) {
-  const downloadList: [string, string][] = Array.isArray(data[0]) 
-    ? (data as string[][]).map(item => item as [string, string]) 
-    : [data as [string, string]];
-  logger.info(`Starting fast download of ${downloadList.length} files`);
+/**
+ * 扩展下载项接口，支持 hash 验证
+ */
+interface DownloadItem {
+  url: string;
+  filePath: string;
+  expectedHash?: string;
+}
+
+/**
+ * 支持带 hash 验证的快速下载
+ * @param data 下载列表，可以是 [url, filePath] 或 [[url, filePath, hash?], ...]
+ */
+export async function fastdownload(data: [string, string]|string[][], enableHashVerify = true) {
+  let downloadList: Array<[string, string, string?]>;
+  
+  if (Array.isArray(data[0])) {
+    // 二维数组格式：[[url, filePath, hash?], ...]
+    downloadList = (data as string[][]).map((item): [string, string, string?] => 
+      item.length >= 3 ? [item[0], item[1], item[2]] : [item[0], item[1]]
+    );
+  } else {
+    // 单个二元组格式：[url, filePath]
+    const singleItem = data as [string, string];
+    downloadList = [[singleItem[0], singleItem[1]]];
+  }
+  
+  logger.info(`开始快速下载 ${downloadList.length} 个文件${enableHashVerify ? '（启用 hash 验证）' : ''}`);
   
   return await pMap(
     downloadList,
-    async (item: [string, string]) => {
-      const [url, filePath] = item;
+    async (item: [string, string, string?]) => {
+      const [url, filePath, expectedHash] = item;
       try {
-        await downloadFile(url, filePath);
+        await downloadFile(url, filePath, enableHashVerify ? expectedHash : undefined);
       } catch (error) {
         logger.error(`Failed to download ${url} after 3 attempts`, error);
         throw error;
@@ -207,18 +363,24 @@ export async function fastdownload(data: [string, string]|string[][]) {
   );
 }
 
-export async function Wfastdownload(data: string[][], ws: MessageWS) {
-  logger.info(`Starting web download of ${data.length} files`);
+/**
+ * 支持带 hash 验证的 WebSocket 下载
+ * @param data 下载列表 [[url, filePath, hash?], ...]
+ * @param ws WebSocket 连接
+ * @param enableHashVerify 是否启用 hash 验证
+ */
+export async function Wfastdownload(data: string[][], ws: MessageWS, enableHashVerify = true) {
+  logger.info(`开始 Web 下载 ${data.length} 个文件${enableHashVerify ? '（启用 hash 验证）' : ''}`);
   let index = 0;
   return await pMap(
     data,
     async (item: string[]) => {
-      const [url, filePath] = item;
+      const [url, filePath, expectedHash] = item;
       try {
-        await downloadFile(url, filePath);
+        await downloadFile(url, filePath, enableHashVerify ? expectedHash : undefined);
         ws.download(data.length, ++index, filePath);
       } catch (error) {
-        logger.error(`Failed to download ${url} after 3 attempts`, error);
+        logger.error(`${url} 下载失败，已重试 3 次`, error);
         throw error;
       }
     },

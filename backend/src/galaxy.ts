@@ -9,9 +9,15 @@ export class Galaxy {
     private readonly upload: multer.Multer;
     got: Got;
     constructor() {
-        this.upload = multer()
+        this.upload = multer({
+            storage: multer.memoryStorage(),
+            limits: {
+                fileSize: 2 * 1024 * 1024 * 1024,
+                files: 10
+            }
+        })
         this.got = got.extend({
-            prefixUrl: "https://galaxy.tianpao.top/",
+            prefixUrl: "https://galaxy.tianpao.top/  ",
             //prefixUrl: "http://localhost:3000/",
             headers: {
                 "User-Agent": "DeEarthX",
@@ -25,22 +31,22 @@ export class Galaxy {
     router.post("/upload",this.upload.array("files"), (req, res) => {
         const files = req.files as Express.Multer.File[];
         if(!files || files.length === 0){
-            res.status(400).json({ status: 400, message: "No file uploaded" });
+            res.status(400).json({ status: 400, message: "未上传文件" });
             return;
         }
         const modids = this.getModids(files);
-        logger.info("Uploaded modids", modids);
+        logger.info("已上传模组 ID", { 模组ID: modids });
         res.json({modids}).end();
     });
     router.post("/submit/:type",(req,res)=>{
         const type = req.params.type;
         if(type !== "server" && type !== "client"){
-            res.status(400).json({ status: 400, message: "Invalid type" });
+            res.status(400).json({ status: 400, message: "无效的类型参数" });
             return;
         }
         const modid = req.body.modids as string;
         if(!modid){
-            res.status(400).json({ status: 400, message: "No modid provided" });
+            res.status(400).json({ status: 400, message: "未提供 modid" });
             return;
         }
         this.got.post(`api/mod/submit/${type}`,{
@@ -48,11 +54,11 @@ export class Galaxy {
                 modid,
             }
         }).then((response)=>{
-            logger.info(`Submitted modids for ${type}：`, response.body);
+            logger.info(`已成功提交 ${type} 端模组 ID`, response.body);
             res.json(response.body).end();
         }).catch((error)=>{
-            logger.error(`Failed to submit modids for ${type}：`, error);
-            res.status(500).json({ status: 500, message: "Failed to submit modids" });
+            logger.error(`提交 ${type} 端模组 ID 失败`, error);
+            res.status(500).json({ status: 500, message: "提交模组 ID 失败" });
         })
     })
     return router;

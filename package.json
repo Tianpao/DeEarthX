@@ -4,18 +4,27 @@
   "description": "main",
   "repository": {
     "type": "git",
-    "url": "https://git.tianpao.top/Tianpao/DeEarthX-V3.git"
+    "url": "https://git.xcclyc.cn/15736060610/DeEarthX.git"
   },
   "license": "ISC",
   "author": "Tianpao",
   "type": "module",
   "main": "./.build/build.js",
   "scripts": {
-    "backend":"cd ./backend && npm run build",
-    "upx":".\\.build\\upx.exe .\\backend\\dist\\core.exe",
-    "tauri":"cd ./front && npm run tauri build",
-    "back2front":"node b2f.js b2f",
-    "build2root":"node b2f.js b2r",
-    "build":"npm run backend && npm run upx && npm run back2front && npm run tauri && npm run build2root"
+    "backend": "cd ./backend && npm run build",
+    "upx": "echo Skipping UPX compression...",
+    "tauri": "cd ./front && npm run tauri build",
+    "back2front": "node b2f.js b2f",
+    "build2root": "node b2f.js b2r",
+    "build": "npm run backend && npm run upx && npm run back2front && npm run tauri && npm run build2root"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "build": "^0.1.4"
+  },
+  "devDependencies": {
+    "@types/archiver": "^7.0.0",
+    "nexe": "^5.0.0-beta.4",
+    "pkg": "^5.8.1"
   }
 }
