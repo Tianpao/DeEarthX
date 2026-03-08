@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { fastdownload, version_compare } from "../utils/utils.js";
 import got from "got";
+import p from "path";
 import { Azip } from "../utils/ziplib.js";
 import { Config } from "../utils/config.js";
 
@@ -59,7 +60,7 @@ export class Minecraft {
           console.log(entry.entryName);
           const data = entry.getData();
           const filepath = `${this.path}/libraries/${entry.entryName.replace("META-INF/libraries/", "")}`;
-          const dir = require('path').dirname(filepath);
+          const dir = p.dirname(filepath);
           await fs.promises.mkdir(dir, { recursive: true });
           await fs.promises.writeFile(filepath, data);
         }

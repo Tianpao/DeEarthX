@@ -12,7 +12,7 @@
   "main": "./.build/build.js",
   "scripts": {
     "backend": "cd ./backend && pnpm run build",
-    "upx": "echo Skipping UPX compression...",
+        "upx":".\\.build\\upx.exe .\\backend\\dist\\core.exe",
     "tauri": "cd ./front && pnpm run tauri build",
     "back2front": "node b2f.js b2f",
     "build2root": "node b2f.js b2r",
