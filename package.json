@@ -11,12 +11,12 @@
   "type": "module",
   "main": "./.build/build.js",
   "scripts": {
-    "backend": "cd ./backend && npm run build",
+    "backend": "cd ./backend && pnpm run build",
     "upx": "echo Skipping UPX compression...",
-    "tauri": "cd ./front && npm run tauri build",
+    "tauri": "cd ./front && pnpm run tauri build",
     "back2front": "node b2f.js b2f",
     "build2root": "node b2f.js b2r",
-    "build": "npm run backend && npm run upx && npm run back2front && npm run tauri && npm run build2root"
+    "build": "pnpm run backend && pnpm run upx && pnpm run back2front && pnpm run tauri && pnpm run build2root"
   },
   "dependencies": {
     "archiver": "^7.0.1",

@@ -1,0 +1,122 @@
+name: Build Windows
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend
+        run: pnpm run backend
+
+      - name: Copy backend to frontend
+        run: pnpm run back2front
+
+      - name: Build frontend
+        run: pnpm run tauri
+
+      - name: Move build to root
+        run: pnpm run build2root
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if ("${{ github.ref }}" -like "refs/tags/*") {
+            $version = "${{ github.ref }}" -replace "refs/tags/", ""
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+          } else {
+            $version = "latest"
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Generate changelog
+        if: startsWith(github.ref, 'refs/tags/')
+        id: changelog
+        run: |
+          # 获取上一个 tag
+          $previousTag = git describe --tags --abbrev=0 HEAD^ 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            $previousTag = ""
+          }
+          
+          # 获取当前 tag
+          $currentTag = "${{ github.ref }}" -replace "refs/tags/", ""
+          
+          # 生成更新日志
+          $changelog = "## $currentTag`n`n"
+          
+          if ($previousTag) {
+            $commits = git log $previousTag..HEAD --pretty=format:"%h|%an|%ae|%s" --no-merges
+          } else {
+            $commits = git log HEAD --pretty=format:"%h|%an|%ae|%s" --no-merges -20
+          }
+          
+          if ($commits) {
+            $changelog += "### 变更内容`n`n"
+            foreach ($commit in $commits) {
+              $parts = $commit -split '\|'
+              $hash = $parts[0]
+              $author = $parts[1]
+              $email = $parts[2]
+              $message = $parts[3]
+              
+              $changelog += "- $message (@$author)`n"
+            }
+          } else {
+            $changelog += "### 变更内容`n`n"
+            $changelog += "- 首次发布`n"
+          }
+          
+          $changelog | Out-File -FilePath changelog.md -Encoding UTF8
+          
+          # 输出到环境变量
+          $changelogContent = Get-Content changelog.md -Raw
+          $changelogContent = $changelogContent -replace "`n", "%0A"
+          echo "changelog=$changelogContent" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeEarthX-V3-${{ steps.get_version.outputs.version }}-windows
+          path: |
+            DeEarthX-V3_x64-setup.exe
+            DeEarthX-V3_x64-setup.zip
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            DeEarthX-V3_x64-setup.exe
+            DeEarthX-V3_x64-setup.zip
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
