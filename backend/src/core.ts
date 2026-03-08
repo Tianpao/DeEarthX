@@ -324,7 +324,7 @@ export class Core {
                 const TemplateManager = (templateModule as any).TemplateManager;
                 const templateManager = new TemplateManager();
                 
-                const templateId = name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]/g, '');
+                const templateId = `template-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 
                 await templateManager.createTemplate(templateId, {
                     name,
