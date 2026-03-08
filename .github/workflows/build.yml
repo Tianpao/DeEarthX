@@ -1,19 +1,86 @@
-name: Build Windows
+name: CI/CD
 
 on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
 
 jobs:
-  build:
+  check_commit:
+    name: Check Commit Message
     runs-on: windows-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      version: ${{ steps.check.outputs.version }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit message
+        id: check
+        run: |
+          # 获取最新的 commit message
+          $commitMessage = git log -1 --pretty=%B
+          
+          # 检查是否包含版本号格式 v xxx.xxx.xxx
+          if ($commitMessage -match "v\s+\d+\.\d+\.\d+") {
+            $version = $matches[0] -replace "v\s+", ""
+            echo "should_build=true" >> $env:GITHUB_OUTPUT
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+            echo "检测到版本号: $version"
+          } else {
+            echo "should_build=false" >> $env:GITHUB_OUTPUT
+            echo "version=latest" >> $env:GITHUB_OUTPUT
+            echo "未检测到版本号，仅进行代码检查"
+          }
+
+  check:
+    name: Code Check
+    runs-on: windows-latest
+    needs: check_commit
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check backend
+        run: |
+          cd backend
+          pnpm exec tsc --noEmit
+
+      - name: Type check frontend
+        run: |
+          cd front
+          pnpm exec vue-tsc --noEmit
+
+  build:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: check_commit
+    if: needs.check_commit.outputs.should_build == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -44,19 +111,7 @@ jobs:
       - name: Move build to root
         run: pnpm run build2root
 
-      - name: Get version from tag
-        id: get_version
-        run: |
-          if ("${{ github.ref }}" -like "refs/tags/*") {
-            $version = "${{ github.ref }}" -replace "refs/tags/", ""
-            echo "version=$version" >> $env:GITHUB_OUTPUT
-          } else {
-            $version = "latest"
-            echo "version=$version" >> $env:GITHUB_OUTPUT
-          }
-
       - name: Generate changelog
-        if: startsWith(github.ref, 'refs/tags/')
         id: changelog
         run: |
           # 获取上一个 tag
@@ -65,11 +120,11 @@ jobs:
             $previousTag = ""
           }
           
-          # 获取当前 tag
-          $currentTag = "${{ github.ref }}" -replace "refs/tags/", ""
+          # 获取当前版本
+          $currentVersion = "${{ needs.check_commit.outputs.version }}"
           
           # 生成更新日志
-          $changelog = "## $currentTag`n`n"
+          $changelog = "## v$currentVersion`n`n"
           
           if ($previousTag) {
             $commits = git log $previousTag..HEAD --pretty=format:"%h|%an|%ae|%s" --no-merges
@@ -103,20 +158,31 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DeEarthX-V3-${{ steps.get_version.outputs.version }}-windows
+          name: DeEarthX-V3-${{ needs.check_commit.outputs.version }}-windows
           path: |
             DeEarthX-V3_x64-setup.exe
             DeEarthX-V3_x64-setup.zip
 
+      - name: Create tag
+        run: |
+          $tagName = "v${{ needs.check_commit.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a $tagName -m "Release $tagName"
+          git push origin $tagName
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ needs.check_commit.outputs.version }}
           files: |
             DeEarthX-V3_x64-setup.exe
             DeEarthX-V3_x64-setup.zip
           body: ${{ steps.changelog.outputs.changelog }}
           draft: false
           prerelease: false
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
