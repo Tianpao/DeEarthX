@@ -73,6 +73,9 @@ jobs:
       - name: Build backend
         run: pnpm run backend
 
+      - name: Compress with UPX
+        run: pnpm run upx
+
       - name: Copy backend to frontend
         run: pnpm run back2front
 
