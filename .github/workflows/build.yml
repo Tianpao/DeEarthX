@@ -27,10 +27,16 @@ jobs:
           
           # 检查是否包含版本号格式 v xxx.xxx.xxx
           if ($commitMessage -match "v\s+\d+\.\d+\.\d+") {
-            $version = $matches[0] -replace "v\s+", ""
-            echo "should_build=true" >> $env:GITHUB_OUTPUT
-            echo "version=$version" >> $env:GITHUB_OUTPUT
-            echo "检测到版本号: $version"
+            if ($matches) {
+              $version = $matches[0] -replace "v\s+", ""
+              echo "should_build=true" >> $env:GITHUB_OUTPUT
+              echo "version=$version" >> $env:GITHUB_OUTPUT
+              echo "检测到版本号: $version"
+            } else {
+              echo "should_build=false" >> $env:GITHUB_OUTPUT
+              echo "version=latest" >> $env:GITHUB_OUTPUT
+              echo "未检测到版本号，仅进行代码检查"
+            }
           } else {
             echo "should_build=false" >> $env:GITHUB_OUTPUT
             echo "version=latest" >> $env:GITHUB_OUTPUT
