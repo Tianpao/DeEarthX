@@ -227,7 +227,7 @@ function formatTime(seconds: number): string {
 }
 
 // 运行DeEarthX核心功能
-async function runDeEarthX(file: File) {
+async function runDeEarthX(file: File, ws: WebSocket) {
     message.success(t('home.start_production'));
     showSteps.value = true;
 
@@ -296,105 +296,16 @@ async function runDeEarthX(file: File) {
 
             xhr.send(formData);
         });
-
-        message.success(t('home.task_connecting'));
-        setupWebSocket();
     } catch (error) {
         console.error('请求失败:', error);
         message.error(t('home.request_failed'));
         uploadProgress.value.status = 'exception';
         resetState();
+        ws.close();
     }
 }
 
 // 设置WebSocket连接
-function setupWebSocket() {
-    message.loading(t('home.ws_connecting'));
-    // 从配置或环境变量获取WebSocket地址
-    const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
-    const wsPort = import.meta.env.VITE_WS_PORT || '37019';
-    const ws = new WebSocket(`ws://${wsHost}:${wsPort}/`);
-
-    ws.addEventListener('open', () => {
-        message.success(t('home.ws_connected'));
-    });
-
-    ws.addEventListener('message', (event) => {
-        try {
-            const data = JSON.parse(event.data);
-
-            // 处理不同类型的消息
-            if (data.type === 'error') {
-                handleError(data.message);
-            } else if (data.type === 'info') {
-                message.info(data.message);
-            } else if (data.status) {
-                // 处理传统状态消息
-                switch (data.status) {
-                    case 'error':
-                        handleError(data.result);
-                        break;
-                    case 'changed':
-                        currentStep.value++;
-                        break;
-                    case 'unzip':
-                        updateUnzipProgress(data.result);
-                        break;
-                    case 'downloading':
-                        updateDownloadProgress(data.result);
-                        break;
-                    case 'finish':
-                        handleFinish(data.result);
-                        break;
-                    case 'server_install_start':
-                        handleServerInstallStart(data.result);
-                        break;
-                    case 'server_install_step':
-                        handleServerInstallStep(data.result);
-                        break;
-                    case 'server_install_progress':
-                        handleServerInstallProgress(data.result);
-                        break;
-                    case 'server_install_complete':
-                        handleServerInstallComplete(data.result);
-                        break;
-                    case 'server_install_error':
-                        handleServerInstallError(data.result);
-                        break;
-                    case 'filter_mods_start':
-                        handleFilterModsStart(data.result);
-                        break;
-                    case 'filter_mods_progress':
-                        handleFilterModsProgress(data.result);
-                        break;
-                    case 'filter_mods_complete':
-                        handleFilterModsComplete(data.result);
-                        break;
-                    case 'filter_mods_error':
-                        handleFilterModsError(data.result);
-                        break;
-                }
-            }
-        } catch (error) {
-            console.error('解析WebSocket消息失败:', error);
-            notification.error({ message: t('common.error'), description: t('home.parse_error') });
-        }
-    });
-
-    ws.addEventListener('error', () => {
-        notification.error({
-            message: t('home.ws_error_title'),
-            description: `${t('home.ws_error_desc')}\n\n${t('home.suggestions')}:\n1. ${t('home.suggestion_check_backend')}\n2. ${t('home.suggestion_check_port')}\n3. ${t('home.suggestion_restart_application')}`,
-            duration: 0
-        });
-        resetState();
-    });
-
-    ws.addEventListener('close', () => {
-        console.log('WebSocket连接关闭');
-    });
-}
-
 // 处理错误消息
 function handleError(result: any) {
     if (result === 'jini') {
@@ -639,10 +550,92 @@ function handleStartProcess() {
     const file = uploadedFiles.value[0].originFileObj;
     if (!file) return;
 
-    runDeEarthX(file);
     startButtonDisabled.value = true;
     uploadDisabled.value = true;
     showSteps.value = true;
+
+    message.loading(t('home.ws_connecting'));
+    const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
+    const wsPort = import.meta.env.VITE_WS_PORT || '37019';
+    const ws = new WebSocket(`ws://${wsHost}:${wsPort}/`);
+
+    ws.addEventListener('open', () => {
+        message.success(t('home.ws_connected'));
+        runDeEarthX(file, ws);
+    });
+
+    ws.addEventListener('message', (event) => {
+        try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'error') {
+                handleError(data.message);
+            } else if (data.type === 'info') {
+                message.info(data.message);
+            } else if (data.status) {
+                switch (data.status) {
+                    case 'error':
+                        handleError(data.result);
+                        break;
+                    case 'changed':
+                        currentStep.value++;
+                        break;
+                    case 'unzip':
+                        updateUnzipProgress(data.result);
+                        break;
+                    case 'downloading':
+                        updateDownloadProgress(data.result);
+                        break;
+                    case 'finish':
+                        handleFinish(data.result);
+                        break;
+                    case 'server_install_start':
+                        handleServerInstallStart(data.result);
+                        break;
+                    case 'server_install_step':
+                        handleServerInstallStep(data.result);
+                        break;
+                    case 'server_install_progress':
+                        handleServerInstallProgress(data.result);
+                        break;
+                    case 'server_install_complete':
+                        handleServerInstallComplete(data.result);
+                        break;
+                    case 'server_install_error':
+                        handleServerInstallError(data.result);
+                        break;
+                    case 'filter_mods_start':
+                        handleFilterModsStart(data.result);
+                        break;
+                    case 'filter_mods_progress':
+                        handleFilterModsProgress(data.result);
+                        break;
+                    case 'filter_mods_complete':
+                        handleFilterModsComplete(data.result);
+                        break;
+                    case 'filter_mods_error':
+                        handleFilterModsError(data.result);
+                        break;
+                }
+            }
+        } catch (error) {
+            console.error('解析WebSocket消息失败:', error);
+            notification.error({ message: t('common.error'), description: t('home.parse_error') });
+        }
+    });
+
+    ws.addEventListener('error', () => {
+        notification.error({
+            message: t('home.ws_error_title'),
+            description: `${t('home.ws_error_desc')}\n\n${t('home.suggestions')}:\n1. ${t('home.suggestion_check_backend')}\n2. ${t('home.suggestion_check_port')}\n3. ${t('home.suggestion_restart_application')}`,
+            duration: 0
+        });
+        resetState();
+    });
+
+    ws.addEventListener('close', () => {
+        console.log('WebSocket连接关闭');
+    });
 }
 </script>
 <template>
