@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import { ref, inject, computed, watch } from 'vue';
+import { ref, inject, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { message, notification } from 'ant-design-vue';
 import { sendNotification } from '@tauri-apps/plugin-notification';
-import type { StepsProps } from 'ant-design-vue';
 
 const { t } = useI18n();
 
@@ -23,15 +22,6 @@ const emit = defineEmits<{
 const currentStep = ref(0);
 const startTime = ref<number>(0);
 const javaAvailable = ref(true);
-
-const stepItems = computed<Required<StepsProps>['items']>(() => {
-    return [
-        { title: t('home.step1_title'), description: t('home.step1_desc') },
-        { title: t('home.step2_title'), description: t('home.step2_desc') },
-        { title: t('home.step3_title'), description: t('home.step3_desc') },
-        { title: t('home.step4_title'), description: t('home.step4_desc') }
-    ];
-});
 
 interface ProgressStatus {
     status: 'active' | 'success' | 'exception' | 'normal';
@@ -194,8 +184,6 @@ function setupWebSocket() {
                     case 'changed':
                         currentStep.value++;
                         emit('step-change', currentStep.value);
-                        const stepTitle = stepItems.value[currentStep.value - 1]?.title ?? t('home.unknown_step');
-                        message.info(`${t('home.step_changed')}: ${stepTitle}`);
                         break;
                     case 'unzip':
                         updateUnzipProgress(data.result);

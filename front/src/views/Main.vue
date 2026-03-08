@@ -336,8 +336,6 @@ function setupWebSocket() {
                         break;
                     case 'changed':
                         currentStep.value++;
-                        const stepTitle = stepItems.value[currentStep.value - 1]?.title ?? t('home.unknown_step');
-                        message.info(`${t('home.step_changed')}: ${stepTitle}`);
                         break;
                     case 'unzip':
                         updateUnzipProgress(data.result);

@@ -62,7 +62,6 @@
     "filter_mods_current": "目前檢查",
     "filter_mods_completed": "篩選完成！識別到 {filtered} 個客戶端模組，移動 {moved} 個",
     "filter_mods_error": "篩選失敗",
-    "step_changed": "步驟變更",
     "start_production": "開始製作，請勿切換選單！",
     "production_complete": "伺服器製作完成！共用時 {time} 秒！",
     "please_select_file": "請先拖曳或選擇檔案",

@@ -62,7 +62,6 @@
     "filter_mods_current": "現在チェック中",
     "filter_mods_completed": "フィルタリング完了！{filtered}個のクライアントModを識別、{moved}個を移動",
     "filter_mods_error": "フィルタリング失敗",
-    "step_changed": "ステップ変更",
     "start_production": "制作を開始、メニューを切り替えないでください！",
     "production_complete": "サーバー制作完了！所要時間{time}秒！",
     "please_select_file": "ファイルをドラッグまたは選択してください",

@@ -62,7 +62,6 @@
     "filter_mods_current": "Aktuell wird geprüft",
     "filter_mods_completed": "Filtern abgeschlossen! {filtered} Client-Mods identifiziert, {moved} verschoben",
     "filter_mods_error": "Filtern fehlgeschlagen",
-    "step_changed": "Schritt geändert",
     "start_production": "Erstellung starten, Menü nicht wechseln!",
     "production_complete": "Server-Erstellung abgeschlossen! Dauer {time} Sekunden!",
     "please_select_file": "Bitte zuerst Dateien per Drag & Drop oder Auswahl hochladen",

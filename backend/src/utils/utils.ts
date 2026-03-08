@@ -334,19 +334,22 @@ export async function fastdownload(data: [string, string] | string[][], enableHa
 
 export async function Wfastdownload(data: string[][], ws: MessageWS, enableHashVerify = true) {
   logger.info(`开始 Web 下载 ${data.length} 个文件${enableHashVerify ? '（启用 hash 验证）' : ''}`);
-  let index = 0;
+  const completed = new Set<number>();
   return await pMap(
     data,
-    async (item: string[]) => {
+    async (item: string[], index: number) => {
       const [url, filePath, expectedHash] = item;
       try {
         await downloadFile(url, filePath, enableHashVerify ? expectedHash : undefined);
-        ws.download(data.length, ++index, filePath);
+        if (!completed.has(index)) {
+          completed.add(index);
+          ws.download(data.length, completed.size, filePath);
+        }
       } catch (error) {
         logger.error(`${url} 下载失败，已重试 3 次`, error);
         throw error;
       }
     },
-    { concurrency: 16 }
+    { concurrency: 24 }
   );
 }

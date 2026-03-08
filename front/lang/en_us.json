@@ -62,7 +62,6 @@
     "filter_mods_current": "Currently Checking",
     "filter_mods_completed": "Filtering completed! Identified {filtered} client mods, moved {moved}",
     "filter_mods_error": "Filtering failed",
-    "step_changed": "Step changed",
     "start_production": "Starting production, please do not switch menus!",
     "production_complete": "Server production completed! Total time: {time} seconds!",
     "please_select_file": "Please drag and drop or select a file first",

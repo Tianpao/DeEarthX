@@ -62,7 +62,6 @@
     "filter_mods_current": "当前检查",
     "filter_mods_completed": "筛选完成！识别到 {filtered} 个客户端模组，移动 {moved} 个",
     "filter_mods_error": "筛选失败",
-    "step_changed": "步骤变更",
     "start_production": "开始制作，请勿切换菜单！",
     "production_complete": "服务端制作完成！共用时 {time} 秒！",
     "please_select_file": "请先拖拽或选择文件",

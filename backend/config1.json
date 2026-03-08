@@ -1,0 +1,14 @@
+{
+  "mirror": {
+    "bmclapi": true,
+    "mcimirror": true
+  },
+  "filter": {
+    "hashes": true,
+    "dexpub": true,
+    "mixins": true
+  },
+  "oaf": true,
+  "port": 37019,
+  "host": "localhost"
+}
