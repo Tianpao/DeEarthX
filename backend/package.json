@@ -7,19 +7,11 @@
   "type": "module",
   "main": "dist/bundle.js",
   "bin": "dist/bundle.js",
-  "pkg": {
-    "scripts": [
-      "dist/**/*.js"
-    ],
-    "assets": [],
-    "targets": ["node18-win-x64"],
-    "outputPath": "dist"
-  },
   "scripts": {
     "test": "set \"DEBUG=true\"&&tsc&&node dist/main.js",
     "rollup": "rollup -c rollup.config.js",
-    "pkg": "pkg . -t node18-win-x64 -o dist/core.exe",
-    "build": "npm run rollup && npm run pkg"
+    "nexe": "nexe -i ./dist/bundle.js --build -t x86-22.13.0 --output ./dist/core.exe",
+    "build": "npm run rollup && npm run nexe"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",
@@ -38,7 +30,6 @@
     "@types/yauzl": "^2.10.3",
     "jest": "^30.2.0",
     "nexe": "^5.0.0-beta.4",
-    "pkg": "^5.8.1",
     "rollup": "^4.50.1",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.2"
