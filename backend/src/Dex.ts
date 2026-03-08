@@ -6,7 +6,7 @@ import { platform, what_platform } from "./platform/index.js";
 import { ModFilterService } from "./dearth/index.js";
 import { dinstall, mlsetup } from "./modloader/index.js";
 import { Config } from "./utils/config.js";
-import { execPromise } from "./utils/utils.js";
+import { execPromise, getAppDir } from "./utils/utils.js";
 import { MessageWS } from "./utils/ws.js";
 import { logger } from "./utils/logger.js";
 import { yauzl_promise } from "./utils/ziplib.js";
@@ -51,7 +51,7 @@ export class Dex {
     logger.debug("整合包信息", info);
     
     const mpname = info.name;
-    const unpath = `./instance/${mpname}`;
+    const unpath = p.join(getAppDir(), "instance", mpname);
     
     await this.parallelTasks(zps, mpname, plat, info, unpath);
     await this.filterMods(unpath, mpname);
@@ -71,7 +71,7 @@ export class Dex {
 
   private async filterMods(unpath: string, mpname: string) {
     const config = Config.getConfig();
-    await new ModFilterService(`${unpath}/mods`, `./.rubbish/${mpname}`, config.filter, this.message).filter();
+    await new ModFilterService(p.join(unpath, "mods"), p.join(getAppDir(), ".rubbish", mpname), config.filter, this.message).filter();
     this.message.statusChange();
   }
 
@@ -112,7 +112,7 @@ export class Dex {
     }
 
     if (config.oaf) {
-      await execPromise(`start ${p.join("./instance")}`);
+      await execPromise(`start ${p.join(getAppDir(), "instance")}`);
     }
 
     logger.info(`任务完成，耗时 ${duration}ms`);
@@ -254,7 +254,7 @@ export class Dex {
     }
     const _unzip = async (instancename: string) => {
       logger.info("开始解压流程", { 实例名称: instancename });
-      const instancePath = `./instance/${instancename}`;
+      const instancePath = p.join(getAppDir(), "instance", instancename);
       let index = 1;
       for await (const entry of zip) {
         const isDir = entry.fileName.endsWith("/");
@@ -283,16 +283,16 @@ export class Dex {
 
         if (isDir) {
           let targetPath = entry.fileName.replace("overrides/", "");
-          await fs.promises.mkdir(`${instancePath}/${targetPath}`, {
+          await fs.promises.mkdir(p.join(instancePath, targetPath), {
             recursive: true,
           });
         } else {
           let targetPath = entry.fileName.replace("overrides/", "");
 
-          const dirPath = `${instancePath}/${targetPath.substring(0, targetPath.lastIndexOf("/"))}`;
+          const dirPath = p.join(instancePath, targetPath.substring(0, targetPath.lastIndexOf("/")));
           await fs.promises.mkdir(dirPath, { recursive: true });
 
-          const fullPath = `${instancePath}/${targetPath}`;
+          const fullPath = p.join(instancePath, targetPath);
           if (fs.existsSync(fullPath)) {
             logger.info("文件已存在，跳过解压", targetPath);
           } else {
@@ -332,7 +332,7 @@ export class Dex {
 
   private async _createZip(sourcePath: string, mpname: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const outputPath = `./instance/${mpname}.zip`;
+      const outputPath = p.join(getAppDir(), "instance", `${mpname}.zip`);
       const output = fs.createWriteStream(outputPath);
       const archive = archiver('zip', {
         zlib: { level: 9 }

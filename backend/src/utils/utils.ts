@@ -10,6 +10,21 @@ import path from "node:path";
 import { MessageWS } from "./ws.js";
 import { logger } from "./logger.js";
 
+export function getAppDir(): string {
+  const execPath = process.execPath;
+  const cwd = process.cwd();
+  
+  const isDevelopment = execPath.toLowerCase().includes('node.exe') && 
+                        !cwd.toLowerCase().includes('program files') &&
+                        !cwd.toLowerCase().includes('nodejs');
+  
+  if (isDevelopment) {
+    return cwd;
+  }
+  
+  return path.dirname(execPath);
+}
+
 export interface JavaVersion {
   major: number;
   minor: number;

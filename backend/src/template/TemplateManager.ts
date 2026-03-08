@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { getAppDir } from "../utils/utils.js";
 
 interface TemplateMetadata {
   name: string;
@@ -13,8 +14,8 @@ interface TemplateMetadata {
 export class TemplateManager {
   private readonly templatesPath: string;
 
-  constructor(templatesPath: string = "./templates") {
-    this.templatesPath = templatesPath;
+  constructor(templatesPath?: string) {
+    this.templatesPath = templatesPath || path.join(getAppDir(), "templates");
   }
 
   async ensureDefaultTemplate(): Promise<void> {

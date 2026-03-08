@@ -11,7 +11,22 @@ interface Logger {
   error: (message: string, meta?: any) => void;
 }
 
-const logsDir = path.join(process.cwd(), "logs");
+function getAppDir(): string {
+  const execPath = process.execPath;
+  const cwd = process.cwd();
+  
+  const isDevelopment = execPath.toLowerCase().includes('node.exe') && 
+                        !cwd.toLowerCase().includes('program files') &&
+                        !cwd.toLowerCase().includes('nodejs');
+  
+  if (isDevelopment) {
+    return cwd;
+  }
+  
+  return path.dirname(execPath);
+}
+
+const logsDir = path.join(getAppDir(), "logs");
 
 const ensureLogsDir = () => {
   if (!fs.existsSync(logsDir)) {

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { TemplateManager } from "./TemplateManager.js";
+import { getAppDir } from "../utils/utils.js";
 
 export { TemplateManager };
 
@@ -16,8 +17,8 @@ interface TemplateMetadata {
 export class TemplateService {
   private readonly templatesPath: string;
 
-  constructor(templatesPath: string = "./templates") {
-    this.templatesPath = templatesPath;
+  constructor(templatesPath?: string) {
+    this.templatesPath = templatesPath || path.join(getAppDir(), "templates");
   }
 
   async getTemplate(name: string): Promise<TemplateMetadata | null> {

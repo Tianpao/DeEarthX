@@ -4,6 +4,7 @@ import { Minecraft } from "./minecraft.js";
 import { NeoForge } from "./neoforge.js";
 import fs from "node:fs";
 import { MessageWS } from "../utils/ws.js";
+import { getAppDir } from "../utils/utils.js";
 
 interface XModloader {
   setup(): Promise<void>;
@@ -44,9 +45,9 @@ export async function mlsetup(ml: string, mcv: string, mlv: string, path: string
       const selectedTemplate = templates.find((t: { id: string; metadata: any }) => t.id === template);
       
       if (selectedTemplate) {
-        const templatePath = `./templates/${template}`;
-        const fs = await import('node:fs/promises');
         const pathModule = await import('node:path');
+        const templatePath = pathModule.join(getAppDir(), "templates", template);
+        const fs = await import('node:fs/promises');
         
         try {
           const dataPath = pathModule.join(templatePath, 'data');
