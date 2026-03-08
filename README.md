@@ -4,7 +4,7 @@
 [![GitHub](https://img.shields.io/github/license/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/blob/main/LICENSE)
 [![GitHub last commit](https://img.shields.io/github/last-commit/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/commits/main)
 [![GitHub issues](https://img.shields.io/github/issues/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/Tianpao/DeEarthX-V3)](https://github.com/Tianpao/DeEarthX-V3/pulls)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/pulls)
 
 ## 项目概述
 
