@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { h, provide, ref, onMounted, computed } from 'vue';
-import { MenuProps, message, Modal } from 'ant-design-vue';
+import { MenuProps, message } from 'ant-design-vue';
 import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined, FileSearchOutlined, FolderOutlined } from '@ant-design/icons-vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Command } from '@tauri-apps/plugin-shell';

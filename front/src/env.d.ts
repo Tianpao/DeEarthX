@@ -10,3 +10,15 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface Window {
+  progressData?: {
+    uploadProgress?: any;
+    unzipProgress?: any;
+    downloadProgress?: any;
+    serverInstallProgress?: any;
+    filterModsProgress?: any;
+    serverInstallInfo?: any;
+    filterModsInfo?: any;
+  };
+}

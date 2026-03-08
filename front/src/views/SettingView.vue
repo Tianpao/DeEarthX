@@ -158,10 +158,10 @@ const { t, locale } = useI18n();
 
 function getConfigValue(path: string): boolean {
   const keys = path.split('.');
-  let value = config.value;
+  let value: any = config.value;
 
   for (const key of keys) {
-    value = value[key as keyof AppConfig];
+    value = value[key];
   }
 
   if (typeof value === 'boolean') {
@@ -172,15 +172,15 @@ function getConfigValue(path: string): boolean {
   return false;
 }
 
-function setConfigValue(path: string, value: boolean): void {
+function setConfigValue(path: string, newValue: boolean): void {
   const keys = path.split('.');
-  let obj = config.value;
+  let obj: any = config.value;
 
   for (let i = 0; i < keys.length - 1; i++) {
-    obj = obj[keys[i] as keyof AppConfig] as any;
+    obj = obj[keys[i]];
   }
 
-  obj[keys[keys.length - 1] as keyof AppConfig] = value as any;
+  obj[keys[keys.length - 1]] = newValue;
 }
 
 async function loadConfig() {

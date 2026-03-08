@@ -1,9 +1,8 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
 import { PlusOutlined, DeleteOutlined, FolderOutlined, ExclamationCircleOutlined, EditOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import { open } from '@tauri-apps/plugin-shell';
 
 const { t } = useI18n();
 
