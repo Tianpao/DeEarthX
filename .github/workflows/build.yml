@@ -4,49 +4,13 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
 
 jobs:
-  check_commit:
-    name: Check Commit Message
-    runs-on: windows-latest
-    outputs:
-      should_build: ${{ steps.check.outputs.should_build }}
-      version: ${{ steps.check.outputs.version }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check commit message
-        id: check
-        run: |
-          # 获取最新的 commit message
-          $commitMessage = git log -1 --pretty=%B
-          
-          # 检查是否包含版本号格式 v xxx.xxx.xxx
-          if ($commitMessage -match "v\s+\d+\.\d+\.\d+") {
-            if ($matches) {
-              $version = $matches[0] -replace "v\s+", ""
-              echo "should_build=true" >> $env:GITHUB_OUTPUT
-              echo "version=$version" >> $env:GITHUB_OUTPUT
-              echo "检测到版本号: $version"
-            } else {
-              echo "should_build=false" >> $env:GITHUB_OUTPUT
-              echo "version=latest" >> $env:GITHUB_OUTPUT
-              echo "未检测到版本号，仅进行代码检查"
-            }
-          } else {
-            echo "should_build=false" >> $env:GITHUB_OUTPUT
-            echo "version=latest" >> $env:GITHUB_OUTPUT
-            echo "未检测到版本号，仅进行代码检查"
-          }
-
   check:
     name: Code Check
     runs-on: windows-latest
-    needs: check_commit
     
     steps:
       - name: Checkout code
@@ -79,8 +43,7 @@ jobs:
   build:
     name: Build Windows
     runs-on: windows-latest
-    needs: check_commit
-    if: needs.check_commit.outputs.should_build == 'true'
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
       - name: Checkout code
@@ -120,25 +83,14 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DeEarthX-V3-${{ needs.check_commit.outputs.version }}-windows
+          name: DeEarthX-V3-${{ github.ref_name }}-windows
           path: |
             DeEarthX-V3_x64-setup.exe
             DeEarthX-V3_x64-setup.zip
 
-      - name: Create tag
-        run: |
-          $tagName = "v${{ needs.check_commit.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a $tagName -m "Release $tagName"
-          git push origin $tagName
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.check_commit.outputs.version }}
           files: |
             DeEarthX-V3_x64-setup.exe
             DeEarthX-V3_x64-setup.zip
