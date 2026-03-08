@@ -195,131 +195,133 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="tw:h-full tw:w-full tw:p-6 tw:overflow-y-auto">
-        <div class="tw:max-w-7xl tw:mx-auto">
-            <div class="tw:flex tw:justify-between tw:items-center tw:mb-6">
-                <div>
-                    <h1 class="tw:text-2xl tw:font-bold tw:text-gray-800">{{ t('template.title') }}</h1>
-                    <p class="tw:text-gray-600 tw:mt-1">{{ t('template.description') }}</p>
-                </div>
-                <a-button type="primary" @click="openCreateModal" class="tw:flex tw:items-center tw:gap-2">
-                    <PlusOutlined />
-                    {{ t('template.create_button') }}
-                </a-button>
-            </div>
-
-            <a-spin :spinning="loading">
-                <div v-if="templates.length === 0 && !loading" class="tw:text-center tw:py-16 tw:text-gray-500">
-                    <FolderOutlined style="font-size: 64px; margin-bottom: 16px;" />
-                    <p class="tw:text-lg">{{ t('template.empty') }}</p>
-                    <p class="tw:text-sm tw:mt-2">{{ t('template.empty_hint') }}</p>
+    <div class="tw:h-full tw:w-full tw:overflow-hidden">
+        <div class="tw:h-full tw:w-full tw:p-6 tw:overflow-y-auto">
+            <div class="tw:max-w-7xl tw:mx-auto">
+                <div class="tw:flex tw:justify-between tw:items-center tw:mb-6">
+                    <div>
+                        <h1 class="tw:text-2xl tw:font-bold tw:text-gray-800">{{ t('template.title') }}</h1>
+                        <p class="tw:text-gray-600 tw:mt-1">{{ t('template.description') }}</p>
+                    </div>
+                    <a-button type="primary" @click="openCreateModal" class="tw:flex tw:items-center tw:gap-2">
+                        <PlusOutlined />
+                        {{ t('template.create_button') }}
+                    </a-button>
                 </div>
 
-                <div v-else class="tw:grid tw:grid-cols-1 md:tw:grid-cols-2 lg:tw:grid-cols-3 tw:gap-4">
-                    <div 
-                        v-for="template in templates" 
-                        :key="template.id"
-                        class="tw:bg-white tw:rounded-lg tw:shadow-md tw:p-5 tw:h-48 tw:flex tw:flex-col tw:border tw:border-gray-200 tw:transition-all tw:duration-300 hover:tw:shadow-lg hover:tw:border-blue-300"
-                    >
-                        <div class="tw:flex-1 tw:overflow-hidden">
-                            <div class="tw:flex tw:justify-between tw:items-start tw:mb-2">
-                                <h3 class="tw:text-lg tw:font-semibold tw:truncate tw:flex-1 tw:mr-2">{{ template.metadata.name }}</h3>
-                                <a-tag color="blue" size="small">{{ template.metadata.version }}</a-tag>
-                            </div>
-                            <p class="tw:text-sm tw:text-gray-600 tw:line-clamp-2 tw:mb-3">{{ template.metadata.description }}</p>
-                            <div class="tw:flex tw:justify-between tw:text-xs tw:text-gray-500">
-                                <span>{{ t('template.author') }}: {{ template.metadata.author }}</span>
-                                <span>{{ template.metadata.created }}</span>
-                            </div>
-                        </div>
-                        <div class="tw:flex tw:justify-between tw:items-center tw:mt-4 tw:pt-4 tw:border-t tw:border-gray-100">
-                            <a-button size="small" @click="openTemplateFolder(template)">
-                                <div class="tw:flex tw:items-center tw:gap-1">
-                                    <FolderOutlined />
-                                    <span>{{ t('template.open_folder') }}</span>
+                <a-spin :spinning="loading">
+                    <div v-if="templates.length === 0 && !loading" class="tw:text-center tw:py-16 tw:text-gray-500">
+                        <FolderOutlined style="font-size: 64px; margin-bottom: 16px;" />
+                        <p class="tw:text-lg">{{ t('template.empty') }}</p>
+                        <p class="tw:text-sm tw:mt-2">{{ t('template.empty_hint') }}</p>
+                    </div>
+
+                    <div v-else class="tw:grid tw:grid-cols-1 md:tw:grid-cols-2 lg:tw:grid-cols-3 tw:gap-4">
+                        <div 
+                            v-for="template in templates" 
+                            :key="template.id"
+                            class="tw:bg-white tw:rounded-lg tw:shadow-md tw:p-5 tw:h-48 tw:flex tw:flex-col tw:border tw:border-gray-200 tw:transition-all tw:duration-300 hover:tw:shadow-lg hover:tw:border-blue-300"
+                        >
+                            <div class="tw:flex-1 tw:overflow-hidden">
+                                <div class="tw:flex tw:justify-between tw:items-start tw:mb-2">
+                                    <h3 class="tw:text-lg tw:font-semibold tw:truncate tw:flex-1 tw:mr-2">{{ template.metadata.name }}</h3>
+                                    <a-tag color="blue" size="small">{{ template.metadata.version }}</a-tag>
                                 </div>
-                            </a-button>
-                            <div class="tw:flex tw:gap-2">
-                                <a-button size="small" @click="openEditModal(template)">
+                                <p class="tw:text-sm tw:text-gray-600 tw:line-clamp-2 tw:mb-3">{{ template.metadata.description }}</p>
+                                <div class="tw:flex tw:justify-between tw:text-xs tw:text-gray-500">
+                                    <span>{{ t('template.author') }}: {{ template.metadata.author }}</span>
+                                    <span>{{ template.metadata.created }}</span>
+                                </div>
+                            </div>
+                            <div class="tw:flex tw:justify-between tw:items-center tw:mt-4 tw:pt-4 tw:border-t tw:border-gray-100">
+                                <a-button size="small" @click="openTemplateFolder(template)">
                                     <div class="tw:flex tw:items-center tw:gap-1">
-                                        <EditOutlined />
-                                        <span>{{ t('template.edit_button') }}</span>
+                                        <FolderOutlined />
+                                        <span>{{ t('template.open_folder') }}</span>
                                     </div>
                                 </a-button>
-                                <a-button size="small" danger @click="openDeleteModal(template)">
-                                    <div class="tw:flex tw:items-center tw:gap-1">
-                                        <DeleteOutlined />
-                                        <span>{{ t('template.delete_button') }}</span>
-                                    </div>
-                                </a-button>
+                                <div class="tw:flex tw:gap-2">
+                                    <a-button size="small" @click="openEditModal(template)">
+                                        <div class="tw:flex tw:items-center tw:gap-1">
+                                            <EditOutlined />
+                                            <span>{{ t('template.edit_button') }}</span>
+                                        </div>
+                                    </a-button>
+                                    <a-button size="small" danger @click="openDeleteModal(template)">
+                                        <div class="tw:flex tw:items-center tw:gap-1">
+                                            <DeleteOutlined />
+                                            <span>{{ t('template.delete_button') }}</span>
+                                        </div>
+                                    </a-button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </a-spin>
-        </div>
-    </div>
-
-    <a-modal 
-        v-model:open="showCreateModal" 
-        :title="t('template.create_title')" 
-        @ok="createTemplate"
-        :ok-text="t('common.confirm')"
-        :cancel-text="t('common.cancel')"
-    >
-        <a-form layout="vertical">
-            <a-form-item :label="t('template.name')" required>
-                <a-input v-model:value="newTemplate.name" :placeholder="t('template.name_placeholder')" />
-            </a-form-item>
-            <a-form-item :label="t('template.version')">
-                <a-input v-model:value="newTemplate.version" :placeholder="t('template.version_placeholder')" />
-            </a-form-item>
-            <a-form-item :label="t('template.description')">
-                <a-textarea v-model:value="newTemplate.description" :placeholder="t('template.description_placeholder')" :rows="4" />
-            </a-form-item>
-            <a-form-item :label="t('template.author')">
-                <a-input v-model:value="newTemplate.author" :placeholder="t('template.author_placeholder')" />
-            </a-form-item>
-        </a-form>
-    </a-modal>
-
-    <a-modal
-        v-model:open="showDeleteModal"
-        :title="t('template.delete_title')"
-        @ok="confirmDelete"
-        :ok-text="t('common.confirm')"
-        :cancel-text="t('common.cancel')"
-        ok-type="danger"
-    >
-        <div class="tw:flex tw:items-start tw:gap-3">
-            <ExclamationCircleOutlined style="font-size: 24px; color: #ff4d4f;" />
-            <div>
-                <p class="tw:mb-2">{{ t('template.delete_confirm', { name: deletingTemplate?.metadata.name }) }}</p>
-                <p class="tw:text-sm tw:text-gray-500">{{ t('template.delete_warning') }}</p>
+                </a-spin>
             </div>
         </div>
-    </a-modal>
 
-    <a-modal 
-        v-model:open="showEditModal" 
-        :title="t('template.edit_title')" 
-        @ok="updateTemplate"
-        :ok-text="t('common.confirm')"
-        :cancel-text="t('common.cancel')"
-    >
-        <a-form layout="vertical">
-            <a-form-item :label="t('template.name')" required>
-                <a-input v-model:value="newTemplate.name" :placeholder="t('template.name_placeholder')" />
-            </a-form-item>
-            <a-form-item :label="t('template.version')">
-                <a-input v-model:value="newTemplate.version" :placeholder="t('template.version_placeholder')" />
-            </a-form-item>
-            <a-form-item :label="t('template.description')">
-                <a-textarea v-model:value="newTemplate.description" :placeholder="t('template.description_placeholder')" :rows="4" />
-            </a-form-item>
-            <a-form-item :label="t('template.author')">
-                <a-input v-model:value="newTemplate.author" :placeholder="t('template.author_placeholder')" />
-            </a-form-item>
-        </a-form>
-    </a-modal>
+        <a-modal 
+            v-model:open="showCreateModal" 
+            :title="t('template.create_title')" 
+            @ok="createTemplate"
+            :ok-text="t('common.confirm')"
+            :cancel-text="t('common.cancel')"
+        >
+            <a-form layout="vertical">
+                <a-form-item :label="t('template.name')" required>
+                    <a-input v-model:value="newTemplate.name" :placeholder="t('template.name_placeholder')" />
+                </a-form-item>
+                <a-form-item :label="t('template.version')">
+                    <a-input v-model:value="newTemplate.version" :placeholder="t('template.version_placeholder')" />
+                </a-form-item>
+                <a-form-item :label="t('template.description')">
+                    <a-textarea v-model:value="newTemplate.description" :placeholder="t('template.description_placeholder')" :rows="4" />
+                </a-form-item>
+                <a-form-item :label="t('template.author')">
+                    <a-input v-model:value="newTemplate.author" :placeholder="t('template.author_placeholder')" />
+                </a-form-item>
+            </a-form>
+        </a-modal>
+
+        <a-modal
+            v-model:open="showDeleteModal"
+            :title="t('template.delete_title')"
+            @ok="confirmDelete"
+            :ok-text="t('common.confirm')"
+            :cancel-text="t('common.cancel')"
+            ok-type="danger"
+        >
+            <div class="tw:flex tw:items-start tw:gap-3">
+                <ExclamationCircleOutlined style="font-size: 24px; color: #ff4d4f;" />
+                <div>
+                    <p class="tw:mb-2">{{ t('template.delete_confirm', { name: deletingTemplate?.metadata.name }) }}</p>
+                    <p class="tw:text-sm tw:text-gray-500">{{ t('template.delete_warning') }}</p>
+                </div>
+            </div>
+        </a-modal>
+
+        <a-modal 
+            v-model:open="showEditModal" 
+            :title="t('template.edit_title')" 
+            @ok="updateTemplate"
+            :ok-text="t('common.confirm')"
+            :cancel-text="t('common.cancel')"
+        >
+            <a-form layout="vertical">
+                <a-form-item :label="t('template.name')" required>
+                    <a-input v-model:value="newTemplate.name" :placeholder="t('template.name_placeholder')" />
+                </a-form-item>
+                <a-form-item :label="t('template.version')">
+                    <a-input v-model:value="newTemplate.version" :placeholder="t('template.version_placeholder')" />
+                </a-form-item>
+                <a-form-item :label="t('template.description')">
+                    <a-textarea v-model:value="newTemplate.description" :placeholder="t('template.description_placeholder')" :rows="4" />
+                </a-form-item>
+                <a-form-item :label="t('template.author')">
+                    <a-input v-model:value="newTemplate.author" :placeholder="t('template.author_placeholder')" />
+                </a-form-item>
+            </a-form>
+        </a-modal>
+    </div>
 </template>

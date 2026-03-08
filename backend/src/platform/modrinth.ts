@@ -49,6 +49,6 @@ export class Modrinth implements XPlatform {
       const unpath = join(path, e.path);
       tmp.push([url, unpath]);
     }
-    await Wfastdownload(tmp, ws);
+    await Wfastdownload(tmp, ws, true, true);
   }
 }

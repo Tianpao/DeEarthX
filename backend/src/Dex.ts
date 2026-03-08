@@ -118,87 +118,113 @@ export class Dex {
 
   private async _processModpack(buffer: Buffer, filename?: string): Promise<Buffer> {
     if (!filename || !filename.endsWith('.zip')) {
+      logger.debug("文件名无效或非 ZIP 格式，直接返回原始缓冲区", { 文件名: filename });
       return buffer;
     }
 
-    let zip: yauzl.ZipFile | null = null;
+    const startTime = Date.now();
+    const bufferSize = buffer.length;
+    logger.info("开始处理整合包", { 文件名: filename, 文件大小: `${(bufferSize / 1024 / 1024).toFixed(2)} MB` });
+
     try {
-      zip = await (new Promise((resolve, reject) => {
-        yauzl.fromBuffer(buffer, { lazyEntries: true }, (err, zipfile) => {
+      const zip = await (new Promise<yauzl.ZipFile>((resolve, reject) => {
+        yauzl.fromBuffer(buffer, { lazyEntries: true, strictFileNames: true }, (err, zipfile) => {
           if (err) {
+            logger.error("解析 ZIP 文件失败", { 文件名: filename, 错误: err.message });
             reject(err);
             return;
           }
+          logger.debug("ZIP 文件解析成功", { 文件名: filename });
           resolve(zipfile);
         });
-      }) as Promise<yauzl.ZipFile>);
-      logger.info("检测到整合包为 zip 文件，疑似 PCL 格式，尝试提取 modpack.mrpack");
+      }));
+
+      logger.info("检测到 PCL 整合包格式，尝试提取 modpack.mrpack 文件");
+
       return new Promise((resolve, reject) => {
         let mrpackBuffer: Buffer | null = null;
         let hasProcessed = false;
+        let entryCount = 0;
 
-        zip!.on('entry', (entry: yauzl.Entry) => {
-          if (hasProcessed || !entry.fileName.endsWith('modpack.mrpack')) {
-            zip!.readEntry();
+        zip.on('entry', (entry: yauzl.Entry) => {
+          entryCount++;
+          
+          if (hasProcessed) {
+            zip.readEntry();
             return;
           }
 
           if (entry.fileName === 'modpack.mrpack') {
+            logger.info("找到 modpack.mrpack 文件，开始读取", { 文件大小: `${(entry.uncompressedSize / 1024).toFixed(2)} KB` });
             hasProcessed = true;
-            zip!.openReadStream(entry, (err, stream) => {
+            zip.openReadStream(entry, (err, stream) => {
               if (err) {
-                zip!.close();
+                logger.error("打开 modpack.mrpack 读取流失败", { 错误: err.message });
+                zip.close();
                 reject(err);
                 return;
               }
 
               const chunks: Buffer[] = [];
+              let bytesRead = 0;
+
               stream.on('data', (chunk) => {
-                if (Buffer.isBuffer(chunk)) {
-                  chunks.push(chunk);
-                } else if (typeof chunk === 'string') {
-                  chunks.push(Buffer.from(chunk));
-                }
+                bytesRead += chunk.length;
+                chunks.push(chunk);
               });
+              
               stream.on('end', () => {
                 mrpackBuffer = Buffer.concat(chunks);
-                zip!.close();
+                const duration = Date.now() - startTime;
+                logger.info("modpack.mrpack 提取成功", { 
+                  原始大小: `${(bufferSize / 1024 / 1024).toFixed(2)} MB`,
+                  提取大小: `${(mrpackBuffer.length / 1024).toFixed(2)} KB`,
+                  耗时: `${duration}ms`
+                });
+                zip.close();
                 resolve(mrpackBuffer);
               });
+              
               stream.on('error', (err) => {
-                zip!.close();
+                logger.error("读取 modpack.mrpack 数据失败", { 错误: err.message });
+                zip.close();
                 reject(err);
               });
             });
           } else {
-            zip!.readEntry();
+            zip.readEntry();
           }
         });
 
-        zip!.on('end', () => {
+        zip.on('end', () => {
           if (!hasProcessed) {
-            zip!.close();
+            const duration = Date.now() - startTime;
+            logger.warn("未找到 modpack.mrpack 文件，使用原始缓冲区", { 
+              扫描条目数: entryCount,
+              耗时: `${duration}ms`
+            });
+            zip.close();
             resolve(buffer);
           }
         });
 
-        zip!.on('error', (err) => {
-          zip!.close();
+        zip.on('error', (err) => {
+          logger.error("ZIP 文件处理异常", { 错误: err.message });
+          zip.close();
           reject(err);
         });
 
-        zip!.readEntry();
+        zip.readEntry();
       });
     } catch (e) {
-      logger.warn('检查 modpack.mrpack 失败，使用原始文件', e);
+      const err = e as Error;
+      const duration = Date.now() - startTime;
+      logger.error("处理整合包失败，使用原始缓冲区", { 
+        文件名: filename, 
+        错误: err.message,
+        耗时: `${duration}ms`
+      });
       return buffer;
-    } finally {
-      if (zip) {
-        try {
-          zip.close();
-        } catch (e) {
-        }
-      }
     }
   }
 

@@ -58,25 +58,29 @@ export class Minecraft {
           console.log(entry.entryName);
           const data = entry.getData();
           const filepath = `${this.path}/libraries/${entry.entryName.replace("META-INF/libraries/", "")}`;
+          const dir = require('path').dirname(filepath);
+          await fs.promises.mkdir(dir, { recursive: true });
           await fs.promises.writeFile(filepath, data);
         }
       }
     } else {
       const lowv = `${this.path}/minecraft_server.${this.minecraft}.jar`;
       const dmc = fastdownload([`https://bmclapi2.bangbang93.com/version/${this.minecraft}/server`, lowv]);
-      const download: Promise<void> = new Promise(async (resolve) => {
+      
+      const download = (async () => {
         console.log("并行");
         const json = await got.get(`https://bmclapi2.bangbang93.com/version/${this.minecraft}/json`, {
           headers: {
             "User-Agent": "DeEarthX"
           }
         }).json<ILInfo>();
-        json.libraries.forEach(async e => {
+        
+        await Promise.all(json.libraries.map(async e => {
           const path = e.downloads.artifact.path;
           await fastdownload([`https://bmclapi2.bangbang93.com/maven/${path}`, `${this.path}/libraries/${path}`]);
-        });
-        resolve();
-      });
+        }));
+      })();
+      
       await Promise.all([dmc, download]);
     }
   }

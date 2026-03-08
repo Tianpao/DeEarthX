@@ -68,6 +68,6 @@ export class CurseForge implements XPlatform {
           }
         );
       });
-    await Wfastdownload(tmp, ws);
+    await Wfastdownload(tmp, ws, true, true);
   }
 }

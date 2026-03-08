@@ -6,6 +6,7 @@ import fs from "node:fs";
 import fse from "fs-extra";
 import { SpawnOptions, exec, spawn } from "node:child_process";
 import crypto from "node:crypto";
+import path from "node:path";
 import { MessageWS } from "./ws.js";
 import { logger } from "./logger.js";
 
@@ -257,7 +258,181 @@ interface DownloadOptions {
   forceDownload?: boolean;
 }
 
-async function downloadFile(url: string, filePath: string, expectedHash?: string, forceDownload = false) {
+async function chunkedDownload(url: string, filePath: string, chunkSize = 5 * 1024 * 1024, concurrency = 4): Promise<void> {
+  logger.debug(`开始分块下载 ${url}，块大小: ${chunkSize / 1024 / 1024}MB，并发数: ${concurrency}`);
+
+  const isBMCLAPI = url.includes('bmclapi2');
+
+  if (isBMCLAPI) {
+    logger.debug(`检测到 BMCLAPI 下载，使用普通下载: ${url}`);
+    const res = await got.get(url, {
+      responseType: "buffer",
+      headers: { "user-agent": "DeEarthX" },
+      followRedirect: true,
+    });
+    fse.outputFileSync(filePath, res.rawBody);
+    return;
+  }
+
+  const tempDir = `${filePath}.chunks`;
+  await fse.ensureDir(tempDir);
+
+  try {
+    const response = await got.head(url, {
+      headers: { "user-agent": "DeEarthX" },
+      followRedirect: true,
+      timeout: { request: 30000 }
+    });
+
+    const fileSize = parseInt(response.headers['content-length'] || '0', 10);
+    const acceptRanges = response.headers['accept-ranges'];
+
+    if (fileSize <= chunkSize || acceptRanges !== 'bytes') {
+      logger.debug(`文件较小或服务器不支持分块下载，使用普通下载: ${url}`);
+      const res = await got.get(url, {
+        responseType: "buffer",
+        headers: { "user-agent": "DeEarthX" },
+        followRedirect: true,
+      });
+      fse.outputFileSync(filePath, res.rawBody);
+      return;
+    }
+
+    const totalChunks = Math.ceil(fileSize / chunkSize);
+    logger.debug(`文件大小: ${(fileSize / 1024 / 1024).toFixed(2)}MB，分 ${totalChunks} 个块下载`);
+
+    let supportsChunkedDownload = true;
+    let currentConcurrency = Math.min(concurrency, totalChunks);
+    let rate429Count = 0;
+
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const downloadChunk = async (chunkIndex: number): Promise<void> => {
+      const start = chunkIndex * chunkSize;
+      const end = Math.min(start + chunkSize - 1, fileSize - 1);
+      const chunkPath = `${tempDir}/chunk_${chunkIndex}`;
+
+      logger.debug(`下载块 ${chunkIndex + 1}/${totalChunks}: bytes ${start}-${end}`);
+
+      let retryCount = 0;
+      const maxRetries = 5;
+
+      while (retryCount < maxRetries) {
+        try {
+          const res = await got.get(url, {
+            responseType: "buffer",
+            headers: {
+              "user-agent": "DeEarthX",
+              "Range": `bytes=${start}-${end}`
+            },
+            followRedirect: true,
+            timeout: { request: 60000 }
+          });
+
+          if (res.statusCode === 206) {
+            fse.writeFileSync(chunkPath, res.rawBody);
+            return;
+          } else if (res.statusCode === 200) {
+            supportsChunkedDownload = false;
+            throw new Error('服务器不支持 Range 请求');
+          } else if (res.statusCode === 429) {
+            rate429Count++;
+            
+            const retryAfter = res.headers['retry-after'];
+            const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.min(5000 * Math.pow(2, retryCount), 60000);
+            
+            logger.warn(`遇到 429 错误，等待 ${waitTime / 1000} 秒后重试 (${retryCount + 1}/${maxRetries})`);
+            await sleep(waitTime);
+            retryCount++;
+            continue;
+          } else {
+            supportsChunkedDownload = false;
+            throw new Error(`服务器返回状态码 ${res.statusCode}，不支持分块下载`);
+          }
+        } catch (error: any) {
+          if (error.response?.statusCode === 429) {
+            rate429Count++;
+            
+            const retryAfter = error.response.headers['retry-after'];
+            const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.min(5000 * Math.pow(2, retryCount), 60000);
+            
+            logger.warn(`遇到 429 错误，等待 ${waitTime / 1000} 秒后重试 (${retryCount + 1}/${maxRetries})`);
+            await sleep(waitTime);
+            retryCount++;
+            continue;
+          }
+          
+          if (error.response?.statusCode) {
+            supportsChunkedDownload = false;
+            logger.warn(`Range 请求失败，状态码: ${error.response.statusCode}`);
+            throw new Error(`服务器返回状态码 ${error.response.statusCode}，不支持分块下载`);
+          }
+          
+          if (error.message.includes('Range') || error.message.includes('不支持')) {
+            supportsChunkedDownload = false;
+          }
+          throw error;
+        }
+      }
+      
+      throw new Error(`下载块失败，已重试 ${maxRetries} 次`);
+    };
+
+    const chunks = Array.from({ length: totalChunks }, (_, i) => i);
+    
+    try {
+      await pMap(chunks, downloadChunk, { concurrency: currentConcurrency });
+    } catch (error: any) {
+      if (!supportsChunkedDownload) {
+        logger.warn(`服务器不支持分块下载，切换到普通下载: ${url}`);
+        await fse.remove(tempDir);
+        const res = await got.get(url, {
+          responseType: "buffer",
+          headers: { "user-agent": "DeEarthX" },
+          followRedirect: true,
+        });
+        fse.outputFileSync(filePath, res.rawBody);
+        return;
+      }
+      
+      if (rate429Count > 0) {
+        const newConcurrency = Math.max(1, Math.floor(currentConcurrency / 2));
+        logger.warn(`检测到 ${rate429Count} 次 429 错误，降低并发数从 ${currentConcurrency} 到 ${newConcurrency}，重新下载`);
+        
+        await fse.remove(tempDir);
+        await fse.ensureDir(tempDir);
+        
+        rate429Count = 0;
+        currentConcurrency = newConcurrency;
+        
+        await pMap(chunks, downloadChunk, { concurrency: currentConcurrency });
+      } else {
+        throw error;
+      }
+    }
+
+    if (supportsChunkedDownload) {
+      logger.debug(`所有块下载完成，开始合并文件`);
+      const writeStream = fs.createWriteStream(filePath);
+
+      for (let i = 0; i < totalChunks; i++) {
+        const chunkPath = `${tempDir}/chunk_${i}`;
+        const chunkBuffer = fs.readFileSync(chunkPath);
+        writeStream.write(chunkBuffer);
+        fs.unlinkSync(chunkPath);
+      }
+
+      writeStream.end();
+      await new Promise((resolve) => writeStream.on('finish', resolve));
+
+      logger.debug(`文件合并完成: ${filePath}`);
+    }
+  } finally {
+    await fse.remove(tempDir);
+  }
+}
+
+async function downloadFile(url: string, filePath: string, expectedHash?: string, forceDownload = false, useChunked = false) {
   await pRetry(
     async () => {
       if (fs.existsSync(filePath) && !forceDownload) {
@@ -271,21 +446,30 @@ async function downloadFile(url: string, filePath: string, expectedHash?: string
       }
 
       logger.debug(`正在下载 ${url} 到 ${filePath}`);
-      let res: any = null;
       try {
-        res = await got.get(url, {
-          responseType: "buffer",
-          headers: { "user-agent": "DeEarthX" },
-          followRedirect: true,
-        });
-        fse.outputFileSync(filePath, res.rawBody);
+        await fse.ensureDir(path.dirname(filePath));
+        
+        if (useChunked) {
+          await chunkedDownload(url, filePath);
+        } else {
+          const res = await got.get(url, {
+            responseType: "buffer",
+            headers: { "user-agent": "DeEarthX" },
+            followRedirect: true,
+          });
+          fse.outputFileSync(filePath, res.rawBody);
+        }
+        
         logger.debug(`下载 ${url} 成功`);
 
         if (expectedHash && !verifySHA1(filePath, expectedHash)) {
           throw new Error(`文件哈希验证失败，下载的文件可能已损坏`);
         }
-      } finally {
-        res = null;
+      } catch (error) {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        throw error;
       }
     },
     {
@@ -332,15 +516,15 @@ export async function fastdownload(data: [string, string] | string[][], enableHa
   );
 }
 
-export async function Wfastdownload(data: string[][], ws: MessageWS, enableHashVerify = true) {
-  logger.info(`开始 Web 下载 ${data.length} 个文件${enableHashVerify ? '（启用 hash 验证）' : ''}`);
+export async function Wfastdownload(data: string[][], ws: MessageWS, enableHashVerify = true, useChunked = false) {
+  logger.info(`开始 Web 下载 ${data.length} 个文件${enableHashVerify ? '（启用 hash 验证）' : ''}${useChunked ? '（启用分块下载）' : ''}`);
   const completed = new Set<number>();
   return await pMap(
     data,
     async (item: string[], index: number) => {
       const [url, filePath, expectedHash] = item;
       try {
-        await downloadFile(url, filePath, enableHashVerify ? expectedHash : undefined);
+        await downloadFile(url, filePath, enableHashVerify ? expectedHash : undefined, false, useChunked);
         if (!completed.has(index)) {
           completed.add(index);
           ws.download(data.length, completed.size, filePath);
