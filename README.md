@@ -12,6 +12,8 @@ DeEarthX V3 是一款专业的 Minecraft 整合包服务端制作工具，致力
 
 QQ群：559349662
 
+注意：本版本是主版本，不是CE版本，但是与CE版本有许关系，CE版本：[https://github.com/xcclycs/DeEarthX-CE](https://github.com/xcclycs/DeEarthX-CE)
+
 ## 核心功能
 
 ### 1. 多平台支持
