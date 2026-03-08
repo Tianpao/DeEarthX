@@ -169,6 +169,7 @@ export class Core {
         // 获取配置路由
         this.app.get('/config/get', (req, res) => {
             try {
+                this.config = Config.getConfig();
                 res.json(this.config);
             } catch (err) {
                 const error = err as Error;
@@ -181,7 +182,8 @@ export class Core {
         this.app.post('/config/post', (req, res) => {
             try {
                 Config.writeConfig(req.body);
-                this.config = req.body; // 更新内存中的配置
+                this.config = req.body;
+                Config.clearCache();
                 logger.info("配置已更新");
                 res.json({ status: 200 });
             } catch (err) {

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { fastdownload, version_compare } from "../utils/utils.js";
 import got from "got";
 import { Azip } from "../utils/ziplib.js";
-import config from "../utils/config.js";
+import { Config } from "../utils/config.js";
 
 interface ILInfo {
   libraries: {
@@ -29,6 +29,7 @@ export class Minecraft {
 
   async setup() {
     await this.eula();
+    const config = Config.getConfig();
     if (!config.mirror.bmclapi) {
       return;
     }

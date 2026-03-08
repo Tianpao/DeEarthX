@@ -1,7 +1,7 @@
 import got, { Got } from "got";
 import fs from "node:fs";
 import { execPromise, fastdownload, verifySHA1, calculateSHA1 } from "../utils/utils.js";
-import config from "../utils/config.js";
+import { Config } from "../utils/config.js";
 import { logger } from "../utils/logger.js";
 
 interface ILatestLoader {
@@ -35,6 +35,7 @@ export class Fabric {
 
   async setup(): Promise<void> {
     await this.installer();
+    const config = Config.getConfig();
     if (config.mirror.bmclapi) {
       await this.libraries();
     }
@@ -43,6 +44,7 @@ export class Fabric {
   }
 
   async install() {
+    const config = Config.getConfig();
     const javaCmd = config.javaPath || 'java';
     await execPromise(`${javaCmd} -jar fabric-installer.jar server -dir . -mcversion ${this.minecraft} -loader ${this.loaderVersion}`, {
       cwd: this.path
@@ -50,6 +52,7 @@ export class Fabric {
   }
 
   private async wshell() {
+    const config = Config.getConfig();
     const javaCmd = config.javaPath || 'java';
     const cmd = `${javaCmd} -jar fabric-server-launch.jar`;
     await fs.promises.writeFile(`${this.path}/run.bat`, `@echo off\n${cmd}`);
@@ -57,6 +60,7 @@ export class Fabric {
   }
 
   async libraries() {
+    const config = Config.getConfig();
     const res = await this.got.get(`fabric-meta/v2/versions/loader/${this.minecraft}/${this.loaderVersion}/server/json`).json<IServer>();
     const _downlist: [string, string, string?][] = [];
     res.libraries.forEach(e => {

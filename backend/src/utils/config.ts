@@ -98,12 +98,17 @@ function getEnv<T>(key: string, defaultValue: T): T {
  * 配置管理器
  */
 export class Config {
+  private static cachedConfig: IConfig | null = null;
+
   /**
    * 获取配置
    * @returns 配置对象
    */
   public static getConfig(): IConfig {
-    // 读取配置文件
+    if (this.cachedConfig) {
+      return this.cachedConfig;
+    }
+
     let config: IConfig;
     if (!fs.existsSync(CONFIG_PATH)) {
       fs.writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
@@ -136,6 +141,7 @@ export class Config {
       host: getEnv('DEEARTHX_HOST', config.host || DEFAULT_CONFIG.host)
     };
     
+    this.cachedConfig = envConfig;
     logger.debug("Loaded config", envConfig);
     return envConfig;
   }
@@ -147,12 +153,17 @@ export class Config {
   public static writeConfig(config: IConfig): void {
     try {
       fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+      this.cachedConfig = config;
       logger.info("Config file written successfully");
     } catch (err) {
       logger.error("Failed to write config file", err as Error);
     }
   }
-}
 
-// 默认导出配置实例
-export default Config.getConfig();
+  /**
+   * 清除配置缓存（强制下次读取时重新从文件加载）
+   */
+  public static clearCache(): void {
+    this.cachedConfig = null;
+  }
+}

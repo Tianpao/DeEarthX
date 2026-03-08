@@ -5,7 +5,7 @@ import { pipeline } from "node:stream/promises";
 import { platform, what_platform } from "./platform/index.js";
 import { ModFilterService } from "./dearth/index.js";
 import { dinstall, mlsetup } from "./modloader/index.js";
-import config from "./utils/config.js";
+import { Config } from "./utils/config.js";
 import { execPromise } from "./utils/utils.js";
 import { MessageWS } from "./utils/ws.js";
 import { logger } from "./utils/logger.js";
@@ -70,6 +70,7 @@ export class Dex {
   }
 
   private async filterMods(unpath: string, mpname: string) {
+    const config = Config.getConfig();
     await new ModFilterService(`${unpath}/mods`, `./.rubbish/${mpname}`, config.filter, this.message).filter();
     this.message.statusChange();
   }
@@ -96,6 +97,7 @@ export class Dex {
   }
 
   private async completeTask(startTime: number, unpath: string, mpname: string, isServerMode: boolean) {
+    const config = Config.getConfig();
     const latest = Date.now();
     const duration = latest - startTime;
     

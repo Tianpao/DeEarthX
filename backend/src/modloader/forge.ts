@@ -3,7 +3,7 @@ import fs from "node:fs";
 import fse from "fs-extra";
 import { execPromise, fastdownload, version_compare, verifySHA1 } from "../utils/utils.js";
 import { Azip } from "../utils/ziplib.js";
-import config from "../utils/config.js";
+import { Config } from "../utils/config.js";
 import { logger } from "../utils/logger.js";
 
 interface IForge {
@@ -52,6 +52,7 @@ export class Forge {
     this.minecraft = minecraft;
     this.loaderVersion = loaderVersion;
     this.path = path;
+    const config = Config.getConfig();
     this.got = got.extend({
       headers: { "User-Agent": "DeEarthX" },
       hooks: {
@@ -70,6 +71,7 @@ export class Forge {
 
   async setup() {
     await this.installer();
+    const config = Config.getConfig();
     if (config.mirror.bmclapi) {
       await this.library();
     }
@@ -110,6 +112,7 @@ export class Forge {
   }
 
   async install() {
+    const config = Config.getConfig();
     const javaCmd = config.javaPath || 'java';
     let cmd = `${javaCmd} -jar forge-${this.minecraft}-${this.loaderVersion}-installer.jar --installServer`;
     if (config.mirror.bmclapi) {
@@ -122,6 +125,7 @@ export class Forge {
   }
 
   async installer() {
+    const config = Config.getConfig();
     let url = `forge/download?mcversion=${this.minecraft}&version=${this.loaderVersion}&category=installer&format=jar`;
     let expectedHash: string | undefined;
 
@@ -162,6 +166,7 @@ export class Forge {
   }
 
   private async wshell() {
+    const config = Config.getConfig();
     const javaCmd = config.javaPath || 'java';
     const cmd = `${javaCmd} -jar forge-${this.minecraft}-${this.loaderVersion}.jar`;
     await fs.promises.writeFile(`${this.path}/run.bat`, `@echo off\n${cmd}`);

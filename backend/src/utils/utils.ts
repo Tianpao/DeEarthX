@@ -1,5 +1,5 @@
 import pMap from "p-map";
-import config from "./config.js";
+import { Config } from "./config.js";
 import got from "got";
 import pRetry from "p-retry";
 import fs from "node:fs";
@@ -32,6 +32,7 @@ export class Utils {
   public modrinth_Durl: string;
   
   constructor() {
+    const config = Config.getConfig();
     this.modrinth_url = "https://api.modrinth.com";
     this.curseforge_url = "https://api.curseforge.com";
     this.modrinth_Durl = "https://cdn.modrinth.com";

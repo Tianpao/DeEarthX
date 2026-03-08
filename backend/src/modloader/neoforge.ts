@@ -1,6 +1,6 @@
 import fse from "fs-extra";
 import { Forge } from "./forge.js";
-import config from "../utils/config.js";
+import { Config } from "../utils/config.js";
 import { Got, got } from "got";
 
 export class NeoForge extends Forge {
@@ -8,6 +8,7 @@ export class NeoForge extends Forge {
 
   constructor(minecraft: string, loaderVersion: string, path: string) {
     super(minecraft, loaderVersion, path);
+    const config = Config.getConfig();
     this.got = got.extend({
       headers: { "User-Agent": "DeEarthX" },
       hooks: {
@@ -26,6 +27,7 @@ export class NeoForge extends Forge {
 
   async setup() {
     await this.installer();
+    const config = Config.getConfig();
     if (config.mirror.bmclapi) {
       await this.library();
     }
@@ -33,6 +35,7 @@ export class NeoForge extends Forge {
   }
 
   async installer() {
+    const config = Config.getConfig();
     let url = `neoforge/version/${this.loaderVersion}/download/installer.jar`;
     if (!config.mirror?.bmclapi) {
       url = `net/neoforged/neoforge/${this.loaderVersion}/neoforge-${this.loaderVersion}-installer.jar`;
