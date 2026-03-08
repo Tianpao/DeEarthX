@@ -10,8 +10,9 @@
   "scripts": {
     "test": "set \"DEBUG=true\"&&tsc&&node dist/main.js",
     "rollup": "rollup -c rollup.config.js",
-    "nexe": "nexe -i ./dist/bundle.js --build -t x86-22.13.0 --output ./dist/core.exe",
-    "build": "npm run rollup && npm run nexe"
+    "sea": "node --experimental-sea-config sea-config.json",
+    "sea:build": "node -e \"require('fs').copyFileSync(process.execPath, './dist/core.exe')\" && npx postject ./dist/core.exe NODE_SEA_BLOB ./dist/sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
+    "build": "npm run rollup && npm run sea && npm run sea:build"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",
@@ -29,7 +30,7 @@
     "@types/ws": "^8.18.1",
     "@types/yauzl": "^2.10.3",
     "jest": "^30.2.0",
-    "nexe": "^5.0.0-beta.4",
+    "postject": "^1.0.0-alpha.6",
     "rollup": "^4.50.1",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.2"
