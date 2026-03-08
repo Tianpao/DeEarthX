@@ -31,3 +31,4 @@ config.json
 instance
 *.mrpack
 templates/
+package-lock.json
