@@ -1,5 +1,11 @@
 # DeEarthX V3
 
+[![Github release](https://img.shields.io/github/v/tag/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/releases)
+[![GitHub](https://img.shields.io/github/license/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/blob/main/LICENSE)
+[![GitHub last commit](https://img.shields.io/github/last-commit/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/commits/main)
+[![GitHub issues](https://img.shields.io/github/issues/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/Tianpao/DeEarthX-V3)](https://github.com/Tianpao/DeEarthX-V3/pulls)
+
 ## 项目概述
 
 DeEarthX V3 是一款专业的 Minecraft 整合包服务端制作工具，致力于让 Minecraft 服务器搭建变得简单、高效、随时随地。通过智能化的模组处理和自动化的配置流程，用户可以快速将客户端整合包转换为可运行的服务端。
