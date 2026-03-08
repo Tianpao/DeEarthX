@@ -44,6 +44,8 @@ jobs:
     name: Build Windows
     runs-on: windows-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
