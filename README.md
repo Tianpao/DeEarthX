@@ -6,6 +6,17 @@
 [![GitHub issues](https://img.shields.io/github/issues/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/pulls)
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=Tianpao%2FDeEarthX&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Tianpao/DeEarthX&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Tianpao/DeEarthX&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Tianpao/DeEarthX&type=date&legend=top-left" />
+ </picture>
+</a>
+
+
 ## 项目概述
 
 DeEarthX V3 是一个 Minecraft 整合包服务端制作工具，帮你快速把客户端整合包转换成可运行的服务端。
