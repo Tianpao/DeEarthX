@@ -10,7 +10,7 @@
 
 <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
 
-<a href=""><image align="center" src="front/public/QQ.png" height="15" width="15"/> 加入Q群</a>
+<a href="https://qm.qq.com/q/7WI7AIL0Vq"><image align="center" src="front/public/QQ.png" height="15" width="15"/> 加入Q群</a>
 
 <a href="https://www.bilibili.com/video/BV1CZffB9ErD/?share_source=copy_web&vd_source=93ac910240591935807ae1d3f37c9b79"> <image align="center" src="front/public/bilibili.svg" height="15" width="15"/> 宣传片</a>
 
