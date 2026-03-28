@@ -1,10 +1,22 @@
-# DeEarthX V3
+<div align="center">
+
+# <image src="front/public/dex.png" height="28" width="28"/> DeEarthX
 
 [![Github release](https://img.shields.io/github/v/tag/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/releases)
 [![GitHub](https://img.shields.io/github/license/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/blob/main/LICENSE)
 [![GitHub last commit](https://img.shields.io/github/last-commit/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/commits/main)
 [![GitHub issues](https://img.shields.io/github/issues/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/Tianpao/DeEarthX)](https://github.com/Tianpao/DeEarthX/pulls)
+
+<div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+
+<a href=""><image align="center" src="front/public/QQ.png" height="15" width="15"/> 加入Q群</a>
+
+<a href="https://www.bilibili.com/video/BV1CZffB9ErD/?share_source=copy_web&vd_source=93ac910240591935807ae1d3f37c9b79"> <image align="center" src="front/public/bilibili.svg" height="15" width="15"/> 宣传片</a>
+
+</div>
+
+</div>
 
 ## Star History
 
@@ -16,6 +28,8 @@
  </picture>
 </a>
 
+> [!WARNING]
+> 模组可能过滤不干净，且制作的服务端禁止用于售卖！
 
 ## 项目概述
 
@@ -26,31 +40,38 @@ QQ群：559349662
 ## 核心功能
 
 ### 整合包支持
+
 - CurseForge
 - Modrinth
 - MCBBS
 
 ### 模组处理
+
 自动区分客户端和服务端模组，保留服务端需要的，剔除客户端专用的（光影、材质包等）。
 
 ### 工作模式
+
 - **开服模式**：下载服务端和模组加载器，完整生成服务端
 - **上传模式**：只做模组筛选，不下载服务端文件
 
 ### 模组加载器
+
 - Forge
 - NeoForge
 - Fabric
 
 ### 版本支持
+
 支持 1.16.5 到最新版本。
 
 ## 技术架构
 
 ### 后端
+
 TypeScript + Node.js，Express 提供 Web 服务，WebSocket 实时通信，使用 Node.js SEA 打包为独立 exe。
 
 ### 前端
+
 Vue 3 + TypeScript，Tauri 2 桌面框架，Ant Design Vue UI 组件，Tailwind CSS 样式。
 
 ## 使用流程
@@ -67,9 +88,6 @@ Vue 3 + TypeScript，Tauri 2 桌面框架，Ant Design Vue UI 组件，Tailwind 
 - 实时进度显示
 - 内置 BMCLAPI 和 MCIM 镜像源加速下载
 - 支持多语言
-
-> [!WARNING]
-> 模组可能过滤不干净，且制作的服务端禁止用于售卖！
 
 ## 安装说明
 
