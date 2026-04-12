@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { FileSearchOutlined, FolderOpenOutlined } from '@ant-design/icons-vue';
 import { open } from '@tauri-apps/plugin-dialog';
+import axiosInstance from '@/utils/axios';
 
 interface ModCheckResult {
     filename: string;
@@ -55,23 +56,28 @@ async function handleCheck() {
     results.value = [];
 
     try {
-        const response = await fetch('http://localhost:37019/modcheck/folder', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                folderPath: selectedFolder.value,
-                bundleName: bundleName.value.trim()
-            })
+        // const response = await fetch('http://localhost:37019/modcheck/folder', {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //     },
+        //     body: JSON.stringify({
+        //         folderPath: selectedFolder.value,
+        //         bundleName: bundleName.value.trim()
+        //     })
+        // });
+
+        const response = await axiosInstance.post('/modcheck/folder',{
+            folderPath: selectedFolder.value,
+            bundleName: bundleName.value.trim()
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
+        if (response.status !== 200) {
+            const errorData = response.data;
             throw new Error(errorData.message || `请求失败: ${response.status}`);
         }
 
-        const data = await response.json();
+        const data = response.data;
         results.value = data;
         showResults.value = true;
         message.success(`检查完成，共检查 ${data.length} 个模组`);

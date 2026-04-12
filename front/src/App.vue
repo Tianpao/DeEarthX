@@ -5,6 +5,7 @@ import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined, Loading
 import { useRouter, useRoute } from 'vue-router';
 import { Command } from '@tauri-apps/plugin-shell';
 import { useI18n } from 'vue-i18n';
+import axiosInstance from './utils/axios';
 
 const router = useRouter();
 const route = useRoute();
@@ -43,13 +44,15 @@ const maxRetries = 5;
 // 检测端口是否被正确的后端占用
 async function checkPortOccupied(): Promise<'correct_backend' | 'wrong_app' | 'free'> {
     try {
-        const response = await fetch("http://localhost:37019/config/get", {
-            method: "GET",
-            signal: AbortSignal.timeout(1000)
-        });
+        // const response = await fetch("http://localhost:37019/config/get", {
+        //     method: "GET",
+        //     signal: AbortSignal.timeout(1000)
+        // });
+
+        const response = await axiosInstance.get("/config/get");
+        const config = response.data;
         
-        if (response.ok) {
-            const config = await response.json();
+        if (response.data.status === 200) {
             // 检查是否包含 DeEarthX 后端的特征字段（mirror、filter 等）
             if (config.mirror !== undefined || config.filter !== undefined) {
                 // 端口被正确的后端占用
@@ -99,8 +102,8 @@ async function runCoreProcess() {
             // 等待后端启动并检查状态
             setTimeout(async () => {
                 try {
-                    const response = await fetch("http://localhost:37019/", { method: "GET" });
-                    if (response.ok) {
+                    const response = await axiosInstance.get("/");
+                    if (response.data.status === 200) {
                         backendStatus.value = 'success';
                         backendErrorInfo.value = '';
                         message.success(t('message.backend_started'));
