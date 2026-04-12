@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { PlusOutlined, DeleteOutlined, FolderOutlined, ExclamationCircleOutlined, EditOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
+import axiosInstance from '@/utils/axios';
 
 const { t } = useI18n();
 
@@ -36,10 +37,10 @@ const newTemplate = ref({
 async function loadTemplates() {
     loading.value = true;
     try {
-        const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
-        const apiPort = import.meta.env.VITE_API_PORT || '37019';
-        const response = await fetch(`http://${apiHost}:${apiPort}/templates`);
-        const result = await response.json();
+        
+        const response = await axiosInstance.get('/templates');
+        
+        const result = response.data;
         
         if (result.status === 200 && result.data) {
             templates.value = result.data;
@@ -71,18 +72,17 @@ async function createTemplate() {
     }
 
     try {
-        const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
-        const apiPort = import.meta.env.VITE_API_PORT || '37019';
+        // const response = await fetch(`http://${apiHost}:${apiPort}/templates`, {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json'
+        //     },
+        //     body: JSON.stringify(newTemplate.value)
+        // });
+
+        const response = await axiosInstance.post('/templates', newTemplate.value);
         
-        const response = await fetch(`http://${apiHost}:${apiPort}/templates`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(newTemplate.value)
-        });
-        
-        const result = await response.json();
+        const result = response.data;
         
         if (result.status === 200) {
             message.success(t('template.create_success'));
@@ -106,14 +106,9 @@ async function confirmDelete() {
     if (!deletingTemplate.value) return;
 
     try {
-        const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
-        const apiPort = import.meta.env.VITE_API_PORT || '37019';
+        const response = await axiosInstance.delete(`/templates/${deletingTemplate.value.id}`);
         
-        const response = await fetch(`http://${apiHost}:${apiPort}/templates/${deletingTemplate.value.id}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
+        const result = response.data;
         
         if (result.status === 200) {
             message.success(t('template.delete_success'));
@@ -130,11 +125,8 @@ async function confirmDelete() {
 
 async function openTemplateFolder(template: Template) {
     try {
-        const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
-        const apiPort = import.meta.env.VITE_API_PORT || '37019';
-        
-        const response = await fetch(`http://${apiHost}:${apiPort}/templates/${template.id}/path`);
-        const result = await response.json();
+        const response = await axiosInstance.get(`/templates/${template.id}/path`);
+        const result = response.data;
         
         if (result.status !== 200) {
             message.error(result.message || t('template.open_folder_failed'));
@@ -163,18 +155,9 @@ async function updateTemplate() {
     }
 
     try {
-        const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
-        const apiPort = import.meta.env.VITE_API_PORT || '37019';
+        const response = await axiosInstance.put(`/templates/${editingTemplate.value.id}`, newTemplate.value);
         
-        const response = await fetch(`http://${apiHost}:${apiPort}/templates/${editingTemplate.value.id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(newTemplate.value)
-        });
-        
-        const result = await response.json();
+        const result = response.data;
         
         if (result.status === 200) {
             message.success(t('template.update_success'));

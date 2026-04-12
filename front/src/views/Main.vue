@@ -6,6 +6,7 @@ import type { UploadFile, UploadChangeParam } from 'ant-design-vue';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { SelectProps } from 'ant-design-vue/es/vc-select';
 import { useI18n } from 'vue-i18n';
+import axiosInstance from '@/utils/axios';
 
 const { t } = useI18n();
 
@@ -120,10 +121,10 @@ function handleModeSelect(value: string) {
 async function loadTemplates() {
     loadingTemplates.value = true;
     try {
-        const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
-        const apiPort = import.meta.env.VITE_API_PORT || '37019';
-        const response = await fetch(`http://${apiHost}:${apiPort}/templates`);
-        const result = await response.json();
+        //const response = await fetch(`http://${apiHost}:${apiPort}/templates`);
+        const response = await axiosInstance.get('/templates');
+        
+        const result = response.data;
         
         if (result.status === 200 && result.data) {
             templates.value = result.data;

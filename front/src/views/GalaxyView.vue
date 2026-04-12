@@ -110,6 +110,7 @@ import { UploadOutlined, InboxOutlined, SendOutlined } from '@ant-design/icons-v
 import { message, Modal } from 'ant-design-vue';
 import type { UploadFile, UploadProps } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
+import axiosInstance from '@/utils/axios';
 
 const { t } = useI18n();
 
@@ -243,17 +244,21 @@ const handleSubmit = () => {
                     ? 'http://localhost:37019/galaxy/submit/client'
                     : 'http://localhost:37019/galaxy/submit/server';
 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        modids: modidList.value,
-                    }),
+                // const response = await fetch(apiUrl, {
+                //     method: 'POST',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //     },
+                //     body: JSON.stringify({
+                //         modids: modidList.value,
+                //     }),
+                // });
+
+                const response = await axiosInstance.post(apiUrl,{
+                    modids: modidList.value,
                 });
 
-                if (response.ok) {
+                if (response.status === 200) {
                     message.success(t('galaxy.submit_success', { type: modTypeText }));
                     modidList.value = [];
                 } else {
