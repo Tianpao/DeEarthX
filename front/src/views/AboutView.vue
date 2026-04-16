@@ -119,14 +119,6 @@ onMounted(() => {
     <div
         class="tw:h-full tw:w-full tw:p-8 tw:bg-gradient-to-br tw:from-slate-50 tw:via-blue-50 tw:to-indigo-50 tw:overflow-auto">
         <div class="tw:w-full tw:max-w-5xl tw:mx-auto tw:flex tw:flex-col tw:gap-8">
-            <div class="tw:text-center tw:animate-fade-in">
-                <h1
-                    class="tw:text-3xl tw:font-bold tw:bg-gradient-to-r tw:from-emerald-500 tw:via-cyan-500 tw:to-blue-500 tw:bg-clip-text tw:text-transparent tw:mb-3">
-                    {{ t('about.title') }}
-                </h1>
-                <p class="tw:text-gray-500 tw:text-lg">{{ t('about.subtitle') }}</p>
-            </div>
-
             <div class="tw:bg-white tw:rounded-2xl tw:shadow-lg tw:p-8 tw:animate-fade-in-up">
                 <h2
                     class="tw:text-xl tw:font-bold tw:text-gray-800 tw:text-center tw:mb-6 tw:flex tw:items-center tw:justify-center tw:gap-3">
@@ -193,7 +185,6 @@ onMounted(() => {
             <div class="tw:bg-white tw:rounded-2xl tw:shadow-lg tw:p-8 tw:animate-fade-in-up tw:delay-100">
                 <h1
                     class="tw:text-xl tw:text-center tw:font-bold tw:bg-gradient-to-r tw:from-amber-500 tw:to-orange-500 tw:bg-clip-text tw:text-transparent tw:mb-8 tw:flex tw:items-center tw:justify-center tw:gap-3">
-                    <span class="tw:text-2xl">💎</span>
                     <span>{{ t('about.sponsor') }}</span>
                 </h1>
                 <div class="tw:flex tw:flex-wrap tw:justify-center tw:gap-6">
