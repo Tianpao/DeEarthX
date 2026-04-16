@@ -3,7 +3,7 @@ import { Forge } from "./forge.js";
 import { Minecraft } from "./minecraft.js";
 import { NeoForge } from "./neoforge.js";
 import fs from "node:fs";
-import { MessageWS } from "../utils/ws.js";
+import { MessageWS } from "../utils/socketio.js";
 import { getAppDir } from "../utils/utils.js";
 
 interface XModloader {

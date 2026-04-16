@@ -2,7 +2,7 @@ import got, { Got } from "got";
 import { join } from "node:path";
 import { Wfastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
-import { MessageWS } from "../utils/ws.js";
+import { MessageWS } from "../utils/socketio.js";
 
 export interface CurseForgeManifest {
   minecraft: {

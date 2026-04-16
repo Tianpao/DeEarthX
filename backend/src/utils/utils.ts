@@ -6,8 +6,8 @@ import fs from "node:fs";
 import fse from "fs-extra";
 import { SpawnOptions, exec, spawn } from "node:child_process";
 import crypto from "node:crypto";
-import path from "node:path";
-import { MessageWS } from "./ws.js";
+import path from "node:path"; 
+import { MessageWS } from "./socketio.js";
 import { logger } from "./logger.js";
 
 export function getAppDir(): string {

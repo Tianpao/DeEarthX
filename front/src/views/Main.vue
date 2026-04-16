@@ -7,6 +7,7 @@ import { sendNotification } from '@tauri-apps/plugin-notification';
 import { SelectProps } from 'ant-design-vue/es/vc-select';
 import { useI18n } from 'vue-i18n';
 import axiosInstance from '@/utils/axios';
+import { io, Socket } from 'socket.io-client';
 
 const { t } = useI18n();
 
@@ -228,7 +229,7 @@ function formatTime(seconds: number): string {
 }
 
 // 运行DeEarthX核心功能
-async function runDeEarthX(file: File, ws: WebSocket) {
+async function runDeEarthX(file: File, socket: Socket) {
     message.success(t('home.start_production'));
     showSteps.value = true;
 
@@ -302,7 +303,7 @@ async function runDeEarthX(file: File, ws: WebSocket) {
         message.error(t('home.request_failed'));
         uploadProgress.value.status = 'exception';
         resetState();
-        ws.close();
+        socket.disconnect();
     }
 }
 
@@ -558,14 +559,15 @@ function handleStartProcess() {
     message.loading(t('home.ws_connecting'));
     const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
     const wsPort = import.meta.env.VITE_WS_PORT || '37019';
-    const ws = new WebSocket(`ws://${wsHost}:${wsPort}/`);
-
-    ws.addEventListener('open', () => {
+    //const ws = new WebSocket(`ws://${wsHost}:${wsPort}/`);
+    const socket = io(`${wsHost}:${wsPort}/`);
+    socket.on('connect', () => {
         message.success(t('home.ws_connected'));
-        runDeEarthX(file, ws);
+        console.log('Connected to WebSocket server');
+        runDeEarthX(file, socket);
     });
 
-    ws.addEventListener('message', (event) => {
+   /* ws.addEventListener('message', (event) => {
         try {
             const data = JSON.parse(event.data);
 
@@ -623,9 +625,61 @@ function handleStartProcess() {
             console.error('解析WebSocket消息失败:', error);
             notification.error({ message: t('common.error'), description: t('home.parse_error') });
         }
+    });*/
+
+    socket.on("finish", (timeSpent: number) => {
+        handleFinish(timeSpent);
     });
 
-    ws.addEventListener('error', () => {
+    socket.on("unzip", (data: any) => {
+        updateUnzipProgress(data);
+    });
+
+    socket.on("downloading", (data: any) => {
+        updateDownloadProgress(data);
+    });
+
+    socket.on("changed", () => {
+        currentStep.value++;
+    });
+
+    socket.on("server_install_start", (data: any) => {
+        handleServerInstallStart(data);
+    });
+
+    socket.on("server_install_step", (data: any) => {
+        handleServerInstallStep(data);
+    });
+
+    socket.on("server_install_progress", (data: any) => {
+        handleServerInstallProgress(data);
+    });
+
+    socket.on("server_install_complete", (data: any) => {
+        handleServerInstallComplete(data);
+    });
+
+    socket.on("server_install_error", (data: any) => {
+        handleServerInstallError(data);
+    });
+
+    socket.on("filter_mods_start", (data: any) => {
+        handleFilterModsStart(data);
+    });
+    
+    socket.on("filter_mods_progress", (data: any) => {
+        handleFilterModsProgress(data);
+    });
+
+    socket.on("filter_mods_complete", (data: any) => {
+        handleFilterModsComplete(data);
+    });
+
+    socket.on("filter_mods_error", (data: any) => {
+        handleFilterModsError(data);
+    });
+
+    socket.on('error', () => {
         notification.error({
             message: t('home.ws_error_title'),
             description: `${t('home.ws_error_desc')}\n\n${t('home.suggestions')}:\n1. ${t('home.suggestion_check_backend')}\n2. ${t('home.suggestion_check_port')}\n3. ${t('home.suggestion_restart_application')}`,
@@ -633,8 +687,8 @@ function handleStartProcess() {
         });
         resetState();
     });
-
-    ws.addEventListener('close', () => {
+socket.listeners("")
+    socket.on('disconnect', () => {
         console.log('WebSocket连接关闭');
     });
 }
