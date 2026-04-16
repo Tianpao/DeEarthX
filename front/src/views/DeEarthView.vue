@@ -56,17 +56,6 @@ async function handleCheck() {
     results.value = [];
 
     try {
-        // const response = await fetch('http://localhost:37019/modcheck/folder', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //     },
-        //     body: JSON.stringify({
-        //         folderPath: selectedFolder.value,
-        //         bundleName: bundleName.value.trim()
-        //     })
-        // });
-
         const response = await axiosInstance.post('/modcheck/folder',{
             folderPath: selectedFolder.value,
             bundleName: bundleName.value.trim()

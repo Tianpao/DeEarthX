@@ -559,11 +559,9 @@ function handleStartProcess() {
     message.loading(t('home.ws_connecting'));
     const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
     const wsPort = import.meta.env.VITE_WS_PORT || '37019';
-    //const ws = new WebSocket(`ws://${wsHost}:${wsPort}/`);
     const socket = io(`${wsHost}:${wsPort}/`);
     socket.on('connect', () => {
         message.success(t('home.ws_connected'));
-        console.log('Connected to WebSocket server');
         runDeEarthX(file, socket);
     });
 
@@ -679,15 +677,10 @@ function handleStartProcess() {
         handleFilterModsError(data);
     });
 
-    socket.on('error', () => {
-        notification.error({
-            message: t('home.ws_error_title'),
-            description: `${t('home.ws_error_desc')}\n\n${t('home.suggestions')}:\n1. ${t('home.suggestion_check_backend')}\n2. ${t('home.suggestion_check_port')}\n3. ${t('home.suggestion_restart_application')}`,
-            duration: 0
-        });
+    socket.on("error", (error: any) => {
+        handleError(error);
         resetState();
     });
-socket.listeners("")
     socket.on('disconnect', () => {
         console.log('WebSocket连接关闭');
     });

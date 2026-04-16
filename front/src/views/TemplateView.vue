@@ -72,14 +72,6 @@ async function createTemplate() {
     }
 
     try {
-        // const response = await fetch(`http://${apiHost}:${apiPort}/templates`, {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify(newTemplate.value)
-        // });
-
         const response = await axiosInstance.post('/templates', newTemplate.value);
         
         const result = response.data;
