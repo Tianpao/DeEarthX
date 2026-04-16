@@ -6,7 +6,7 @@ import { DexpubFilter } from "./strategies/DexpubFilter.js";
 import { ModrinthFilter } from "./strategies/ModrinthFilter.js";
 import { IFilterConfig } from "./types.js";
 import { logger } from "../utils/logger.js";
-import { MessageWS } from "../utils/ws.js";
+import { MessageWS } from "../utils/socketio.js";
 import path from "node:path";
 
 export class ModFilterService {

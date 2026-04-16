@@ -1,26 +1,26 @@
 import fs from "node:fs";
 import p from "node:path";
-import websocket, { WebSocketServer } from "ws";
 import { pipeline } from "node:stream/promises";
 import { platform, what_platform } from "./platform/index.js";
 import { ModFilterService } from "./dearth/index.js";
 import { dinstall, mlsetup } from "./modloader/index.js";
 import { Config } from "./utils/config.js";
 import { execPromise, getAppDir } from "./utils/utils.js";
-import { MessageWS } from "./utils/ws.js";
+import { MessageWS } from "./utils/socketio.js";
 import { logger } from "./utils/logger.js";
 import { yauzl_promise } from "./utils/ziplib.js";
 import yauzl from "yauzl";
 import archiver from "archiver";
+import { Server } from "socket.io";
 
 export class Dex {
-  wsx!: WebSocketServer;
   message!: MessageWS;
+  io: Server;
   
-  constructor(ws: WebSocketServer) {
-    this.wsx = ws;
-    this.wsx.on("connection", (e) => {
-      this.message = new MessageWS(e);
+  constructor(io: Server) {
+    this.io = io;
+    this.io.on("connection", (socket) => {
+      this.message = new MessageWS(socket);
     });
   }
 

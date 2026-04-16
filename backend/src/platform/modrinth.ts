@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { join } from "node:path";
 import { Wfastdownload, Utils } from "../utils/utils.js";
 import { modpack_info, XPlatform } from "./index.js";
-import { MessageWS } from "../utils/ws.js";
+import { MessageWS } from "../utils/socketio.js";
 
 interface ModrinthManifest {
   files: Array<{ path: string; downloads: string[]; fileSize: number; }>;

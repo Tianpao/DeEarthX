@@ -1,4 +1,4 @@
-import { MessageWS } from "../utils/ws.js";
+import { MessageWS } from "../utils/socketio.js";
 import { CurseForge } from "./curseforge.js";
 import { Modrinth } from "./modrinth.js";
 
