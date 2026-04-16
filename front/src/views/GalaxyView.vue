@@ -244,16 +244,6 @@ const handleSubmit = () => {
                     ? 'http://localhost:37019/galaxy/submit/client'
                     : 'http://localhost:37019/galaxy/submit/server';
 
-                // const response = await fetch(apiUrl, {
-                //     method: 'POST',
-                //     headers: {
-                //         'Content-Type': 'application/json',
-                //     },
-                //     body: JSON.stringify({
-                //         modids: modidList.value,
-                //     }),
-                // });
-
                 const response = await axiosInstance.post(apiUrl,{
                     modids: modidList.value,
                 });
