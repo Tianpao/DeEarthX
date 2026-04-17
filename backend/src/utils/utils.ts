@@ -348,7 +348,7 @@ async function chunkedDownload(url: string, filePath: string, chunkSize = 5 * 10
           if (res.statusCode === 206) {
             fse.writeFileSync(chunkPath, res.rawBody);
             return;
-          } else if (res.statusCode === 200) {
+          } else if (res.statusCode === 200 && res.headers['accept-ranges'] !== 'bytes') {
             supportsChunkedDownload = false;
             throw new Error('服务器不支持 Range 请求');
           } else if (res.statusCode === 429) {
