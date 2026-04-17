@@ -565,66 +565,6 @@ function handleStartProcess() {
         runDeEarthX(file, socket);
     });
 
-   /* ws.addEventListener('message', (event) => {
-        try {
-            const data = JSON.parse(event.data);
-
-            if (data.type === 'error') {
-                handleError(data.message);
-            } else if (data.type === 'info') {
-                message.info(data.message);
-            } else if (data.status) {
-                switch (data.status) {
-                    case 'error':
-                        handleError(data.result);
-                        break;
-                    case 'changed':
-                        currentStep.value++;
-                        break;
-                    case 'unzip':
-                        updateUnzipProgress(data.result);
-                        break;
-                    case 'downloading':
-                        updateDownloadProgress(data.result);
-                        break;
-                    case 'finish':
-                        handleFinish(data.result);
-                        break;
-                    case 'server_install_start':
-                        handleServerInstallStart(data.result);
-                        break;
-                    case 'server_install_step':
-                        handleServerInstallStep(data.result);
-                        break;
-                    case 'server_install_progress':
-                        handleServerInstallProgress(data.result);
-                        break;
-                    case 'server_install_complete':
-                        handleServerInstallComplete(data.result);
-                        break;
-                    case 'server_install_error':
-                        handleServerInstallError(data.result);
-                        break;
-                    case 'filter_mods_start':
-                        handleFilterModsStart(data.result);
-                        break;
-                    case 'filter_mods_progress':
-                        handleFilterModsProgress(data.result);
-                        break;
-                    case 'filter_mods_complete':
-                        handleFilterModsComplete(data.result);
-                        break;
-                    case 'filter_mods_error':
-                        handleFilterModsError(data.result);
-                        break;
-                }
-            }
-        } catch (error) {
-            console.error('解析WebSocket消息失败:', error);
-            notification.error({ message: t('common.error'), description: t('home.parse_error') });
-        }
-    });*/
-
     socket.on("finish", (timeSpent: number) => {
         handleFinish(timeSpent);
     });
@@ -680,6 +620,7 @@ function handleStartProcess() {
     socket.on("error", (error: any) => {
         handleError(error);
         resetState();
+        socket.disconnect();
     });
     socket.on('disconnect', () => {
         console.log('WebSocket连接关闭');
