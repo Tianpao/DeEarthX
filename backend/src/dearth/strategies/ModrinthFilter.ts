@@ -1,5 +1,7 @@
 import { IFilterStrategy, IFileInfo } from "../types.js";
 import { logger } from "../../utils/logger.js";
+import { Utils } from "../../utils/utils.js";
+import got from "got";
 
 interface IModrinthProject {
   client_side: string;
@@ -10,7 +12,11 @@ interface IModrinthProject {
 
 export class ModrinthFilter implements IFilterStrategy {
   name = "ModrinthFilter";
-  private readonly API_BASE = "https://api.modrinth.com/v2";
+  private utils: Utils;
+
+  constructor() {
+    this.utils = new Utils();
+  }
 
   private extractProjectId(infos: { name: string; data: string }[]): string | null {
     for (const info of infos) {
@@ -35,24 +41,18 @@ export class ModrinthFilter implements IFilterStrategy {
       const idsParam = batch.join(",");
 
       try {
-        const response = await fetch(`${this.API_BASE}/projects?ids=${encodeURIComponent(idsParam)}`, {
-          headers: {
-            'User-Agent': 'DeEarthX-V3/1.0.0'
-          }
-        });
-
-        if (response.ok) {
-          const projects: Array<any> = await response.json();
-
-          for (const project of projects) {
-            if (project && project.id) {
-              projectMap.set(project.id, {
-                client_side: project.client_side,
-                server_side: project.server_side,
-                project_type: project.project_type,
-                categories: project.categories || []
-              });
-            }
+        const projects = await got.post(`${this.utils.modrinth_url}/v2/projects?ids=${idsParam}`, {
+          headers: { "User-Agent": "DeEarth", "Content-Type": "application/json" },
+          json: {}
+        }).json<any[]>().catch((e) => { throw new Error(e.message) });
+        for (const project of projects) {
+          if (project && project.id) {
+            projectMap.set(project.id, {
+              client_side: project.client_side,
+              server_side: project.server_side,
+              project_type: project.project_type,
+              categories: project.categories || []
+            });
           }
         }
       } catch (error) {
