@@ -93,8 +93,8 @@ function resetState() {
     startButtonDisabled.value = false;
     showSteps.value = false;
     currentStep.value = 0;
-    unzipProgress.value = { status: 'active', percent: 0, display: true };
-    downloadProgress.value = { status: 'active', percent: 0, display: true };
+    unzipProgress.value = { status: 'active', percent: 0, display: false };
+    downloadProgress.value = { status: 'active', percent: 0, display: false };
     const killCoreProcess = inject("killCoreProcess");
     if (killCoreProcess && typeof killCoreProcess === 'function') {
         killCoreProcess();
@@ -412,7 +412,7 @@ function handleFinish(result: number) {
     sendNotification({ title: t('common.app_name'), body: t('home.production_complete', { time: timeSpent }) });
 
     // 8秒后自动重置状态
-    setTimeout(resetState, 8000);
+    setTimeout(() => resetState(), 8000);
 }
 
 // 处理服务端安装开始
@@ -559,7 +559,13 @@ function handleStartProcess() {
     message.loading(t('home.ws_connecting'));
     const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
     const wsPort = import.meta.env.VITE_WS_PORT || '37019';
-    const socket = io(`${wsHost}:${wsPort}/`);
+    const socket = io(`${wsHost}:${wsPort}/`,{
+        autoConnect: false,
+        reconnection: false
+    });
+
+    socket.connect(); // 手动连接
+
     socket.on('connect', () => {
         message.success(t('home.ws_connected'));
         runDeEarthX(file, socket);
@@ -567,6 +573,7 @@ function handleStartProcess() {
 
     socket.on("finish", (timeSpent: number) => {
         handleFinish(timeSpent);
+        socket.disconnect();
     });
 
     socket.on("unzip", (data: any) => {
