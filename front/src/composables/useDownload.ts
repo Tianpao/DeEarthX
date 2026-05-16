@@ -199,7 +199,7 @@ export function useDownload() {
   }
 
   function goNext() {
-    if (currentStep.value === 2 && selectedLoader.value === 'neoforge' && !loaderVersionsFetched.value) {
+    if (currentStep.value === 1 && selectedLoader.value === 'neoforge' && !loaderVersionsFetched.value) {
       fetchNeoForgeVersions();
     }
     if (currentStep.value < 3 && canProceedToStep(currentStep.value + 1)) {
