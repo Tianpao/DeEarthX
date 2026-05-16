@@ -1,234 +1,18 @@
 <script lang="ts" setup>
-import { h, provide, ref, onMounted, computed } from 'vue';
-import { MenuProps, message } from 'ant-design-vue';
-import { SettingOutlined, UploadOutlined, UserOutlined, WindowsOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined, FileSearchOutlined, FolderOutlined } from '@ant-design/icons-vue';
-import { useRouter, useRoute } from 'vue-router';
-import { Command } from '@tauri-apps/plugin-shell';
+import { ref, provide } from 'vue';
+import { LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import axiosInstance from './utils/axios';
-
-const router = useRouter();
-const route = useRoute();
-let killCoreProcess: (() => void) | null = null;
+import { useVersion } from '@/composables/useVersion';
+import { useBackend } from '@/composables/useBackend';
+import { useMenu } from '@/composables/useMenu';
 
 const { t } = useI18n();
+const { version } = useVersion();
+const { backendStatus, backendErrorInfo, createKillCoreProcessHandler } = useBackend();
+const { selectedKeys, menuItems, handleMenuClick, route } = useMenu();
 
-// 版本号相关
-const version = ref<string>('V3');
+provide("killCoreProcess", createKillCoreProcessHandler());
 
-// 加载版本号
-async function loadVersion() {
-    try {
-        console.log('开始加载版本号...');
-        const response = await fetch('/version.json');
-        console.log('version.json 响应状态:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log('版本号数据:', data);
-        version.value = `V${data.version}`;
-        console.log('设置版本号为:', version.value);
-    } catch (error) {
-        console.error('加载版本号失败:', error);
-        version.value = 'V3';
-    }
-}
-
-// 后端连接状态相关
-const backendStatus = ref<'loading' | 'success' | 'error'>('loading');
-const backendErrorInfo = ref<string>('');
-const retryCount = ref<number>(0);
-const maxRetries = 5;
-
-// 检测端口是否被正确的后端占用
-async function checkPortOccupied(): Promise<'correct_backend' | 'wrong_app' | 'free'> {
-    try {
-        // const response = await fetch("http://localhost:37019/config/get", {
-        //     method: "GET",
-        //     signal: AbortSignal.timeout(1000)
-        // });
-
-        const response = await axiosInstance.get("/config/get");
-        const config = response.data;
-        
-        if (response.data.status === 200) {
-            // 检查是否包含 DeEarthX 后端的特征字段（mirror、filter 等）
-            if (config.mirror !== undefined || config.filter !== undefined) {
-                // 端口被正确的后端占用
-                return 'correct_backend';
-            } else {
-                // 端口被其他应用占用
-                return 'wrong_app';
-            }
-        } else {
-            return 'free';
-        }
-    } catch (error) {
-        // 连接失败，端口可能是空闲的
-        return 'free';
-    }
-}
-
-// 启动后端核心服务
-async function runCoreProcess() {
-    // 先检测端口状态
-    const portStatus = await checkPortOccupied();
-    
-    if (portStatus === 'correct_backend') {
-        // 端口已经被正确的后端占用，直接使用
-        backendStatus.value = 'success';
-        backendErrorInfo.value = '';
-        message.success(t('message.backend_running'));
-        return;
-    }
-
-    if (portStatus === 'wrong_app') {
-        // 端口被其他应用占用
-        backendStatus.value = 'error';
-        backendErrorInfo.value = t('message.backend_port_occupied');
-        message.error(t('message.backend_port_occupied'));
-        return;
-    }
-    
-    // 端口空闲，尝试启动后端
-    backendStatus.value = 'loading';
-    
-    Command.create("core").spawn()
-        .then((e) => {
-            console.log("DeEarthX V3 Core");
-            killCoreProcess = e.kill;
-            
-            // 等待后端启动并检查状态
-            setTimeout(async () => {
-                try {
-                    const response = await axiosInstance.get("/");
-                    if (response.data.status === 200) {
-                        backendStatus.value = 'success';
-                        backendErrorInfo.value = '';
-                        message.success(t('message.backend_started'));
-                    } else {
-                        backendStatus.value = 'error';
-                        backendErrorInfo.value = t('common.status_error');
-                        router.push('/error');
-                    }
-                } catch (error) {
-                    console.error("后端连接失败:", error);
-                    backendStatus.value = 'error';
-                    backendErrorInfo.value = t('common.status_error');
-                    router.push('/error');
-                }
-            }, 3000); // 等待3秒让后端启动
-        })
-        .catch((error) => {
-            console.error(error);
-            retryCount.value++;
-            
-            if (retryCount.value <= maxRetries) {
-                message.info(t('message.retry_start', { current: retryCount.value, max: maxRetries }));
-                setTimeout(() => {
-                    runCoreProcess();
-                }, 2000);
-            } else {
-                backendStatus.value = 'error';
-                backendErrorInfo.value = t('message.backend_start_failed', { count: maxRetries });
-                message.error(t('message.backend_start_failed', { count: maxRetries }));
-            }
-        });
-}
-
-
-// 组件挂载时启动后端
-onMounted(async () => {
-    loadVersion();
-    runCoreProcess();
-});
-
-provide("killCoreProcess", () => {
-        if (killCoreProcess && typeof killCoreProcess === 'function') {
-            killCoreProcess();
-            killCoreProcess = null;
-            message.info(t('message.backend_restart'));
-            runCoreProcess();
-        }
-});
-
-// 导航菜单配置
-const selectedKeys = ref<(string | number)[]>(['main']);
-
-// 监听路由变化，更新选中菜单
-router.beforeEach((to, _from, next) => {
-    const routeToKey: Record<string, string> = {
-        '/': 'main',
-        '/setting': 'setting',
-        '/about': 'about',
-        '/error': 'main',
-        '/galaxy': 'galaxy',
-        '/deearth': 'deearth',
-        '/template': 'template'
-    };
-    selectedKeys.value[0] = routeToKey[to.path] || 'main';
-    next();
-});
-
-// 菜单项配置（使用计算属性使其响应语言变化）
-const menuItems = computed<MenuProps['items']>(() => {
-    return [
-        {
-            key: 'main',
-            icon: h(WindowsOutlined),
-            label: t('menu.home'),
-            title: t('menu.home'),
-        },
-        {
-            key: 'deearth',
-            icon: h(FileSearchOutlined),
-            label: t('menu.deearth'),
-            title: t('menu.deearth'),
-        },
-        {
-            key: 'galaxy',
-            icon: h(UploadOutlined),
-            label: t('menu.galaxy'),
-            title: t('menu.galaxy'),
-        },
-        {
-            key: 'template',
-            icon: h(FolderOutlined),
-            label: t('menu.template'),
-            title: t('menu.template'),
-        },
-        {
-            key: 'setting',
-            icon: h(SettingOutlined),
-            label: t('menu.setting'),
-            title: t('menu.setting'),
-        },
-        {
-            key: 'about',
-            icon: h(UserOutlined),
-            label: t('menu.about'),
-            title: t('menu.about'),
-        }
-    ];
-});
-
-// 菜单点击事件处理
-const handleMenuClick: MenuProps['onClick'] = (e) => {
-    selectedKeys.value[0] = e.key;
-    const routeMap: Record<string, string> = {
-        main: '/',
-        deearth: '/deearth',
-        setting: '/setting',
-        about: '/about',
-        galaxy: '/galaxy',
-        template: '/template'
-    };
-    const route = routeMap[e.key] || '/';
-    router.push(route);
-};
-
-// 主题配置
 const theme = ref({
     token: {
         colorPrimary: '#67eac3',
@@ -354,7 +138,7 @@ img {
 
 @keyframes fadeSlideOut {
     0% {
-        opacity: 1;
+        opacity: 0;
         transform: translateX(0);
     }
     100% {
