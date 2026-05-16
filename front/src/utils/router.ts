@@ -7,6 +7,7 @@ import ErrorView from "../views/ErrorView.vue";
 import GalaxyView from "../views/GalaxyView.vue";
 import DeEarthView from "../views/DeEarthView.vue";
 import TemplateView from "../views/TemplateView.vue";
+import DownloadView from "../views/DownloadView.vue";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -41,6 +42,10 @@ const router = createRouter({
         {
             path: "/template",
             component: TemplateView
+        },
+        {
+            path: "/download",
+            component: DownloadView
         }
     ]
 })

@@ -45,3 +45,16 @@ export interface FilterModsInfo {
     error: string;
     duration: number;
 }
+
+export interface MinecraftVersion {
+    id: string;
+    type: 'release' | 'snapshot';
+}
+
+export interface LoaderVersion {
+    version: string;
+    mcversion?: string;
+    hash?: string;
+    installerPath?: string;
+    stable?: boolean;
+}

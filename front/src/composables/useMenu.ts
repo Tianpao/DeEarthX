@@ -5,7 +5,8 @@ import {
     UserOutlined,
     WindowsOutlined,
     FileSearchOutlined,
-    FolderOutlined
+    FolderOutlined,
+    CloudDownloadOutlined
 } from '@ant-design/icons-vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -26,7 +27,8 @@ export function useMenu() {
             '/error': 'main',
             '/galaxy': 'galaxy',
             '/deearth': 'deearth',
-            '/template': 'template'
+            '/template': 'template',
+            '/download': 'download'
         };
         selectedKeys.value[0] = routeToKey[to.path] || 'main';
         next();
@@ -59,6 +61,12 @@ export function useMenu() {
                 title: t('menu.template'),
             },
             {
+                key: 'download',
+                icon: h(CloudDownloadOutlined),
+                label: t('menu.download'),
+                title: t('menu.download'),
+            },
+            {
                 key: 'setting',
                 icon: h(SettingOutlined),
                 label: t('menu.setting'),
@@ -81,7 +89,8 @@ export function useMenu() {
             setting: '/setting',
             about: '/about',
             galaxy: '/galaxy',
-            template: '/template'
+            template: '/template',
+            download: '/download'
         };
         const routePath = routeMap[e.key] || '/';
         router.push(routePath);
