@@ -10,6 +10,7 @@ import { Galaxy } from "./galaxy.js";
 import { Server as SocketServer } from "socket.io";
 import { setupTemplateRoutes } from "./routes/templates.js";
 import { setupModCheckRoutes } from "./routes/modcheck.js";
+import { setupDownloadRoutes } from "./routes/download.js";
 
 export class Core {
     private config: IConfig;
@@ -80,6 +81,7 @@ export class Core {
         this.setupGalaxyRoutes();
         this.setupJavaRoutes();
         this.setupTemplateRoutes();
+        this.setupDownloadRoutes();
     }
 
     private setupMiddleware() {
@@ -239,6 +241,11 @@ export class Core {
     private setupTemplateRoutes() {
         setupTemplateRoutes(this.app);
     }
+
+    private setupDownloadRoutes() {
+        setupDownloadRoutes(this.app, this.io);
+    }
+
     public async start() {
 
         this.setupExpressRoutes();
