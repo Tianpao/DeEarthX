@@ -1,15 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { getAppDir } from "../utils/utils.js";
-
-interface TemplateMetadata {
-  name: string;
-  version: string;
-  description: string;
-  author: string;
-  created: string;
-  type: string;
-}
+import type { TemplateMetadata } from "./types.js";
 
 export class TemplateManager {
   private readonly templatesPath: string;

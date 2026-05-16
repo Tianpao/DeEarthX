@@ -1,9 +1,10 @@
 import { FileExtractor } from "./utils/FileExtractor.js";
+import { runFilterStrategies } from "./utils/StrategyRunner.js";
 import { HashFilter } from "./strategies/HashFilter.js";
 import { MixinFilter } from "./strategies/MixinFilter.js";
 import { DexpubFilter } from "./strategies/DexpubFilter.js";
 import { ModrinthFilter } from "./strategies/ModrinthFilter.js";
-import { IModCheckResult, IModCheckConfig, IFileInfo, ModSide } from "./types.js";
+import { IModCheckResult, IModCheckConfig, IFileInfo, ModSide, IFilterConfig } from "./types.js";
 import { JarParser } from "../utils/jar-parser.js";
 import { logger } from "../utils/logger.js";
 import * as fs from "fs";
@@ -77,60 +78,17 @@ export class ModCheckService {
     return results;
   }
 
+  private modCheckConfigToFilterConfig(): IFilterConfig {
+    return {
+      dexpub: this.config.enableDexpub,
+      modrinth: this.config.enableModrinth,
+      mixins: this.config.enableMixin,
+      hashes: this.config.enableHash,
+    };
+  }
+
   private async identifyClientSideMods(files: IFileInfo[]): Promise<string[]> {
-    const clientMods: string[] = [];
-    const processedFiles = new Set<string>();
-
-    if (this.config.enableDexpub) {
-      logger.info("开始 Galaxy Square (dexpub) 检查客户端模组");
-      const dexpubStrategy = new DexpubFilter();
-      const dexpubMods = await dexpubStrategy.filter(files);
-      const serverModsListSet = new Set(await dexpubStrategy.getServerMods(files));
-
-      dexpubMods.forEach(mod => processedFiles.add(mod));
-      serverModsListSet.forEach(mod => processedFiles.add(mod));
-      clientMods.push(...dexpubMods);
-    }
-
-    if (this.config.enableModrinth) {
-      logger.info("开始 Modrinth API 检查客户端模组");
-
-      let serverModsSet = new Set<string>();
-      if (this.config.enableDexpub) {
-        const dexpubStrategy = new DexpubFilter();
-        serverModsSet = new Set(await dexpubStrategy.getServerMods(files));
-      }
-
-      const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
-      const modrinthMods = await new ModrinthFilter().filter(unprocessedFiles);
-
-      modrinthMods.forEach(mod => processedFiles.add(mod));
-      clientMods.push(...modrinthMods);
-    }
-
-    if (this.config.enableMixin) {
-      logger.info("开始 Mixin 检查客户端模组");
-
-      const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
-      const mixinMods = await new MixinFilter().filter(unprocessedFiles);
-
-      mixinMods.forEach(mod => processedFiles.add(mod));
-      clientMods.push(...mixinMods);
-    }
-
-    if (this.config.enableHash) {
-      logger.info("开始 Hash 检查客户端模组");
-
-      const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
-      const hashMods = await new HashFilter().filter(unprocessedFiles);
-
-      clientMods.push(...hashMods);
-    }
-
-    const uniqueMods = [...new Set(clientMods)];
-    logger.info("识别到客户端模组", { 数量: uniqueMods.length });
-
-    return uniqueMods;
+    return runFilterStrategies(files, this.modCheckConfigToFilterConfig());
   }
 
   private async moveClientMods(clientModFilePaths: string[], bundleName: string): Promise<void> {
