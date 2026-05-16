@@ -57,4 +57,5 @@ export interface LoaderVersion {
     hash?: string;
     installerPath?: string;
     stable?: boolean;
+    latest?: boolean;
 }
