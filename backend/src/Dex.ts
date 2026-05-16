@@ -61,9 +61,7 @@ export class Dex {
     await Promise.all([
       zps._unzip(mpname),
       platform(plat).downloadfile(info, unpath, this.message)
-    ]).catch(e => {
-      logger.error("并行任务执行异常", e);
-    });
+    ]);
     this.message.statusChange();
   }
 

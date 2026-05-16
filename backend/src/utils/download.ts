@@ -67,12 +67,14 @@ export async function verifySHA1(filePath: string, expectedHash: string): Promis
 // ── Simple download ─────────────────────────────────────────────────
 
 async function simpleDownload(url: string, filePath: string): Promise<void> {
+  const tempPath = filePath + ".downloading";
   const res = await got.get(url, {
     responseType: "buffer",
     headers: { "user-agent": "DeEarthX" },
     followRedirect: true,
   });
-  fse.outputFileSync(filePath, res.rawBody);
+  fse.outputFileSync(tempPath, res.rawBody);
+  fs.renameSync(tempPath, filePath);
 }
 
 // ── Chunked download ────────────────────────────────────────────────
@@ -93,6 +95,7 @@ async function chunkedDownload(
   chunkSize = 5 * 1024 * 1024,
   concurrency = 4,
 ): Promise<void> {
+  const tempPath = filePath + ".downloading";
   logger.debug(`开始分块下载 ${url}，块大小: ${chunkSize / 1024 / 1024}MB，并发数: ${concurrency}`);
 
   // Try HEAD to probe server capabilities
@@ -122,8 +125,8 @@ async function chunkedDownload(
   const totalChunks = Math.ceil(fileSize / chunkSize);
   logger.debug(`文件大小: ${(fileSize / 1024 / 1024).toFixed(2)}MB，分 ${totalChunks} 个块下载`);
 
-  // Write chunks directly to the final file at correct offsets (no temp files)
-  const fd = await fs.promises.open(filePath, 'w');
+  // Write chunks directly to temp file at correct offsets
+  const fd = await fs.promises.open(tempPath, 'w');
   await fd.truncate(fileSize);
 
   let currentConcurrency = Math.min(concurrency, totalChunks);
@@ -186,7 +189,7 @@ async function chunkedDownload(
     await pMap(tasks, downloadChunk, { concurrency: currentConcurrency });
   } catch (err: any) {
     await fd.close();
-    try { await fs.promises.unlink(filePath); } catch {}
+    try { await fs.promises.unlink(tempPath); } catch {}
 
     if (!rangeSupported) {
       logger.warn(`服务器不支持分块下载，切换到普通下载: ${url}`);
@@ -198,6 +201,7 @@ async function chunkedDownload(
   }
 
   await fd.close();
+  fs.renameSync(tempPath, filePath);
   logger.debug(`分块下载完成: ${filePath}`);
 }
 
@@ -222,6 +226,12 @@ async function downloadFile(
         }
       }
 
+      // Clean up stale .downloading file from interrupted download
+      const tempPath = filePath + ".downloading";
+      if (fs.existsSync(tempPath)) {
+        fs.unlinkSync(tempPath);
+      }
+
       logger.debug(`正在下载 ${url} 到 ${filePath}`);
       try {
         await fse.ensureDir(path.dirname(filePath));
@@ -240,6 +250,9 @@ async function downloadFile(
       } catch (error) {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
+        }
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
         }
         throw error;
       }
