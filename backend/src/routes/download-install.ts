@@ -116,19 +116,15 @@ export async function performInstall(
       ws?.serverInstallStep("安装 Minecraft 服务端", 1, 2);
       const minecraft = new Minecraft(loader, mcVersion, loaderVersion, installPath);
       await minecraft.setup();
-      ws?.serverInstallProgress("安装 Minecraft 服务端", 100);
 
       ws?.serverInstallStep(`安装 ${loader} 加载器`, 2, 2);
       await getLoaderInstance(loader, mcVersion, loaderVersion, installPath).setup();
-      ws?.serverInstallProgress(`安装 ${loader} 加载器`, 100);
     } else {
       ws?.serverInstallStep("下载安装器", 1, 2);
       await getLoaderInstance(loader, mcVersion, loaderVersion, installPath).installer();
-      ws?.serverInstallProgress("下载安装器", 100);
 
       ws?.serverInstallStep("生成安装脚本", 2, 2);
       await generateInstallScripts(loader, mcVersion, loaderVersion, installPath);
-      ws?.serverInstallProgress("生成安装脚本", 100);
     }
 
     const duration = Date.now() - startTime;
