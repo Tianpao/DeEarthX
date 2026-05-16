@@ -138,6 +138,24 @@ export function useDownload() {
     }
   }
 
+  function sortLoaderVersions(loader: string) {
+    const promo = forgePromos.value[selectedMcVersion.value];
+    loaderVersions.value.sort((a, b) => {
+      if (loader === 'forge' && promo) {
+        const aPri = promo.recommended === a.version ? 0 : promo.latest === a.version ? 1 : 2;
+        const bPri = promo.recommended === b.version ? 0 : promo.latest === b.version ? 1 : 2;
+        if (aPri !== bPri) return aPri - bPri;
+      } else if (loader === 'neoforge') {
+        if (a.latest && !b.latest) return -1;
+        if (!a.latest && b.latest) return 1;
+      } else if (loader === 'fabric') {
+        if (a.stable && !b.stable) return -1;
+        if (!a.stable && b.stable) return 1;
+      }
+      return b.version.localeCompare(a.version, undefined, { numeric: true });
+    });
+  }
+
   async function fetchLoaderVersions() {
     if (!selectedMcVersion.value || !selectedLoader.value) return;
     if (selectedLoader.value === 'neoforge') return;
@@ -156,6 +174,7 @@ export function useDownload() {
       const res = await axiosInstance.get(url);
       if (Array.isArray(res.data)) {
         loaderVersions.value = res.data;
+        sortLoaderVersions(selectedLoader.value);
         loaderVersionsFetched.value = true;
       }
     } catch {
@@ -172,6 +191,7 @@ export function useDownload() {
       const res = await axiosInstance.get(`/download/neoforge-versions?mcver=${selectedMcVersion.value}`);
       if (Array.isArray(res.data)) {
         loaderVersions.value = res.data;
+        sortLoaderVersions('neoforge');
         loaderVersionsFetched.value = true;
       }
     } catch {
