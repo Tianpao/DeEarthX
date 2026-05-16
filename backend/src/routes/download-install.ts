@@ -29,24 +29,6 @@ function getLoaderInstance(loader: string, mcVersion: string, loaderVersion: str
   }
 }
 
-async function generateRunScripts(loader: string, mcVersion: string, loaderVersion: string, installPath: string): Promise<void> {
-  const config = Config.getConfig();
-  const javaCmd = config.javaPath || "java";
-
-  let jarName: string;
-  if (loader === "forge" || loader === "neoforge") {
-    jarName = `forge-${mcVersion}-${loaderVersion}.jar`;
-  } else if (loader === "fabric" || loader === "fabric-loader") {
-    jarName = "fabric-server-launch.jar";
-  } else {
-    jarName = "server.jar";
-  }
-
-  const cmd = `${javaCmd} -jar ${jarName}`;
-  await fs.promises.writeFile(`${installPath}/run.bat`, `@echo off\n${cmd}\npause\n`);
-  await fs.promises.writeFile(`${installPath}/run.sh`, `#!/bin/bash\n${cmd}\n`);
-}
-
 async function generateInstallScripts(
   loader: string,
   mcVersion: string,
@@ -139,8 +121,6 @@ export async function performInstall(
       ws?.serverInstallStep(`安装 ${loader} 加载器`, 2, 2);
       await getLoaderInstance(loader, mcVersion, loaderVersion, installPath).setup();
       ws?.serverInstallProgress(`安装 ${loader} 加载器`, 100);
-
-      await generateRunScripts(loader, mcVersion, loaderVersion, installPath);
     } else {
       ws?.serverInstallStep("下载安装器", 1, 2);
       await getLoaderInstance(loader, mcVersion, loaderVersion, installPath).installer();
