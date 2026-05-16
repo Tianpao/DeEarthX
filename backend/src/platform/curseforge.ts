@@ -1,6 +1,6 @@
 import got, { Got } from "got";
 import { join } from "node:path";
-import { Wfastdownload, Utils } from "../utils/utils.js";
+import { Wfastdownload, MirrorUrls, getMirrorUrls } from "../utils/download.js";
 import { modpack_info, XPlatform } from "./index.js";
 import { MessageWS } from "../utils/socketio.js";
 
@@ -13,13 +13,13 @@ export interface CurseForgeManifest {
 }
 
 export class CurseForge implements XPlatform {
-  private utils: Utils;
+  private urls: MirrorUrls;
   private got: Got;
-  
+
   constructor() {
-    this.utils = new Utils();
+    this.urls = getMirrorUrls();
     this.got = got.extend({
-      prefixUrl: this.utils.curseforge_url,
+      prefixUrl: this.urls.curseforge_url,
       headers: {
         "User-Agent": "DeEarthX",
         "x-api-key": "$2a$10$ydk0TLDG/Gc6uPMdz7mad.iisj2TaMDytVcIW4gcVP231VKngLBKy",
@@ -63,7 +63,7 @@ export class CurseForge implements XPlatform {
               return;
             }
             const unpath = join(path + "/mods/", e.fileName);
-            const url = e.downloadUrl.replace("https://edge.forgecdn.net", this.utils.curseforge_Durl);
+            const url = e.downloadUrl.replace("https://edge.forgecdn.net", this.urls.curseforge_Durl);
             tmp.push([url, unpath]);
           }
         );

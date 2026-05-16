@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { join } from "node:path";
-import { Wfastdownload, Utils } from "../utils/utils.js";
+import { Wfastdownload, MirrorUrls, getMirrorUrls } from "../utils/download.js";
 import { modpack_info, XPlatform } from "./index.js";
 import { MessageWS } from "../utils/socketio.js";
 
@@ -16,10 +16,10 @@ interface ModrinthManifest {
 }
 
 export class Modrinth implements XPlatform {
-  private utils: Utils;
-  
+  private urls: MirrorUrls;
+
   constructor() {
-    this.utils = new Utils();
+    this.urls = getMirrorUrls();
   }
   
   async getinfo(manifest: object): Promise<modpack_info> {
@@ -45,7 +45,7 @@ export class Modrinth implements XPlatform {
       if (e.path.endsWith(".zip")) {
         continue;
       }
-      const url = e.downloads[0].replace("https://cdn.modrinth.com", this.utils.modrinth_Durl);
+      const url = e.downloads[0].replace("https://cdn.modrinth.com", this.urls.modrinth_Durl);
       const unpath = join(path, e.path);
       tmp.push([url, unpath]);
     }

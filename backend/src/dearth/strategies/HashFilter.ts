@@ -1,14 +1,14 @@
 import got from "got";
-import { Utils } from "../../utils/utils.js";
+import { getMirrorUrls, MirrorUrls } from "../../utils/download.js";
 import { logger } from "../../utils/logger.js";
 import { IFilterStrategy, IFileInfo, IHashResponse, IProjectInfo } from "../types.js";
 
 export class HashFilter implements IFilterStrategy {
   name = "HashFilter";
-  private utils: Utils;
+  private urls: MirrorUrls;
 
   constructor() {
-    this.utils = new Utils();
+    this.urls = getMirrorUrls();
   }
 
   async filter(files: IFileInfo[]): Promise<string[]> {
@@ -21,7 +21,7 @@ export class HashFilter implements IFilterStrategy {
     logger.debug("Checking mod hashes with Modrinth API", { fileCount: files.length });
 
     try {
-      const fileInfoResponse = await got.post(`${this.utils.modrinth_url}/v2/version_files`, {
+      const fileInfoResponse = await got.post(`${this.urls.modrinth_url}/v2/version_files`, {
         headers: { "User-Agent": "DeEarth", "Content-Type": "application/json" },
         json: { hashes, algorithm: "sha1" }
       }).json<IHashResponse>();
@@ -34,7 +34,7 @@ export class HashFilter implements IFilterStrategy {
           return info.project_id;
         });
 
-      const projectsResponse = await got.get(`${this.utils.modrinth_url}/v2/projects?ids=${JSON.stringify(projectIds)}`, {
+      const projectsResponse = await got.get(`${this.urls.modrinth_url}/v2/projects?ids=${JSON.stringify(projectIds)}`, {
         headers: { "User-Agent": "DeEarth" }
       }).json<IProjectInfo[]>();
 

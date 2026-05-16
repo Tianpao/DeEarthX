@@ -1,6 +1,6 @@
 import { IFilterStrategy, IFileInfo } from "../types.js";
 import { logger } from "../../utils/logger.js";
-import { Utils } from "../../utils/utils.js";
+import { getMirrorUrls, MirrorUrls } from "../../utils/download.js";
 import got from "got";
 
 interface IModrinthProject {
@@ -12,10 +12,10 @@ interface IModrinthProject {
 
 export class ModrinthFilter implements IFilterStrategy {
   name = "ModrinthFilter";
-  private utils: Utils;
+  private urls: MirrorUrls;
 
   constructor() {
-    this.utils = new Utils();
+    this.urls = getMirrorUrls();
   }
 
   private extractProjectId(infos: { name: string; data: string }[]): string | null {
@@ -41,7 +41,7 @@ export class ModrinthFilter implements IFilterStrategy {
       const idsParam = batch.join(",");
 
       try {
-        const projects = await got.post(`${this.utils.modrinth_url}/v2/projects?ids=${idsParam}`, {
+        const projects = await got.post(`${this.urls.modrinth_url}/v2/projects?ids=${idsParam}`, {
           headers: { "User-Agent": "DeEarth", "Content-Type": "application/json" },
           json: {}
         }).json<any[]>().catch((e) => { throw new Error(e.message) });

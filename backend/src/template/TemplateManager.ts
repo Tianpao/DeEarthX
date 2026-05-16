@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { getAppDir } from "../utils/utils.js";
+import { getAppDir } from "../utils/appdir.js";
 import type { TemplateMetadata } from "./types.js";
 
 export class TemplateManager {

@@ -1,5 +1,6 @@
 import fs from "node:fs";
-import { fastdownload, version_compare } from "../utils/utils.js";
+import { fastdownload } from "../utils/download.js";
+import { version_compare } from "../utils/java.js";
 import got from "got";
 import p from "path";
 import { Azip } from "../utils/ziplib.js";

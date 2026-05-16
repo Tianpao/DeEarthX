@@ -5,7 +5,7 @@ import { createServer, Server } from "node:http";
 import { Config, IConfig } from "./utils/config.js";
 import { Dex } from "./Dex.js";
 import { logger } from "./utils/logger.js";
-import { checkJava, JavaCheckResult, detectJavaPaths } from "./utils/utils.js";
+import { checkJava, JavaCheckResult, detectJavaPaths } from "./utils/java.js";
 import { Galaxy } from "./galaxy.js";
 import { Server as SocketServer } from "socket.io";
 import { setupTemplateRoutes } from "./routes/templates.js";

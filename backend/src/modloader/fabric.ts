@@ -1,6 +1,7 @@
 import got, { Got } from "got";
 import fs from "node:fs";
-import { execPromise, fastdownload, verifySHA1, calculateSHA1 } from "../utils/utils.js";
+import { execPromise } from "../utils/utils.js";
+import { fastdownload, verifySHA1, calculateSHA1 } from "../utils/download.js";
 import { Config } from "../utils/config.js";
 import { logger } from "../utils/logger.js";
 

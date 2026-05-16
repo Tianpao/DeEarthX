@@ -1,10 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { logger } from './logger.js';
+import { getAppDir } from './appdir.js';
 
-/**
- * 应用配置接口
- */
 export interface IConfig {
   mirror: {
     bmclapi: boolean;
@@ -23,9 +21,6 @@ export interface IConfig {
   javaPath?: string;
 }
 
-/**
- * 默认配置
- */
 const DEFAULT_CONFIG: IConfig = {
   mirror: {
     bmclapi: true,
@@ -43,27 +38,6 @@ const DEFAULT_CONFIG: IConfig = {
   host: 'localhost',
   javaPath: undefined
 };
-
-/**
- * 获取可执行文件所在目录
- * 在开发环境返回当前目录,在生产环境返回可执行文件所在目录
- */
-function getAppDir(): string {
-  const execPath = process.execPath;
-  const cwd = process.cwd();
-  
-  // 检查是否在开发环境中运行
-  // 如果 execPath 指向 node.exe 且当前目录不是 node 安装目录，说明是开发环境
-  const isDevelopment = execPath.toLowerCase().includes('node.exe') && 
-                        !cwd.toLowerCase().includes('program files') &&
-                        !cwd.toLowerCase().includes('nodejs');
-  
-  if (isDevelopment) {
-    return cwd;
-  }
-  
-  return path.dirname(execPath);
-}
 
 /**
  * 配置文件路径 - 使用可执行文件所在目录

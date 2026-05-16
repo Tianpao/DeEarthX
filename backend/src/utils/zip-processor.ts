@@ -5,7 +5,7 @@ import yauzl from "yauzl";
 import archiver from "archiver";
 import { yauzl_promise } from "./ziplib.js";
 import { logger } from "./logger.js";
-import { getAppDir } from "./utils.js";
+import { getAppDir } from "./appdir.js";
 
 const BLACKLISTED_PATHS = [
   "overrides/options.txt",

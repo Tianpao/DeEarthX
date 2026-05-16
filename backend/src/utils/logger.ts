@@ -1,6 +1,7 @@
 import { formatLevel, formatTime, colorize, COLORS } from "./colors.js";
 import * as fs from "fs";
 import * as path from "path";
+import { getAppDir } from "./appdir.js";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -9,21 +10,6 @@ interface Logger {
   info: (message: string, meta?: any) => void;
   warn: (message: string, meta?: any) => void;
   error: (message: string, meta?: any) => void;
-}
-
-function getAppDir(): string {
-  const execPath = process.execPath;
-  const cwd = process.cwd();
-  
-  const isDevelopment = execPath.toLowerCase().includes('node.exe') && 
-                        !cwd.toLowerCase().includes('program files') &&
-                        !cwd.toLowerCase().includes('nodejs');
-  
-  if (isDevelopment) {
-    return cwd;
-  }
-  
-  return path.dirname(execPath);
 }
 
 const logsDir = path.join(getAppDir(), "logs");
