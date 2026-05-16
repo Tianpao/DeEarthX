@@ -1,9 +1,42 @@
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { open } from '@tauri-apps/plugin-dialog';
 import { io, Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axios';
 import type { MinecraftVersion, LoaderVersion, ProgressStatus, ServerInstallInfo } from '@/types/progress';
+
+function compareVersion(a: string, b: string): number {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const va = pa[i] || 0;
+    const vb = pb[i] || 0;
+    if (va < vb) return -1;
+    if (va > vb) return 1;
+  }
+  return 0;
+}
+
+function isVersionLessThan(a: string, b: string): boolean {
+  return compareVersion(a, b) < 0;
+}
+
+const SPECIAL_FORGE_VERSIONS = ['1.16.5', '1.18.2', '1.19.2', '1.20.1'];
+
+function getAvailableLoaders(mcVersion: string): string[] {
+  if (isVersionLessThan(mcVersion, '1.2.2')) return [];
+  const loaders: string[] = ['forge'];
+  if (!isVersionLessThan(mcVersion, '1.14')) loaders.push('fabric');
+  if (!isVersionLessThan(mcVersion, '1.20.1')) loaders.push('neoforge');
+  return loaders;
+}
+
+function getDefaultLoader(mcVersion: string, available: string[]): string {
+  if (available.length === 0) return '';
+  if (available.length === 1) return available[0];
+  if (SPECIAL_FORGE_VERSIONS.includes(mcVersion) || isVersionLessThan(mcVersion, '1.14')) return 'forge';
+  if (!isVersionLessThan(mcVersion, '1.20.1')) return 'neoforge';
+  return 'fabric';
+}
 
 export function useDownload() {
   const { t } = useI18n();
@@ -14,18 +47,21 @@ export function useDownload() {
   const selectedMcVersion = ref('');
   const loadingMcVersions = ref(false);
 
-  const selectedLoader = ref<'forge' | 'neoforge' | 'fabric'>('forge');
+  const availableLoaders = ref<string[]>([]);
+  const selectedLoader = ref('');
+
+  const forgePromos = ref<Record<string, { latest?: string; recommended?: string }>>({});
 
   const loaderVersions = ref<LoaderVersion[]>([]);
   const selectedLoaderVersion = ref('');
   const loadingLoaderVersions = ref(false);
+  const loaderVersionsFetched = ref(false);
 
   const autoInstall = ref(true);
 
-  const installPath = ref('');
-
   const installing = ref(false);
   const installCompleted = ref(false);
+  const installPath = ref('');
 
   const serverInstallProgress = reactive<ProgressStatus>({
     status: 'normal',
@@ -66,25 +102,52 @@ export function useDownload() {
     }
   }
 
+  async function fetchForgePromos() {
+    try {
+      const res = await axiosInstance.get('/download/forge-promos');
+      if (res.data) {
+        forgePromos.value = res.data;
+      }
+    } catch {
+      forgePromos.value = {};
+    }
+  }
+
   function handleMcVersionChange() {
     selectedLoaderVersion.value = '';
     loaderVersions.value = [];
-    if (selectedMcVersion.value) {
+    loaderVersionsFetched.value = false;
+
+    const available = getAvailableLoaders(selectedMcVersion.value);
+    availableLoaders.value = available;
+    const def = getDefaultLoader(selectedMcVersion.value, available);
+    selectedLoader.value = def;
+
+    if (selectedMcVersion.value && def) {
+      fetchLoaderVersions();
+    }
+  }
+
+  function handleLoaderChange() {
+    selectedLoaderVersion.value = '';
+    loaderVersions.value = [];
+    loaderVersionsFetched.value = false;
+
+    if (selectedMcVersion.value && selectedLoader.value && selectedLoader.value !== 'neoforge') {
       fetchLoaderVersions();
     }
   }
 
   async function fetchLoaderVersions() {
-    if (!selectedMcVersion.value) return;
+    if (!selectedMcVersion.value || !selectedLoader.value) return;
+    if (selectedLoader.value === 'neoforge') return;
+
     loadingLoaderVersions.value = true;
     try {
       let url = '';
       switch (selectedLoader.value) {
         case 'forge':
           url = `/download/forge-versions?mcver=${selectedMcVersion.value}`;
-          break;
-        case 'neoforge':
-          url = `/download/neoforge-versions?mcver=${selectedMcVersion.value}`;
           break;
         case 'fabric':
           url = `/download/fabric-versions?mcver=${selectedMcVersion.value}`;
@@ -93,6 +156,7 @@ export function useDownload() {
       const res = await axiosInstance.get(url);
       if (Array.isArray(res.data)) {
         loaderVersions.value = res.data;
+        loaderVersionsFetched.value = true;
       }
     } catch {
       loaderVersions.value = [];
@@ -101,41 +165,56 @@ export function useDownload() {
     }
   }
 
-  function handleLoaderChange() {
-    selectedLoaderVersion.value = '';
-    loaderVersions.value = [];
-    if (selectedMcVersion.value) {
-      fetchLoaderVersions();
+  async function fetchNeoForgeVersions() {
+    if (!selectedMcVersion.value || selectedLoader.value !== 'neoforge') return;
+    loadingLoaderVersions.value = true;
+    try {
+      const res = await axiosInstance.get(`/download/neoforge-versions?mcver=${selectedMcVersion.value}`);
+      if (Array.isArray(res.data)) {
+        loaderVersions.value = res.data;
+        loaderVersionsFetched.value = true;
+      }
+    } catch {
+      loaderVersions.value = [];
+    } finally {
+      loadingLoaderVersions.value = false;
     }
   }
 
-  async function selectInstallDir() {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: t('download.step5_title')
-      });
-      if (selected) {
-        installPath.value = selected;
-      }
-    } catch {
-      // user cancelled
-    }
+  function getForgeBadge(version: string): string | null {
+    const promo = forgePromos.value[selectedMcVersion.value];
+    if (!promo) return null;
+    if (promo.latest === version) return 'latest';
+    if (promo.recommended === version) return 'recommended';
+    return null;
   }
 
   function canProceedToStep(step: number): boolean {
     switch (step) {
-      case 1: return !!selectedMcVersion.value;
+      case 1: return !!selectedMcVersion.value && availableLoaders.value.length > 0;
       case 2: return !!selectedMcVersion.value && !!selectedLoader.value;
       case 3: return !!selectedMcVersion.value && !!selectedLoader.value && !!selectedLoaderVersion.value;
-      case 4: return true;
       default: return true;
     }
   }
 
+  function goNext() {
+    if (currentStep.value === 2 && selectedLoader.value === 'neoforge' && !loaderVersionsFetched.value) {
+      fetchNeoForgeVersions();
+    }
+    if (currentStep.value < 3 && canProceedToStep(currentStep.value + 1)) {
+      currentStep.value++;
+    }
+  }
+
+  function goPrev() {
+    if (currentStep.value > 0) {
+      currentStep.value--;
+    }
+  }
+
   function startInstall() {
-    if (!selectedMcVersion.value || !selectedLoader.value || !selectedLoaderVersion.value || !installPath.value) {
+    if (!selectedMcVersion.value || !selectedLoader.value || !selectedLoaderVersion.value) {
       return;
     }
 
@@ -162,10 +241,13 @@ export function useDownload() {
           loader: selectedLoader.value,
           mcVersion: selectedMcVersion.value,
           loaderVersion: selectedLoaderVersion.value,
-          installPath: installPath.value,
           autoInstall: autoInstall.value
         }
-      ).catch(() => {
+      ).then(res => {
+        if (res.data?.installPath) {
+          installPath.value = res.data.installPath;
+        }
+      }).catch(() => {
         serverInstallInfo.status = 'error';
         serverInstallInfo.error = t('download.install_failed');
         serverInstallProgress.status = 'exception';
@@ -234,12 +316,13 @@ export function useDownload() {
   function resetState() {
     currentStep.value = 0;
     selectedMcVersion.value = '';
-    selectedLoader.value = 'forge';
+    selectedLoader.value = '';
     selectedLoaderVersion.value = '';
     autoInstall.value = true;
     installPath.value = '';
     installing.value = false;
     installCompleted.value = false;
+    loaderVersionsFetched.value = false;
     serverInstallProgress.display = false;
     serverInstallProgress.percent = 0;
     serverInstallProgress.status = 'normal';
@@ -249,12 +332,19 @@ export function useDownload() {
     socket = null;
   }
 
+  onMounted(() => {
+    fetchMcVersions();
+    fetchForgePromos();
+  });
+
   return {
     currentStep,
     mcVersions,
     selectedMcVersion,
     loadingMcVersions,
+    availableLoaders,
     selectedLoader,
+    forgePromos,
     loaderVersions,
     selectedLoaderVersion,
     loadingLoaderVersions,
@@ -265,11 +355,15 @@ export function useDownload() {
     serverInstallProgress,
     serverInstallInfo,
     fetchMcVersions,
+    fetchForgePromos,
     handleMcVersionChange,
-    fetchLoaderVersions,
     handleLoaderChange,
-    selectInstallDir,
+    fetchLoaderVersions,
+    fetchNeoForgeVersions,
+    getForgeBadge,
     canProceedToStep,
+    goNext,
+    goPrev,
     startInstall,
     resetState
   };

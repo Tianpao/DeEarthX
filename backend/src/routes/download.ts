@@ -1,8 +1,10 @@
 import { Application, Request, Response } from "express";
 import got from "got";
+import path from "node:path";
 import { Server } from "socket.io";
 import { Config } from "../utils/config.js";
 import { logger } from "../utils/logger.js";
+import { getAppDir } from "../utils/appdir.js";
 import { performInstall } from "./download-install.js";
 
 interface MinecraftVersionEntry {
@@ -25,6 +27,15 @@ interface ForgeBuild {
   files: ForgeBuildFile[];
 }
 
+interface ForgePromoEntry {
+  name: string;
+  build: {
+    mcversion: string;
+    version: string;
+    files: ForgeBuildFile[];
+  };
+}
+
 interface NeoForgeBuild {
   version: string;
   mcversion: string;
@@ -36,6 +47,16 @@ interface FabricLoaderEntry {
     version: string;
     stable: boolean;
   };
+}
+
+function loaderDisplayName(loader: string): string {
+  switch (loader) {
+    case "forge": return "Forge";
+    case "neoforge": return "NeoForge";
+    case "fabric":
+    case "fabric-loader": return "Fabric";
+    default: return loader;
+  }
 }
 
 export function setupDownloadRoutes(app: Application, io: Server): void {
@@ -57,6 +78,32 @@ export function setupDownloadRoutes(app: Application, io: Server): void {
     } catch (err) {
       logger.error("获取 Minecraft 版本列表失败", err as Error);
       res.status(500).json({ error: "获取版本列表失败" });
+    }
+  });
+
+  app.get("/download/forge-promos", async (_req: Request, res: Response) => {
+    try {
+      const data = await got.get("https://bmclapi2.bangbang93.com/forge/promos", {
+        headers: { "User-Agent": "DeEarthX" },
+        timeout: { request: 30000 }
+      }).json<ForgePromoEntry[]>();
+
+      const promos: Record<string, { latest?: string; recommended?: string }> = {};
+      for (const entry of data) {
+        if (!entry.build?.mcversion) continue;
+        if (!promos[entry.build.mcversion]) {
+          promos[entry.build.mcversion] = {};
+        }
+        if (entry.name.endsWith("-latest")) {
+          promos[entry.build.mcversion].latest = entry.build.version;
+        } else if (entry.name.endsWith("-recommended")) {
+          promos[entry.build.mcversion].recommended = entry.build.version;
+        }
+      }
+      res.json(promos);
+    } catch (err) {
+      logger.error("获取 Forge Promos 失败", err as Error);
+      res.status(500).json({ error: "获取 Forge Promos 失败" });
     }
   });
 
@@ -100,10 +147,11 @@ export function setupDownloadRoutes(app: Application, io: Server): void {
         timeout: { request: 30000 }
       }).json<NeoForgeBuild[]>();
 
-      const versions = data.map(v => ({
+      const versions = data.map((v, i) => ({
         version: v.version,
         mcversion: v.mcversion,
-        installerPath: v.installerPath
+        installerPath: v.installerPath,
+        latest: i === data.length - 1
       }));
 
       res.json(versions);
@@ -141,17 +189,22 @@ export function setupDownloadRoutes(app: Application, io: Server): void {
 
   app.post("/download/install", async (req: Request, res: Response) => {
     try {
-      const { loader, mcVersion, loaderVersion, installPath, autoInstall } = req.body;
-      if (!loader || !mcVersion || !loaderVersion || !installPath) {
-        return res.status(400).json({ error: "缺少必要参数: loader, mcVersion, loaderVersion, installPath" });
+      const { loader, mcVersion, loaderVersion, autoInstall } = req.body;
+      if (!loader || !mcVersion || !loaderVersion) {
+        return res.status(400).json({ error: "缺少必要参数: loader, mcVersion, loaderVersion" });
       }
+
+      const name = loaderDisplayName(loader);
+      const timestamp = Date.now();
+      const dirName = `[${name}]${mcVersion}-${loaderVersion}-${timestamp}`;
+      const installPath = path.join(getAppDir(), "instance", dirName);
 
       const socketId = req.query.socketId as string;
 
       performInstall(loader, mcVersion, loaderVersion, installPath, autoInstall === true, io, socketId)
         .catch(err => logger.error("安装失败", err as Error));
 
-      res.json({ status: 200, message: "安装已开始" });
+      res.json({ status: 200, message: "安装已开始", installPath });
     } catch (err) {
       logger.error("安装请求处理失败", err as Error);
       res.status(500).json({ error: "安装请求处理失败" });
