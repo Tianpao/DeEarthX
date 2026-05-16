@@ -89,6 +89,10 @@ function get429WaitTime(headers: Record<string, string | string[] | undefined> |
   return Math.min(5000 * Math.pow(2, attempt), 60000);
 }
 
+function isMCIMirrorUrl(url: string): boolean {
+  return url.includes('mod.mcimirror.top');
+}
+
 async function chunkedDownload(
   url: string,
   filePath: string,
@@ -96,7 +100,18 @@ async function chunkedDownload(
   concurrency = 4,
 ): Promise<void> {
   const tempPath = filePath + ".downloading";
-  logger.debug(`开始分块下载 ${url}，块大小: ${chunkSize / 1024 / 1024}MB，并发数: ${concurrency}`);
+
+  // MCIM mirror: adapt to 64KB chunks for files > 256KB
+  const useMCIMirror = isMCIMirrorUrl(url);
+  if (useMCIMirror) {
+    chunkSize = 512 * 1024;
+    concurrency = 16;
+  }
+
+  const chunkLabel = chunkSize >= 1024 * 1024
+    ? `${chunkSize / 1024 / 1024}MB`
+    : `${chunkSize / 1024}KB`;
+  logger.debug(`开始分块下载 ${url}，块大小: ${chunkLabel}，并发数: ${concurrency}`);
 
   // Try HEAD to probe server capabilities
   let fileSize = 0;
@@ -109,7 +124,11 @@ async function chunkedDownload(
       timeout: { request: 30000 },
     });
     fileSize = parseInt(head.headers['content-length'] || '0', 10);
-    supportsRange = head.headers['accept-ranges'] === 'bytes' && fileSize > chunkSize;
+    if (useMCIMirror) {
+      supportsRange = head.headers['accept-ranges'] === 'bytes' && fileSize > 256 * 1024;
+    } else {
+      supportsRange = head.headers['accept-ranges'] === 'bytes' && fileSize > chunkSize;
+    }
   } catch {
     logger.debug(`HEAD 请求失败，回退到普通下载: ${url}`);
     await simpleDownload(url, filePath);
