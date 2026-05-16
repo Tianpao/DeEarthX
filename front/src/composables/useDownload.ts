@@ -1,4 +1,4 @@
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { io, Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axios';
@@ -41,8 +41,6 @@ function getDefaultLoader(mcVersion: string, available: string[]): string {
 export function useDownload() {
   const { t } = useI18n();
 
-  const currentStep = ref(0);
-
   const mcVersions = ref<MinecraftVersion[]>([]);
   const selectedMcVersion = ref('');
   const loadingMcVersions = ref(false);
@@ -73,6 +71,10 @@ export function useDownload() {
 
   let socket: Socket | null = null;
 
+  const canInstall = computed(() =>
+    !!selectedMcVersion.value && !!selectedLoader.value && !!selectedLoaderVersion.value
+  );
+
   async function fetchMcVersions() {
     loadingMcVersions.value = true;
     try {
@@ -96,22 +98,16 @@ export function useDownload() {
   function handleMcVersionChange() {
     selectedLoaderVersion.value = '';
     loaderVersions.value = [];
-
     const available = getAvailableLoaders(selectedMcVersion.value);
     availableLoaders.value = available;
     selectedLoader.value = getDefaultLoader(selectedMcVersion.value, available);
-
-    if (selectedMcVersion.value && selectedLoader.value) {
-      fetchLoaderVersions();
-    }
+    if (selectedMcVersion.value && selectedLoader.value) fetchLoaderVersions();
   }
 
   function handleLoaderChange() {
     selectedLoaderVersion.value = '';
     loaderVersions.value = [];
-    if (selectedMcVersion.value && selectedLoader.value) {
-      fetchLoaderVersions();
-    }
+    if (selectedMcVersion.value && selectedLoader.value) fetchLoaderVersions();
   }
 
   function sortLoaderVersions(loader: string) {
@@ -160,22 +156,8 @@ export function useDownload() {
     return null;
   }
 
-  function canProceed(): boolean {
-    return !!selectedMcVersion.value && !!selectedLoader.value && !!selectedLoaderVersion.value;
-  }
-
-  function goNext() {
-    if (currentStep.value < 1 && canProceed()) {
-      currentStep.value++;
-    }
-  }
-
-  function goPrev() {
-    if (currentStep.value > 0) currentStep.value--;
-  }
-
   function startInstall() {
-    if (!canProceed()) return;
+    if (!canInstall.value) return;
 
     installing.value = true;
     installCompleted.value = false;
@@ -259,7 +241,6 @@ export function useDownload() {
   }
 
   function resetState() {
-    currentStep.value = 0;
     selectedMcVersion.value = '';
     selectedLoader.value = '';
     selectedLoaderVersion.value = '';
@@ -282,17 +263,14 @@ export function useDownload() {
   });
 
   return {
-    currentStep,
     mcVersions, selectedMcVersion, loadingMcVersions,
     availableLoaders, selectedLoader,
-    forgePromos,
     loaderVersions, selectedLoaderVersion, loadingLoaderVersions,
     autoInstall, installPath,
     installing, installCompleted,
     serverInstallProgress, serverInstallInfo,
     handleMcVersionChange, handleLoaderChange,
     getForgeBadge,
-    canProceed, goNext, goPrev,
-    startInstall, resetState
+    canInstall, startInstall, resetState
   };
 }
