@@ -97,21 +97,21 @@ async function chunkedDownload(
   url: string,
   filePath: string,
   chunkSize = 5 * 1024 * 1024,
-  concurrency = 4,
 ): Promise<void> {
   const tempPath = filePath + ".downloading";
 
   // MCIM mirror: adapt to 64KB chunks for files > 256KB
   const useMCIMirror = isMCIMirrorUrl(url);
+  let chunkConcurrency = 32;
   if (useMCIMirror) {
-    chunkSize = 512 * 1024;
-    concurrency = 16;
+    chunkSize = 128 * 1024;
+    chunkConcurrency = 64;
   }
 
   const chunkLabel = chunkSize >= 1024 * 1024
     ? `${chunkSize / 1024 / 1024}MB`
     : `${chunkSize / 1024}KB`;
-  logger.debug(`开始分块下载 ${url}，块大小: ${chunkLabel}，并发数: ${concurrency}`);
+  logger.debug(`开始分块下载 ${url}，块大小: ${chunkLabel}，并发数: ${chunkConcurrency}`);
 
   // Try HEAD to probe server capabilities
   let fileSize = 0;
@@ -148,7 +148,7 @@ async function chunkedDownload(
   const fd = await fs.promises.open(tempPath, 'w');
   await fd.truncate(fileSize);
 
-  let currentConcurrency = Math.min(concurrency, totalChunks);
+  let currentConcurrency = Math.min(chunkConcurrency, totalChunks);
   let rangeSupported = true;
 
   const downloadChunk = async (chunkIndex: number): Promise<void> => {
@@ -344,6 +344,6 @@ export async function Wfastdownload(
         throw error;
       }
     },
-    { concurrency: 24 },
+    { concurrency: 64 },
   );
 }
