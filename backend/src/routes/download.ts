@@ -208,8 +208,8 @@ export function setupDownloadRoutes(app: Application, io: Server): void {
       }
 
       const name = loaderDisplayName(loader);
-      const timestamp = Date.now();
-      const dirName = `[${name}]${mcVersion}-${loaderVersion}-${timestamp}`;
+      const timestamp = Date.now().toString().substring(6, 10);
+      const dirName = `${mcVersion}-${name}-${loaderVersion}-${timestamp}`;
       const installPath = path.join(getAppDir(), "instance", dirName);
 
       const socketId = req.query.socketId as string;
