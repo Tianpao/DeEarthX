@@ -8,10 +8,13 @@ import { useModeSelection } from '@/composables/useModeSelection';
 import { useTemplateSelection } from '@/composables/useTemplateSelection';
 import { useProgress } from '@/composables/useProgress';
 import { useErrorHandler } from '@/composables/useErrorHandler';
+import axiosInstance from '@/utils/axios';
 
 export function useTaskProcessor() {
     const { t } = useI18n();
     const killCoreProcess = inject<(() => void) | undefined>("killCoreProcess");
+    const droppedFilePaths = inject<ReturnType<typeof import('@/composables/useDragDrop').useDragDrop>['droppedFilePaths']>('droppedFilePaths');
+    const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
     // Initialize all sub-composables
     const {
@@ -78,6 +81,9 @@ export function useTaskProcessor() {
         uploadDisabled.value = false;
         startButtonDisabled.value = false;
         resetProgress();
+        if (clearDroppedFile) {
+            clearDroppedFile();
+        }
         if (killCoreProcess && typeof killCoreProcess === 'function') {
             killCoreProcess();
         }
@@ -159,14 +165,48 @@ export function useTaskProcessor() {
         }
     }
 
+    async function runDeEarthXFromPath(filePath: string, socket: Socket) {
+        message.success(t('home.start_production'));
+        showSteps.value = true;
+
+        try {
+            message.loading(t('home.task_preparing'));
+            const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
+            const apiPort = import.meta.env.VITE_API_PORT || '37019';
+            let url = `http://${apiHost}:${apiPort}/start-path?mode=${selectedMode.value}`;
+
+            if (selectedMode.value === 'server' && selectedTemplate.value) {
+                url += `&template=${encodeURIComponent(selectedTemplate.value)}`;
+            }
+
+            startTime.value = Date.now();
+
+            await axiosInstance.post(url, { path: filePath });
+        } catch (error) {
+            console.error('请求失败:', error);
+            message.error(t('home.request_failed'));
+            resetState();
+            socket.disconnect();
+        }
+    }
+
     function handleStartProcess() {
-        if (uploadedFiles.value.length === 0) {
+        // 获取有效的拖放文件（仅 .zip/.mrpack）
+        let validPath: string | null = null;
+        if (droppedFilePaths && 'value' in droppedFilePaths && droppedFilePaths.value.length > 0) {
+            const validExtensions = ['.zip', '.mrpack'];
+            const path = droppedFilePaths.value[0];
+            const ext = path.toLowerCase().substring(path.lastIndexOf('.'));
+            if (validExtensions.includes(ext)) {
+                validPath = path;
+            }
+        }
+        const hasUploadedFile = uploadedFiles.value.length > 0;
+
+        if (!validPath && !hasUploadedFile) {
             message.warning(t('home.please_select_file'));
             return;
         }
-
-        const file = uploadedFiles.value[0].originFileObj;
-        if (!file) return;
 
         startButtonDisabled.value = true;
         uploadDisabled.value = true;
@@ -184,7 +224,15 @@ export function useTaskProcessor() {
 
         socket.on('connect', () => {
             message.success(t('home.ws_connected'));
-            runDeEarthX(file, socket);
+
+            if (validPath) {
+                runDeEarthXFromPath(validPath, socket);
+            } else if (hasUploadedFile) {
+                const file = uploadedFiles.value[0].originFileObj;
+                if (file) {
+                    runDeEarthX(file, socket);
+                }
+            }
         });
 
         socket.on("finish", (timeSpent: number) => {

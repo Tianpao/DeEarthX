@@ -62,8 +62,22 @@
                             </p>
                         </a-upload-dragger>
 
-                        <div v-if="fileList.length > 0" class="tw:mt-4">
-                            <p class="tw:text-sm tw:font-medium tw:text-gray-700 tw:mb-2">
+                        <div v-if="hasDroppedFiles" class="tw:mt-2 tw:p-2 tw:bg-green-50 tw:rounded-lg tw:border tw:border-green-200">
+                            <div class="tw:flex tw:items-center tw:justify-between">
+                                <span class="tw:text-green-600 tw:text-sm">{{ t('galaxy.files_dropped', { count: droppedFilesCount }) }}</span>
+                                <a-button type="text" size="small" @click="handleClearDroppedFile" class="tw:text-gray-400 hover:tw:text-red-500">
+                                    <template #icon><CloseCircleOutlined /></template>
+                                </a-button>
+                            </div>
+                            <div class="tw:mt-1 tw:max-h-20 tw:overflow-y-auto">
+                                <div v-for="(name, idx) in droppedFilesNames" :key="idx" class="tw:text-xs tw:text-gray-500 tw:truncate">
+                                    {{ name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="fileList.length > 0 || hasDroppedFiles" class="tw:mt-4">
+                            <p v-if="fileList.length > 0" class="tw:text-sm tw:font-medium tw:text-gray-700 tw:mb-2">
                                 {{ t('galaxy.file_selected', { count: fileList.length }) }}
                             </p>
                             <div v-if="uploading" class="tw:mb-4">
@@ -105,14 +119,16 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
-import { UploadOutlined, InboxOutlined, SendOutlined } from '@ant-design/icons-vue';
+import { ref, computed, inject, watch } from 'vue';
+import { UploadOutlined, InboxOutlined, SendOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { message, Modal } from 'ant-design-vue';
 import type { UploadFile, UploadProps } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import axiosInstance from '@/utils/axios';
 
 const { t } = useI18n();
+const droppedFilePaths = inject<ReturnType<typeof import('@/composables/useDragDrop').useDragDrop>['droppedFilePaths']>('droppedFilePaths');
+const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
 const modType = ref<'client' | 'server'>('client');
 const modidList = ref<string[]>([]);
@@ -130,6 +146,49 @@ const modidInput = computed({
             .filter(id => id.length > 0);
     }
 });
+
+// Galaxy 只接受 .jar 文件
+const validDroppedFiles = computed(() => {
+    if (droppedFilePaths && 'value' in droppedFilePaths && droppedFilePaths.value.length > 0) {
+        const validExtensions = ['.jar'];
+        return droppedFilePaths.value.filter(path => {
+            const ext = path.toLowerCase().substring(path.lastIndexOf('.'));
+            return validExtensions.includes(ext);
+        });
+    }
+    return [];
+});
+
+const hasDroppedFiles = computed(() => validDroppedFiles.value.length > 0);
+const droppedFilesCount = computed(() => validDroppedFiles.value.length);
+const droppedFilesNames = computed(() => {
+    return validDroppedFiles.value.map(path => {
+        return path.substring(Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/')) + 1);
+    });
+});
+
+// 监听拖放，无效文件时提示
+watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.value : [], (paths) => {
+    if (paths.length > 0) {
+        const validExtensions = ['.jar'];
+        const validFiles = paths.filter(p => {
+            const ext = p.toLowerCase().substring(p.lastIndexOf('.'));
+            return validExtensions.includes(ext);
+        });
+        if (validFiles.length === 0) {
+            message.warning(t('galaxy.only_jar'));
+            if (clearDroppedFile) {
+                clearDroppedFile();
+            }
+        }
+    }
+});
+
+function handleClearDroppedFile() {
+    if (clearDroppedFile) {
+        clearDroppedFile();
+    }
+}
 
 const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     console.log(file.name);
@@ -152,7 +211,10 @@ const handleRemove: UploadProps['onRemove'] = (file) => {
 };
 
 const handleUpload = async () => {
-    if (fileList.value.length === 0) {
+    const hasFiles = fileList.value.length > 0;
+    const hasPaths = hasDroppedFiles.value;
+
+    if (!hasFiles && !hasPaths) {
         message.warning(t('galaxy.please_select_file'));
         return;
     }
@@ -160,35 +222,15 @@ const handleUpload = async () => {
     uploading.value = true;
     uploadProgress.value = 0;
 
-    const formData = new FormData();
-    fileList.value.forEach((file) => {
-        if (file.originFileObj) {
-            const blob = file.originFileObj;
-            const encodedFileName = encodeURIComponent(file.name);
-            const fileWithCorrectName = new File([blob], encodedFileName, { type: blob.type });
-            formData.append('files', fileWithCorrectName);
-        }
-    });
-
     try {
-        await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', 'http://localhost:37019/galaxy/upload', true);
-
-            xhr.upload.addEventListener('progress', (event) => {
-                if (event.lengthComputable) {
-                    uploadProgress.value = Math.round((event.loaded / event.total) * 100);
-                }
-            });
-
-            xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        const data = JSON.parse(xhr.responseText);
-                        console.log(data);
-                        if (data.modids && Array.isArray(data.modids)) {
+        if (hasPaths) {
+            const paths = validDroppedFiles.value;
+            await new Promise((resolve, reject) => {
+                axiosInstance.post('http://localhost:37019/galaxy/upload-path', { paths })
+                    .then(response => {
+                        if (response.data.modids && Array.isArray(response.data.modids)) {
                             let addedCount = 0;
-                            data.modids.forEach((modid: string) => {
+                            response.data.modids.forEach((modid: string) => {
                                 if (modid && !modidList.value.includes(modid)) {
                                     modidList.value.push(modid);
                                     addedCount++;
@@ -198,29 +240,76 @@ const handleUpload = async () => {
                         } else {
                             message.error(t('galaxy.data_format_error'));
                         }
-                        resolve(xhr.responseText);
-                    } catch (e) {
-                        message.error(t('galaxy.data_format_error'));
-                        reject(e);
-                    }
-                } else {
-                    message.error(t('galaxy.upload_failed'));
-                    reject(new Error(`HTTP ${xhr.status}`));
+                        resolve(response);
+                    })
+                    .catch(error => {
+                        message.error(t('galaxy.upload_error'));
+                        reject(error);
+                    });
+            });
+            handleClearDroppedFile();
+        } else {
+            const formData = new FormData();
+            fileList.value.forEach((file) => {
+                if (file.originFileObj) {
+                    const blob = file.originFileObj;
+                    const encodedFileName = encodeURIComponent(file.name);
+                    const fileWithCorrectName = new File([blob], encodedFileName, { type: blob.type });
+                    formData.append('files', fileWithCorrectName);
                 }
             });
 
-            xhr.addEventListener('error', () => {
-                message.error(t('galaxy.upload_error'));
-                reject(new Error('网络错误'));
-            });
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'http://localhost:37019/galaxy/upload', true);
 
-            xhr.addEventListener('abort', () => {
-                message.error(t('galaxy.upload_error'));
-                reject(new Error('上传已取消'));
-            });
+                xhr.upload.addEventListener('progress', (event) => {
+                    if (event.lengthComputable) {
+                        uploadProgress.value = Math.round((event.loaded / event.total) * 100);
+                    }
+                });
 
-            xhr.send(formData);
-        });
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            console.log(data);
+                            if (data.modids && Array.isArray(data.modids)) {
+                                let addedCount = 0;
+                                data.modids.forEach((modid: string) => {
+                                    if (modid && !modidList.value.includes(modid)) {
+                                        modidList.value.push(modid);
+                                        addedCount++;
+                                    }
+                                });
+                                message.success(t('galaxy.upload_success', { count: addedCount }));
+                            } else {
+                                message.error(t('galaxy.data_format_error'));
+                            }
+                            resolve(xhr.responseText);
+                        } catch (e) {
+                            message.error(t('galaxy.data_format_error'));
+                            reject(e);
+                        }
+                    } else {
+                        message.error(t('galaxy.upload_failed'));
+                        reject(new Error(`HTTP ${xhr.status}`));
+                    }
+                });
+
+                xhr.addEventListener('error', () => {
+                    message.error(t('galaxy.upload_error'));
+                    reject(new Error('网络错误'));
+                });
+
+                xhr.addEventListener('abort', () => {
+                    message.error(t('galaxy.upload_error'));
+                    reject(new Error('上传已取消'));
+                });
+
+                xhr.send(formData);
+            });
+        }
     } catch (error) {
         console.error('上传失败:', error);
     } finally {

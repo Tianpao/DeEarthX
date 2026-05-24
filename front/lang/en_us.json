@@ -67,6 +67,7 @@
     "production_complete": "Server production completed! Total time: {time} seconds!",
     "please_select_file": "Please drag and drop or select a file first",
     "only_zip_mrpack": "Only .zip and .mrpack files are supported",
+    "only_one_file": "Only one file can be dropped",
     "file_prepared": "File preparation completed",
     "preparing_file": "Preparing file...",
     "ws_connecting": "Establishing WebSocket connection...",
@@ -119,7 +120,8 @@
     "template_loading": "Loading template list...",
     "template_load_failed": "Failed to load template list",
     "template_apply_success": "Template applied successfully",
-    "template_apply_failed": "Failed to apply template"
+    "template_apply_failed": "Failed to apply template",
+    "file_dropped": "File selected: {name}"
   },
   "template": {
     "title": "Template Management",
@@ -240,7 +242,10 @@
     "upload_error": "Upload error, please try again",
     "submit_success": "{type} mod submitted successfully",
     "submit_failed": "Submission failed",
-    "submit_error": "Submission error, please try again"
+    "submit_error": "Submission error, please try again",
+    "file_dropped": "Dropped file: {name}",
+    "files_dropped": "Dropped {count} files",
+    "only_jar": "Only .jar files are supported"
   },
   "message": {
     "backend_running": "DeEarthX.Core is already running",

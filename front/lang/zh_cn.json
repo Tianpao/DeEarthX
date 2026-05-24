@@ -67,6 +67,7 @@
     "production_complete": "服务端制作完成！共用时 {time} 秒！",
     "please_select_file": "请先拖拽或选择文件",
     "only_zip_mrpack": "仅支持 .zip 和 .mrpack 文件",
+    "only_one_file": "仅可拖入一个文件",
     "file_prepared": "文件准备完成",
     "preparing_file": "正在准备文件...",
     "ws_connecting": "正在建立 WebSocket 连接...",
@@ -119,7 +120,8 @@
     "template_loading": "加载模板列表中...",
     "template_load_failed": "加载模板列表失败",
     "template_apply_success": "模板应用成功",
-    "template_apply_failed": "模板应用失败"
+    "template_apply_failed": "模板应用失败",
+    "file_dropped": "已选择文件: {name}"
   },
   "template": {
     "title": "模板管理",
@@ -240,7 +242,10 @@
     "upload_error": "上传出错，请重试",
     "submit_success": "{type} 模组提交成功",
     "submit_failed": "提交失败",
-    "submit_error": "提交出错，请重试"
+    "submit_error": "提交出错，请重试",
+    "file_dropped": "已拖放文件: {name}",
+    "files_dropped": "已拖放 {count} 个文件",
+    "only_jar": "仅支持 .jar 文件"
   },
   "message": {
     "backend_running": "DeEarthX.Core 已在运行",
