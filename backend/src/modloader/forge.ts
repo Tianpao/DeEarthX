@@ -61,7 +61,7 @@ export class Forge {
         init: [
           (options) => {
             if (config.mirror.bmclapi) {
-              options.prefixUrl = "https://bmclapi2.bangbang93.com";
+              options.prefixUrl = "https://bmclapi2.bangbang93.com/";
             } else {
               options.prefixUrl = "http://maven.minecraftforge.net/";
             }
@@ -97,12 +97,13 @@ export class Forge {
       }
 
       if (entry.entryName === "install_profile.json") {
+        if (version_compare(this.minecraft, "26") != -1) {
+          return;
+        }
         const json = JSON.parse((entry.getData()).toString()) as IForge;
         const vjson = await this.got.get(`version/${this.minecraft}/json`).json<IVersion>();
-        console.log(`${new URL(vjson.downloads.server_mappings.url).pathname}`);
         const mojpath = this.MTP(json.data.MOJMAPS.server);
         _downlist.push([`https://bmclapi2.bangbang93.com/${new URL(vjson.downloads.server_mappings.url).pathname.slice(1)}`, `${this.path}/libraries/${mojpath}`]);
-
         const mappingobj = json.data.MAPPINGS.server;
         const path = this.MTP(mappingobj.replace(":mappings@txt", "@zip"));
         _downlist.push([`https://bmclapi2.bangbang93.com/maven/${path}`, `${this.path}/libraries/${path}`]);
@@ -110,6 +111,7 @@ export class Forge {
     }
 
     const downlist = [...new Set(_downlist)];
+    console.log(downlist);
     await fastdownload(downlist);
   }
 

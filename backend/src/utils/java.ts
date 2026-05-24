@@ -18,6 +18,8 @@ export interface JavaCheckResult {
 }
 
 export function version_compare(v1: string, v2: string): number {
+  // v1传入比较的版本号 v2为被比较版本号
+  // 比较两个版本字符串，返回 -1（v1 < v2）、0（v1 == v2）或 1（v1 > v2）
   const a = v1.split(".").map(Number);
   const b = v2.split(".").map(Number);
   const len = Math.max(a.length, b.length);
