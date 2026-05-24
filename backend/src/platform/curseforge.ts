@@ -35,9 +35,9 @@ export class CurseForge implements XPlatform {
     if (result && local_manifest)
       result.minecraft = local_manifest.minecraft.version;
     const id = local_manifest.minecraft.modLoaders[0].id;
-    const loader_all = id.match(/(.*)-/) as RegExpMatchArray;
+    const loader_all = id.match(/^([^-]+)-(.*)$/) as RegExpMatchArray;
     result.loader = loader_all[1];
-    result.loader_version = id.replace(loader_all[0], "");
+    result.loader_version = loader_all[2];
     return result;
   }
 
