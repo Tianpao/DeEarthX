@@ -2,6 +2,7 @@ import express from "express";
 import toml from "smol-toml";
 import multer, { Multer } from "multer";
 import AdmZip from "adm-zip";
+import fs from "node:fs";
 import { logger } from "./utils/logger.js";
 import got, { Got } from "got";
 
@@ -27,7 +28,7 @@ export class Galaxy {
     }
   getRouter() {
     const router = express.Router();
-    router.use(express.json()); // 解析 JSON 请求体
+    router.use(express.json());
     router.post("/upload",this.upload.array("files"), (req, res) => {
         const files = req.files as Express.Multer.File[];
         if(!files || files.length === 0){
@@ -36,6 +37,39 @@ export class Galaxy {
         }
         const modids = this.getModids(files);
         logger.info("已上传模组 ID", { 模组ID: modids });
+        res.json({modids}).end();
+    });
+    router.post("/upload-path", (req, res) => {
+        const paths = req.body.paths as string[];
+        if(!paths || paths.length === 0){
+            res.status(400).json({ status: 400, message: "未提供文件路径" });
+            return;
+        }
+        const files: Express.Multer.File[] = [];
+        for(const filePath of paths){
+            if(!fs.existsSync(filePath)){
+                continue;
+            }
+            const buffer = fs.readFileSync(filePath);
+            files.push({
+                buffer,
+                originalname: filePath.substring(filePath.lastIndexOf('/') + 1 || filePath.lastIndexOf('\\') + 1),
+                mimetype: 'application/java-archive',
+                size: buffer.length,
+                fieldname: 'files',
+                encoding: '7bit',
+                destination: '',
+                filename: '',
+                path: '',
+                stream: fs.createReadStream(filePath) as any
+            });
+        }
+        if(files.length === 0){
+            res.status(400).json({ status: 400, message: "文件不存在" });
+            return;
+        }
+        const modids = this.getModids(files);
+        logger.info("已上传模组 ID (路径模式)", { 模组ID: modids });
         res.json({modids}).end();
     });
     router.post("/submit/:type",(req,res)=>{
