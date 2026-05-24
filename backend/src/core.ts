@@ -2,6 +2,8 @@ import express, { Application } from "express";
 import multer from "multer";
 import cors from "cors"
 import { createServer, Server } from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import { Config, IConfig } from "./utils/config.js";
 import { Dex } from "./Dex.js";
 import { logger } from "./utils/logger.js";
@@ -161,6 +163,43 @@ export class Core {
             } catch (err) {
                 const error = err as Error;
                 logger.error("/start 路由错误", error);
+                res.status(500).json({ status: 500, message: "服务器内部错误" });
+            }
+        });
+
+        this.app.post("/start-path", (req, res) => {
+            try {
+                const filePath = req.body.path as string;
+                if (!filePath) {
+                    return res.status(400).json({ status: 400, message: "缺少 path 参数" });
+                }
+                if (!req.query.mode) {
+                    return res.status(400).json({ status: 400, message: "缺少 mode 参数" });
+                }
+
+                const allowedExtensions = ['.zip', '.mrpack'];
+                const fileExtension = filePath.toLowerCase().substring(filePath.lastIndexOf('.'));
+                if (!allowedExtensions.includes(fileExtension)) {
+                    return res.status(400).json({ status: 400, message: "只支持 .zip 和 .mrpack 文件" });
+                }
+
+                if (!fs.existsSync(filePath)) {
+                    return res.status(400).json({ status: 400, message: "文件不存在" });
+                }
+
+                const isServerMode = req.query.mode === "server";
+                const template = req.query.template as string || "";
+                const filename = path.basename(filePath);
+                logger.info("正在启动任务(路径模式)", { 是否服务端模式: isServerMode, 文件路径: filePath, 文件名: filename, 模板: template || "官方模组加载器" });
+
+                this.dex.MainFromPath(filePath, isServerMode, template).catch(err => {
+                    logger.error("任务执行失败", err);
+                });
+
+                res.json({ status: 200, message: "任务已提交，正在处理中" });
+            } catch (err) {
+                const error = err as Error;
+                logger.error("/start-path 路由错误", error);
                 res.status(500).json({ status: 500, message: "服务器内部错误" });
             }
         });

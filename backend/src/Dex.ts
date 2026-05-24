@@ -14,7 +14,7 @@ import { Server } from "socket.io";
 export class Dex {
   message!: MessageWS;
   io: Server;
-  
+
   constructor(io: Server) {
     this.io = io;
     this.io.on("connection", (socket) => {
@@ -25,6 +25,19 @@ export class Dex {
   public async Main(buffer: Buffer, dser: boolean, filename?: string, template?: string) {
     try {
       const first = Date.now();
+      await this.processModpack(buffer, filename, first, dser, template);
+    } catch (e) {
+      const err = e as Error;
+      logger.error("主流程执行失败", err);
+      this.message.handleError(err);
+    }
+  }
+
+  public async MainFromPath(filePath: string, dser: boolean, template?: string) {
+    try {
+      const first = Date.now();
+      const filename = p.basename(filePath);
+      const buffer = fs.readFileSync(filePath);
       await this.processModpack(buffer, filename, first, dser, template);
     } catch (e) {
       const err = e as Error;
