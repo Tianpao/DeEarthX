@@ -1,17 +1,29 @@
 <script lang="ts" setup>
-import { ref, provide } from 'vue';
+import { ref, provide, onMounted, onUnmounted } from 'vue';
 import { LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { useVersion } from '@/composables/useVersion';
 import { useBackend } from '@/composables/useBackend';
 import { useMenu } from '@/composables/useMenu';
+import { useDragDrop } from '@/composables/useDragDrop';
 
 const { t } = useI18n();
 const { version } = useVersion();
 const { backendStatus, backendErrorInfo, createKillCoreProcessHandler } = useBackend();
 const { selectedKeys, menuItems, handleMenuClick, route } = useMenu();
+const { droppedFilePaths, clearDroppedFile, setupDragDropListener, cleanup: cleanupDragDrop } = useDragDrop();
 
 provide("killCoreProcess", createKillCoreProcessHandler());
+provide("droppedFilePaths", droppedFilePaths);
+provide("clearDroppedFile", clearDroppedFile);
+
+onMounted(async () => {
+    await setupDragDropListener();
+});
+
+onUnmounted(() => {
+    cleanupDragDrop();
+});
 
 const theme = ref({
     token: {
