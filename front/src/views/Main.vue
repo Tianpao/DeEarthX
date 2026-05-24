@@ -1,10 +1,14 @@
 <script lang="ts" setup>
-import { InboxOutlined } from '@ant-design/icons-vue';
+import { inject, computed, watch } from 'vue';
+import { InboxOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { formatFileSize, formatTime } from '@/utils/format';
 import { useTaskProcessor } from '@/composables/useTaskProcessor';
 
 const { t } = useI18n();
+const droppedFilePaths = inject<ReturnType<typeof import('@/composables/useDragDrop').useDragDrop>['droppedFilePaths']>('droppedFilePaths');
+const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
 const {
     uploadedFiles,
@@ -35,6 +39,57 @@ const {
     startButtonDisabled,
     handleStartProcess
 } = useTaskProcessor();
+
+// 主页只接受 .zip/.mrpack，取第一个文件
+const validDroppedFile = computed(() => {
+    if (droppedFilePaths && 'value' in droppedFilePaths && droppedFilePaths.value.length > 0) {
+        const validExtensions = ['.zip', '.mrpack'];
+        const path = droppedFilePaths.value[0];
+        const ext = path.toLowerCase().substring(path.lastIndexOf('.'));
+        if (validExtensions.includes(ext)) {
+            return path;
+        }
+    }
+    return null;
+});
+
+const hasDroppedFile = computed(() => validDroppedFile.value !== null);
+const droppedFileName = computed(() => {
+    if (validDroppedFile.value) {
+        const path = validDroppedFile.value;
+        return path.substring(Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/')) + 1);
+    }
+    return '';
+});
+
+// 监听拖放，无效文件时提示
+watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.value : [], (paths) => {
+    if (paths.length > 0) {
+        // 主页只允许拖入一个文件
+        if (paths.length > 1) {
+            message.warning(t('home.only_one_file'));
+            if (clearDroppedFile) {
+                clearDroppedFile();
+            }
+            return;
+        }
+        const validExtensions = ['.zip', '.mrpack'];
+        const firstPath = paths[0];
+        const ext = firstPath.toLowerCase().substring(firstPath.lastIndexOf('.'));
+        if (!validExtensions.includes(ext)) {
+            message.warning(t('home.only_zip_mrpack'));
+            if (clearDroppedFile) {
+                clearDroppedFile();
+            }
+        }
+    }
+});
+
+function handleClearDroppedFile() {
+    if (clearDroppedFile) {
+        clearDroppedFile();
+    }
+}
 </script>
 <template>
     <div class="tw:h-full tw:w-full tw:relative tw:flex tw:flex-col">
@@ -55,6 +110,14 @@ const {
                         {{ t('home.upload_hint') }}
                     </p>
                 </a-upload-dragger>
+                <div v-if="hasDroppedFile" class="tw:w-full tw:max-w-md tw:mt-2 tw:p-2 tw:bg-green-50 tw:rounded-lg tw:border tw:border-green-200">
+                    <div class="tw:flex tw:items-center tw:justify-between">
+                        <span class="tw:text-green-600 tw:text-sm tw:truncate">{{ t('home.file_dropped', { name: droppedFileName }) }}</span>
+                        <a-button type="text" size="small" @click="handleClearDroppedFile" class="tw:text-gray-400 hover:tw:text-red-500">
+                            <template #icon><CloseCircleOutlined /></template>
+                        </a-button>
+                    </div>
+                </div>
                 <div class="tw:flex tw:items-center tw:gap-2 tw:mt-8">
                     <a-select ref="select" :options="modeOptions" :value="selectedMode"
                         style="width: 120px;" @select="handleModeSelect"></a-select>
