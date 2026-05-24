@@ -89,7 +89,7 @@ export async function mlsetup(ml: string, mcv: string, mlv: string, path: string
         messageWS.serverInstallProgress("Installing Minecraft Server", 100);
         messageWS.serverInstallStep(`Installing ${ml} Loader`, 2, totalSteps);
       }
-      
+      console.log("步骤2：安装 Mod Loader");
       await modloader(ml, mcv, mlv, path).setup();
       
       if (messageWS) {

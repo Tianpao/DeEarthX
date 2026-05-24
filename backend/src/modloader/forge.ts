@@ -74,11 +74,12 @@ export class Forge {
   async setup() {
     await this.installer();
     const config = Config.getConfig();
-    if (config.mirror.bmclapi) {
+    if (config.mirror.bmclapi && version_compare(this.minecraft, "1.10") === 1) {
       await this.library();
     }
     await this.install();
-    if (version_compare(this.minecraft, "1.18") === -1) {
+    if (version_compare(this.minecraft, "1.18.0") === -1) {
+      console.log("需要wshell");
       await this.wshell();
     }
   }
@@ -102,11 +103,15 @@ export class Forge {
         }
         const json = JSON.parse((entry.getData()).toString()) as IForge;
         const vjson = await this.got.get(`version/${this.minecraft}/json`).json<IVersion>();
+        if (version_compare(this.minecraft, "1.18") !== -1) {
         const mojpath = this.MTP(json.data.MOJMAPS.server);
         _downlist.push([`https://bmclapi2.bangbang93.com/${new URL(vjson.downloads.server_mappings.url).pathname.slice(1)}`, `${this.path}/libraries/${mojpath}`]);
-        const mappingobj = json.data.MAPPINGS.server;
+        }
+        if (version_compare(this.minecraft, "1.12.2") === 1){
+          const mappingobj = json.data.MAPPINGS.server;
         const path = this.MTP(mappingobj.replace(":mappings@txt", "@zip"));
         _downlist.push([`https://bmclapi2.bangbang93.com/maven/${path}`, `${this.path}/libraries/${path}`]);
+        }
       }
     }
 
@@ -119,7 +124,7 @@ export class Forge {
     const config = Config.getConfig();
     const javaCmd = config.javaPath || 'java';
     let cmd = `${javaCmd} -jar forge-${this.minecraft}-${this.loaderVersion}-installer.jar --installServer`;
-    if (config.mirror.bmclapi) {
+    if (config.mirror.bmclapi && version_compare(this.minecraft, "1.10") === 1) {
       cmd += ` --mirror https://bmclapi2.bangbang93.com/maven/`;
     }
     await execPromise(cmd, { cwd: this.path }).catch((e) => {
@@ -131,6 +136,9 @@ export class Forge {
   async installer() {
     const config = Config.getConfig();
     let url = `forge/download?mcversion=${this.minecraft}&version=${this.loaderVersion}&category=installer&format=jar`;
+    if (version_compare(this.minecraft, "1.10") !== 1) {
+      url += `&branch=${this.minecraft}`;
+    }
     let expectedHash: string | undefined;
 
     if (config.mirror?.bmclapi) {
@@ -172,7 +180,10 @@ export class Forge {
   private async wshell() {
     const config = Config.getConfig();
     const javaCmd = config.javaPath || 'java';
-    const cmd = `${javaCmd} -jar forge-${this.minecraft}-${this.loaderVersion}.jar`;
+    let cmd = `${javaCmd} -jar forge-${this.minecraft}-${this.loaderVersion}.jar`;
+    if (version_compare(this.minecraft, "1.10.0") === -1) {
+      cmd = `${javaCmd} -jar forge-${this.minecraft}-${this.loaderVersion}-${this.minecraft}-universal.jar`;
+    }
     await fs.promises.writeFile(`${this.path}/run.bat`, `@echo off\n${cmd}`);
     await fs.promises.writeFile(`${this.path}/run.sh`, `#!/bin/bash\n${cmd}`);
   }

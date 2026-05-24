@@ -79,8 +79,21 @@ export class Minecraft {
         }).json<ILInfo>();
         
         await Promise.all(json.libraries.map(async e => {
+          try{
+            console.log(version_compare(this.minecraft, "1.12.2"));
+          if (!e.downloads.artifact && version_compare(this.minecraft, "1.12.2") !== 1) {
+            return;
+          }
           const path = e.downloads.artifact.path;
           await fastdownload([`https://bmclapi2.bangbang93.com/maven/${path}`, `${this.path}/libraries/${path}`]);
+        }catch(error){
+          if(version_compare(this.minecraft, "1.12") !== 1){
+            return; //无事发生
+          }else{
+            console.log(error);
+            throw error; //1.12.x以上报错这个真的是有事了，直接把错误甩出三界之外！！！
+          }
+        }
         }));
       })();
       
