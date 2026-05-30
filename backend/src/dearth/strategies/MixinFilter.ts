@@ -8,16 +8,29 @@ export class MixinFilter implements IFilterStrategy {
     const clientMods: string[] = [];
 
     for (const file of files) {
+      if (file.filename.includes("lib")) {
+        continue;
+      }
+
+      let hasServerMixin = false;
+      let hasClientMixin = false;
+
       for (const mixin of file.mixins) {
         try {
           const config = JSON.parse(mixin.data);
-          if (!config.mixins?.length && config.client?.length > 0 && !file.filename.includes("lib")) {
-            clientMods.push(file.filename);
-            break;
+          if (config.mixins?.length || config.server?.length) {
+            hasServerMixin = true;
+          }
+          if (config.client?.length) {
+            hasClientMixin = true;
           }
         } catch (error: any) {
           logger.warn("Failed to parse mixin config", { filename: file.filename, mixin: mixin.name, error: error.message });
         }
+      }
+
+      if (hasClientMixin && !hasServerMixin) {
+        clientMods.push(file.filename);
       }
     }
 
