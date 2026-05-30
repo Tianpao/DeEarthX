@@ -53,7 +53,7 @@ export class DexpubFilter implements IFilterStrategy {
         }
       }
 
-      const modIdToIsTypeMod = await this.got.post(`api/mod/check`, {
+      const modIdToIsTypeMod = await this.got.post(`mod/check`, {
         json: {
           modids: modIds,
         }

@@ -658,7 +658,6 @@ dependencies = [
 name = "dex-v3-ui"
 version = "1.0.0"
 dependencies = [
- "open",
  "serde",
  "serde_json",
  "tauri",

@@ -235,7 +235,7 @@ export class Core {
     }
 
     private setupModCheckRoutes() {
-        setupModCheckRoutes(this.app);
+        setupModCheckRoutes(this.app, this.io);
     }
 
     private setupGalaxyRoutes() {

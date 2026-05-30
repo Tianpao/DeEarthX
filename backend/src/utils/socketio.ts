@@ -99,4 +99,34 @@ export class MessageWS {
       error
     });
   }
+
+  // ModCheck 进度事件
+  modcheckStart(totalMods: number) {
+    this.socket.emit("modcheck_start", {
+      totalMods
+    });
+  }
+
+  modcheckProgress(current: number, total: number, modName: string) {
+    this.socket.emit("modcheck_progress", {
+      current,
+      total,
+      modName
+    });
+  }
+
+  modcheckComplete(results: any[], filteredCount: number, movedCount: number, duration: number) {
+    this.socket.emit("modcheck_complete", {
+      results,
+      filteredCount,
+      movedCount,
+      duration
+    });
+  }
+
+  modcheckError(error: string) {
+    this.socket.emit("modcheck_error", {
+      error
+    });
+  }
 }

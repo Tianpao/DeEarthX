@@ -11,6 +11,10 @@ import * as fs from "fs";
 import * as path from "path";
 import crypto from "node:crypto";
 
+export interface IModCheckProgressCallback {
+  (current: number, total: number, modName: string): void;
+}
+
 const DEFAULT_CONFIG: IModCheckConfig = {
   enableDexpub: true,
   enableModrinth: true,
@@ -22,10 +26,12 @@ const DEFAULT_CONFIG: IModCheckConfig = {
 export class ModCheckService {
   private readonly extractor: FileExtractor;
   private readonly config: IModCheckConfig;
+  private readonly onProgress?: IModCheckProgressCallback;
 
-  constructor(modsDir: string, config?: Partial<IModCheckConfig>) {
+  constructor(modsDir: string, config?: Partial<IModCheckConfig> & { onProgress?: IModCheckProgressCallback }) {
     this.extractor = new FileExtractor(modsDir);
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.onProgress = config?.onProgress;
   }
 
   async checkMods(): Promise<IModCheckResult[]> {
@@ -46,13 +52,22 @@ export class ModCheckService {
     logger.info("开始模组检查流程（带整合包）", { bundleName });
     const files = await this.extractor.extractFilesInfo();
     const results: IModCheckResult[] = [];
+    const total = files.length;
 
+    // 识别客户端模组时发送进度
+    logger.info("开始识别客户端模组...");
     const clientMods = await this.identifyClientSideMods(files);
-    
-    for (const file of files) {
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       const filename = file.filename;
       const isClient = clientMods.includes(filename);
-      
+
+      // 发送进度回调
+      if (this.onProgress) {
+        this.onProgress(i + 1, total, path.basename(filename));
+      }
+
       results.push({
         filename: path.basename(filename),
         filePath: filename,

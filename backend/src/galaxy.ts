@@ -18,7 +18,7 @@ export class Galaxy {
             }
         })
         this.got = got.extend({
-            prefixUrl: "https://galaxy.tianpao.top/  ",
+            prefixUrl: "https://galaxy.tianpao.top/",
             //prefixUrl: "http://localhost:3000/",
             headers: {
                 "User-Agent": "DeEarthX",
@@ -83,7 +83,7 @@ export class Galaxy {
             res.status(400).json({ status: 400, message: "未提供 modid" });
             return;
         }
-        this.got.post(`api/mod/submit/${type}`,{
+        this.got.post(`mod/submit/${type}`,{
             json: {
                 modid,
             }
