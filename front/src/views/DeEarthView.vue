@@ -3,7 +3,6 @@ import { ref, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { FileSearchOutlined, FolderOpenOutlined } from '@ant-design/icons-vue';
 import { open } from '@tauri-apps/plugin-dialog';
-import axiosInstance from '@/utils/axios';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 
@@ -64,6 +63,12 @@ async function handleCheck() {
         return;
     }
 
+    // 清理旧连接
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+
     checking.value = true;
     showResults.value = false;
     showProgress.value = false;
@@ -74,47 +79,41 @@ async function handleCheck() {
     const wsPort = import.meta.env.VITE_WS_PORT || '37019';
     socket = io(`${wsHost}:${wsPort}/`, {
         autoConnect: false,
-        reconnection: false
+        reconnection: false,
+        transports: ['websocket', 'polling']
     });
 
-    socket.on('connect', async () => {
+    socket.on('connect', () => {
         console.log('Socket.IO 已连接');
-        try {
-            const response = await axiosInstance.post('/modcheck/folder',{
-                folderPath: selectedFolder.value,
-                bundleName: bundleName.value.trim()
-            });
-
-            if (response.status !== 200) {
-                const errorData = response.data;
-                throw new Error(errorData.message || `请求失败: ${response.status}`);
-            }
-            // 任务已提交，等待 Socket.IO 事件
-        } catch (error: any) {
-            console.error('检查失败:', error);
-            message.error(`检查失败: ${error.message}`);
-            checking.value = false;
-            socket?.disconnect();
-        }
+        // 通过 Socket.IO 发送检查请求
+        socket!.emit('modcheck:start', {
+            folderPath: selectedFolder.value,
+            bundleName: bundleName.value.trim()
+        });
     });
 
     socket.on('modcheck_start', (data: any) => {
         console.log('开始检查:', data);
         showProgress.value = true;
-        message.loading({ content: data.message || '开始检查模组...', key: 'modcheck', duration: 0 });
+        progress.value = {
+            current: 0,
+            total: data.totalMods || 0,
+            percent: 0,
+            modName: ''
+        };
     });
 
     socket.on('modcheck_progress', (data: any) => {
+        const percent = data.total > 0 ? Math.round((data.current / data.total) * 100) : 0;
         progress.value = {
             current: data.current,
             total: data.total,
-            percent: data.percent || Math.round((data.current / data.total) * 100),
+            percent,
             modName: data.modName
         };
     });
 
     socket.on('modcheck_complete', (data: any) => {
-        message.destroy('modcheck');
         message.success(`检查完成，共检查 ${data.results.length} 个模组，筛选出 ${data.filteredCount} 个客户端模组`);
         results.value = data.results;
         showResults.value = true;
@@ -124,7 +123,6 @@ async function handleCheck() {
     });
 
     socket.on('modcheck_error', (data: any) => {
-        message.destroy('modcheck');
         message.error(`检查失败: ${data.error}`);
         checking.value = false;
         showProgress.value = false;
@@ -135,9 +133,8 @@ async function handleCheck() {
         console.log('Socket.IO 连接关闭');
     });
 
-    socket.on('error', (error: any) => {
-        console.error('Socket.IO 错误:', error);
-        message.destroy('modcheck');
+    socket.on('connect_error', (error: any) => {
+        console.error('Socket.IO 连接错误:', error);
         message.error('连接错误');
         checking.value = false;
         showProgress.value = false;
@@ -156,10 +153,10 @@ async function handleCheck() {
 
         <a-card class="tw:mb-4 md:tw:mb-6">
             <div class="tw:mb-4">
-                <a-button 
-                    type="default" 
-                    size="large" 
-                    block 
+                <a-button
+                    type="default"
+                    size="large"
+                    block
                     @click="selectFolder"
                     class="tw:mb-4"
                 >
@@ -213,10 +210,10 @@ async function handleCheck() {
 
         <a-card v-if="showResults" title="检查结果">
             <div class="tw:overflow-x-auto">
-                <a-table 
-                    :dataSource="results" 
-                    :pagination="false" 
-                    :scroll="{ y: 300, x: 'max-content' }" 
+                <a-table
+                    :dataSource="results"
+                    :pagination="false"
+                    :scroll="{ y: 300, x: 'max-content' }"
                     size="small"
                     :bordered="true"
                 >

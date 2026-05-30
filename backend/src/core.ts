@@ -11,7 +11,7 @@ import { checkJava, JavaCheckResult, detectJavaPaths } from "./utils/java.js";
 import { Galaxy } from "./galaxy.js";
 import { Server as SocketServer } from "socket.io";
 import { setupTemplateRoutes } from "./routes/templates.js";
-import { setupModCheckRoutes } from "./routes/modcheck.js";
+import { setupModCheckSocket } from "./routes/modcheck.js";
 import { setupDownloadRoutes } from "./routes/download.js";
 
 export class Core {
@@ -79,7 +79,7 @@ export class Core {
         this.setupHealthRoutes();
         this.setupTaskRoutes();
         this.setupConfigRoutes();
-        this.setupModCheckRoutes();
+        this.setupModCheckSocket();
         this.setupGalaxyRoutes();
         this.setupJavaRoutes();
         this.setupTemplateRoutes();
@@ -234,8 +234,8 @@ export class Core {
         });
     }
 
-    private setupModCheckRoutes() {
-        setupModCheckRoutes(this.app, this.io);
+    private setupModCheckSocket() {
+        setupModCheckSocket(this.io);
     }
 
     private setupGalaxyRoutes() {

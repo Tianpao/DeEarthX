@@ -103,7 +103,8 @@ export class MessageWS {
   // ModCheck 进度事件
   modcheckStart(totalMods: number) {
     this.socket.emit("modcheck_start", {
-      totalMods
+      totalMods,
+      message: "开始提取模组信息..."
     });
   }
 

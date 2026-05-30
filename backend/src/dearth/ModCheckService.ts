@@ -7,6 +7,7 @@ import { ModrinthFilter } from "./strategies/ModrinthFilter.js";
 import { IModCheckResult, IModCheckConfig, IFileInfo, ModSide, IFilterConfig } from "./types.js";
 import { JarParser } from "../utils/jar-parser.js";
 import { logger } from "../utils/logger.js";
+import type { MessageWS } from "../utils/socketio.js";
 import * as fs from "fs";
 import * as path from "path";
 import crypto from "node:crypto";
@@ -27,11 +28,13 @@ export class ModCheckService {
   private readonly extractor: FileExtractor;
   private readonly config: IModCheckConfig;
   private readonly onProgress?: IModCheckProgressCallback;
+  private readonly messageWS?: MessageWS;
 
-  constructor(modsDir: string, config?: Partial<IModCheckConfig> & { onProgress?: IModCheckProgressCallback }) {
+  constructor(modsDir: string, config?: Partial<IModCheckConfig> & { onProgress?: IModCheckProgressCallback; messageWS?: MessageWS }) {
     this.extractor = new FileExtractor(modsDir);
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.onProgress = config?.onProgress;
+    this.messageWS = config?.messageWS;
   }
 
   async checkMods(): Promise<IModCheckResult[]> {
@@ -54,8 +57,16 @@ export class ModCheckService {
     const results: IModCheckResult[] = [];
     const total = files.length;
 
-    // 识别客户端模组时发送进度
+    // 发送开始事件
+    if (this.messageWS) {
+      this.messageWS.modcheckStart(total);
+    }
+
+    // 识别客户端模组
     logger.info("开始识别客户端模组...");
+    if (this.messageWS) {
+      this.messageWS.modcheckProgress(0, total, "正在识别客户端模组...");
+    }
     const clientMods = await this.identifyClientSideMods(files);
 
     for (let i = 0; i < files.length; i++) {
@@ -66,6 +77,9 @@ export class ModCheckService {
       // 发送进度回调
       if (this.onProgress) {
         this.onProgress(i + 1, total, path.basename(filename));
+      }
+      if (this.messageWS) {
+        this.messageWS.modcheckProgress(i + 1, total, path.basename(filename));
       }
 
       results.push({
@@ -103,6 +117,8 @@ export class ModCheckService {
   }
 
   private async identifyClientSideMods(files: IFileInfo[]): Promise<string[]> {
+    // 不传递 messageWS 给 runFilterStrategies，因为它发送的是 filter_mods_* 事件
+    // 我们在 checkModsWithBundle 中自己发送 modcheck_* 事件
     return runFilterStrategies(files, this.modCheckConfigToFilterConfig());
   }
 
