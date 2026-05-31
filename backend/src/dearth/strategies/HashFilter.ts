@@ -40,7 +40,18 @@ export class HashFilter implements IFilterStrategy {
 
       const clientMods = projectsResponse
         .filter(p => p.client_side === "required" && p.server_side === "unsupported")
-        .map(p => projectIdToFilename.get(p.id))
+        .map(p => {
+          const filename = projectIdToFilename.get(p.id);
+          if (filename) {
+            logger.debug("Modrinth Hashes 标记为客户端模组", {
+              filename,
+              projectId: p.id,
+              client_side: p.client_side,
+              server_side: p.server_side
+            });
+          }
+          return filename;
+        })
         .filter(Boolean) as string[];
 
       logger.debug("Hash check completed", { count: clientMods.length });

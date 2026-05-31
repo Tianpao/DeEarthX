@@ -12,61 +12,74 @@ export async function runFilterStrategies(
   messageWS?: MessageWS
 ): Promise<string[]> {
   const clientMods: string[] = [];
-  const processedFiles = new Set<string>();
+  // Galaxy Square 判定过的文件（客户端+服务端），后续策略不可覆盖
+  const gsDecidedFiles = new Set<string>();
+  // 被高优先级策略检测出的客户端模组，Mixin 不可覆盖
+  const skipMixinFiles = new Set<string>();
 
+  // 第一优先级：Galaxy Square (Dexpub) — 最高权威，说什么就是什么
   if (config.dexpub) {
     logger.info("开始 Galaxy Square (dexpub) 检查客户端模组");
     const dexpubStrategy = new DexpubFilter();
     const dexpubMods = await dexpubStrategy.filter(files);
     const serverModsListSet = new Set(await dexpubStrategy.getServerMods(files));
 
-    dexpubMods.forEach(mod => processedFiles.add(mod));
-    serverModsListSet.forEach(mod => processedFiles.add(mod));
+    dexpubMods.forEach(mod => {
+      gsDecidedFiles.add(mod);
+      skipMixinFiles.add(mod);
+    });
+    serverModsListSet.forEach(mod => {
+      gsDecidedFiles.add(mod);
+      skipMixinFiles.add(mod);
+    });
     clientMods.push(...dexpubMods);
 
     if (messageWS) {
-      messageWS.filterModsProgress(processedFiles.size, files.length, "Galaxy Square (dexpub) 检查");
+      messageWS.filterModsProgress(gsDecidedFiles.size, files.length, "Galaxy Square (dexpub) 检查");
     }
   }
 
-  if (config.modrinth) {
+  // 第二优先级：Hash 和 Modrinth API（同级，并行执行）
+  // GS 已判定的文件不传给它们，它们无法覆盖 GS 的判定
+  const hashPromise = config.hashes ? (async () => {
+    logger.info("开始 Hash 检查客户端模组");
+    const unprocessedFiles = files.filter(f => !gsDecidedFiles.has(f.filename));
+    const hashMods = await new HashFilter().filter(unprocessedFiles);
+    return { mods: hashMods, strategy: "hash" as const };
+  })() : Promise.resolve({ mods: [] as string[], strategy: "hash" as const });
+
+  const modrinthPromise = config.modrinth ? (async () => {
     logger.info("开始 Modrinth API 检查客户端模组");
-
-    const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
+    const unprocessedFiles = files.filter(f => !gsDecidedFiles.has(f.filename));
     const modrinthMods = await new ModrinthFilter().filter(unprocessedFiles);
+    return { mods: modrinthMods, strategy: "modrinth" as const };
+  })() : Promise.resolve({ mods: [] as string[], strategy: "modrinth" as const });
 
-    modrinthMods.forEach(mod => processedFiles.add(mod));
-    clientMods.push(...modrinthMods);
+  const [hashResult, modrinthResult] = await Promise.all([hashPromise, modrinthPromise]);
 
-    if (messageWS) {
-      messageWS.filterModsProgress(processedFiles.size, files.length, "Modrinth API 检查");
-    }
+  // 合并 Hash 和 Modrinth 的结果
+  const hashAndModrinthMods = [...new Set([...hashResult.mods, ...modrinthResult.mods])];
+  hashAndModrinthMods.forEach(mod => {
+    skipMixinFiles.add(mod);
+  });
+  clientMods.push(...hashAndModrinthMods);
+
+  if (messageWS && (config.hashes || config.modrinth)) {
+    messageWS.filterModsProgress(gsDecidedFiles.size + hashAndModrinthMods.length, files.length, "Hash/Modrinth API 检查");
   }
 
+  // 第三优先级：Mixin（最低优先级）
+  // GS 判定过的文件和 Hash/Modrinth 检测出的客户端模组，Mixin 都不可覆盖
   if (config.mixins) {
     logger.info("开始 Mixin 检查客户端模组");
 
-    const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
+    const unprocessedFiles = files.filter(f => !skipMixinFiles.has(f.filename));
     const mixinMods = await new MixinFilter().filter(unprocessedFiles);
 
-    mixinMods.forEach(mod => processedFiles.add(mod));
     clientMods.push(...mixinMods);
 
     if (messageWS) {
-      messageWS.filterModsProgress(processedFiles.size, files.length, "Mixin 检查");
-    }
-  }
-
-  if (config.hashes) {
-    logger.info("开始 Hash 检查客户端模组");
-
-    const unprocessedFiles = files.filter(f => !processedFiles.has(f.filename));
-    const hashMods = await new HashFilter().filter(unprocessedFiles);
-
-    clientMods.push(...hashMods);
-
-    if (messageWS) {
-      messageWS.filterModsProgress(processedFiles.size, files.length, "Hash 检查");
+      messageWS.filterModsProgress(skipMixinFiles.size + mixinMods.length, files.length, "Mixin 检查");
     }
   }
 

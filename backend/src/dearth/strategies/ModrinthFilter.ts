@@ -98,6 +98,12 @@ export class ModrinthFilter implements IFilterStrategy {
       const project = projectMap.get(projectId);
       if (project && this.isClientMod(project)) {
         clientMods.push(filename);
+        logger.debug("Modrinth API 标记为客户端模组", {
+          filename,
+          projectId,
+          client_side: project.client_side,
+          server_side: project.server_side
+        });
       }
     }
 

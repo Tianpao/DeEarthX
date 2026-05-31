@@ -40,7 +40,7 @@ export async function extractMrpackFromZip(buffer: Buffer, filename?: string): P
 
   try {
     const zip = await new Promise<yauzl.ZipFile>((resolve, reject) => {
-      yauzl.fromBuffer(buffer, { lazyEntries: true, strictFileNames: true }, (err, zipfile) => {
+      yauzl.fromBuffer(buffer, { lazyEntries: true, strictFileNames: false }, (err, zipfile) => {
         if (err) {
           logger.error("解析 ZIP 文件失败", { 文件名: filename, 错误: err.message });
           reject(err);
