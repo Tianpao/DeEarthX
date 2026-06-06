@@ -37,11 +37,9 @@ const newTemplate = ref({
 async function loadTemplates() {
     loading.value = true;
     try {
-        
         const response = await axiosInstance.get('/templates');
-        
         const result = response.data;
-        
+
         if (result.status === 200 && result.data) {
             templates.value = result.data;
         } else {
@@ -73,9 +71,8 @@ async function createTemplate() {
 
     try {
         const response = await axiosInstance.post('/templates', newTemplate.value);
-        
         const result = response.data;
-        
+
         if (result.status === 200) {
             message.success(t('template.create_success'));
             showCreateModal.value = false;
@@ -99,9 +96,8 @@ async function confirmDelete() {
 
     try {
         const response = await axiosInstance.delete(`/templates/${deletingTemplate.value.id}`);
-        
         const result = response.data;
-        
+
         if (result.status === 200) {
             message.success(t('template.delete_success'));
             showDeleteModal.value = false;
@@ -119,7 +115,7 @@ async function openTemplateFolder(template: Template) {
     try {
         const response = await axiosInstance.get(`/templates/${template.id}/path`);
         const result = response.data;
-        
+
         if (result.status !== 200) {
             message.error(result.message || t('template.open_folder_failed'));
         }
@@ -148,9 +144,8 @@ async function updateTemplate() {
 
     try {
         const response = await axiosInstance.put(`/templates/${editingTemplate.value.id}`, newTemplate.value);
-        
         const result = response.data;
-        
+
         if (result.status === 200) {
             message.success(t('template.update_success'));
             showEditModal.value = false;
@@ -170,75 +165,85 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="tw:h-full tw:w-full tw:overflow-hidden">
-        <div class="tw:h-full tw:w-full tw:p-6 tw:overflow-y-auto">
-            <div class="tw:max-w-7xl tw:mx-auto">
-                <div class="tw:flex tw:justify-between tw:items-center tw:mb-6">
-                    <div>
-                        <h1 class="tw:text-2xl tw:font-bold tw:text-gray-800">{{ t('template.title') }}</h1>
-                        <p class="tw:text-gray-600 tw:mt-1">{{ t('template.description') }}</p>
-                    </div>
-                    <a-button type="primary" @click="openCreateModal" class="tw:flex tw:items-center tw:gap-2">
-                        <PlusOutlined />
-                        {{ t('template.create_button') }}
-                    </a-button>
+    <div class="tw:h-full tw:w-full tw:overflow-y-auto tw:p-6">
+        <div class="tw:mx-auto tw:flex tw:w-full tw:max-w-6xl tw:flex-col tw:gap-6">
+            <div class="tw:flex tw:flex-col tw:gap-3 md:tw:flex-row md:tw:items-end md:tw:justify-between">
+                <div>
+                    <h1 class="tw:text-2xl tw:font-semibold tw:text-slate-900">{{ t('template.title') }}</h1>
+                    <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('template.description') }}</p>
                 </div>
+                <a-button type="primary" @click="openCreateModal" class="template-action-button tw:w-full md:tw:w-auto">
+                    <template #icon>
+                        <PlusOutlined />
+                    </template>
+                    <span>{{ t('template.create_button') }}</span>
+                </a-button>
+            </div>
 
+            <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
                 <a-spin :spinning="loading">
-                    <div v-if="templates.length === 0 && !loading" class="tw:text-center tw:py-16 tw:text-gray-500">
-                        <FolderOutlined style="font-size: 64px; margin-bottom: 16px;" />
-                        <p class="tw:text-lg">{{ t('template.empty') }}</p>
-                        <p class="tw:text-sm tw:mt-2">{{ t('template.empty_hint') }}</p>
+                    <div v-if="templates.length === 0 && !loading" class="tw:flex tw:flex-col tw:items-center tw:justify-center tw:rounded-lg tw:border tw:border-dashed tw:border-slate-200 tw:bg-slate-50 tw:px-6 tw:py-16 tw:text-center">
+                        <div class="tw:mb-4 tw:flex tw:h-14 tw:w-14 tw:items-center tw:justify-center tw:rounded-lg tw:border tw:border-slate-200 tw:bg-white tw:text-slate-400">
+                            <FolderOutlined style="font-size: 26px;" />
+                        </div>
+                        <p class="tw:text-base tw:font-medium tw:text-slate-700">{{ t('template.empty') }}</p>
+                        <p class="tw:mt-2 tw:max-w-md tw:text-sm tw:text-slate-500">{{ t('template.empty_hint') }}</p>
                     </div>
 
-                    <div v-else class="tw:grid tw:grid-cols-1 md:tw:grid-cols-2 lg:tw:grid-cols-3 tw:gap-4">
-                        <div 
-                            v-for="template in templates" 
+                    <div v-else class="tw:grid tw:grid-cols-1 tw:gap-4 md:tw:grid-cols-2 xl:tw:grid-cols-3">
+                        <article
+                            v-for="template in templates"
                             :key="template.id"
-                            class="tw:bg-white tw:rounded-lg tw:shadow-md tw:p-5 tw:h-48 tw:flex tw:flex-col tw:border tw:border-gray-200 tw:transition-all tw:duration-300 hover:tw:shadow-lg hover:tw:border-blue-300"
+                            class="tw:flex tw:min-h-[220px] tw:flex-col tw:rounded-xl tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-5 tw:shadow-sm tw:transition-colors hover:tw:border-slate-300"
                         >
-                            <div class="tw:flex-1 tw:overflow-hidden">
-                                <div class="tw:flex tw:justify-between tw:items-start tw:mb-2">
-                                    <h3 class="tw:text-lg tw:font-semibold tw:truncate tw:flex-1 tw:mr-2">{{ template.metadata.name }}</h3>
-                                    <a-tag color="blue" size="small">{{ template.metadata.version }}</a-tag>
+                            <div class="tw:flex tw:items-start tw:justify-between tw:gap-3">
+                                <div class="tw:min-w-0 tw:flex-1">
+                                    <h3 class="tw:truncate tw:text-base tw:font-semibold tw:text-slate-900">{{ template.metadata.name }}</h3>
+                                    <p class="tw:mt-2 tw:line-clamp-3 tw:text-sm tw:leading-6 tw:text-slate-500">{{ template.metadata.description }}</p>
                                 </div>
-                                <p class="tw:text-sm tw:text-gray-600 tw:line-clamp-2 tw:mb-3">{{ template.metadata.description }}</p>
-                                <div class="tw:flex tw:justify-between tw:text-xs tw:text-gray-500">
-                                    <span>{{ t('template.author') }}: {{ template.metadata.author }}</span>
-                                    <span>{{ template.metadata.created }}</span>
+                                <a-tag color="blue">{{ template.metadata.version }}</a-tag>
+                            </div>
+
+                            <div class="tw:mt-5 tw:grid tw:grid-cols-2 tw:gap-3 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-white tw:p-3">
+                                <div class="tw:min-w-0">
+                                    <div class="tw:text-xs tw:text-slate-400">{{ t('template.author') }}</div>
+                                    <div class="tw:truncate tw:text-sm tw:text-slate-700">{{ template.metadata.author || '-' }}</div>
+                                </div>
+                                <div class="tw:min-w-0">
+                                    <div class="tw:text-xs tw:text-slate-400">Created</div>
+                                    <div class="tw:truncate tw:text-sm tw:text-slate-700">{{ template.metadata.created }}</div>
                                 </div>
                             </div>
-                            <div class="tw:flex tw:justify-between tw:items-center tw:mt-4 tw:pt-4 tw:border-t tw:border-gray-100">
-                                <a-button size="small" @click="openTemplateFolder(template)">
-                                    <div class="tw:flex tw:items-center tw:gap-1">
+
+                            <div class="tw:mt-4 tw:flex tw:flex-wrap tw:gap-2 tw:border-t tw:border-slate-200 tw:pt-4">
+                                <a-button size="small" @click="openTemplateFolder(template)" class="template-action-button template-action-button--subtle">
+                                    <template #icon>
                                         <FolderOutlined />
-                                        <span>{{ t('template.open_folder') }}</span>
-                                    </div>
+                                    </template>
+                                    <span>{{ t('template.open_folder') }}</span>
                                 </a-button>
-                                <div class="tw:flex tw:gap-2">
-                                    <a-button size="small" @click="openEditModal(template)">
-                                        <div class="tw:flex tw:items-center tw:gap-1">
-                                            <EditOutlined />
-                                            <span>{{ t('template.edit_button') }}</span>
-                                        </div>
-                                    </a-button>
-                                    <a-button size="small" danger @click="openDeleteModal(template)">
-                                        <div class="tw:flex tw:items-center tw:gap-1">
-                                            <DeleteOutlined />
-                                            <span>{{ t('template.delete_button') }}</span>
-                                        </div>
-                                    </a-button>
-                                </div>
+                                <a-button size="small" @click="openEditModal(template)" class="template-action-button template-action-button--subtle">
+                                    <template #icon>
+                                        <EditOutlined />
+                                    </template>
+                                    <span>{{ t('template.edit_button') }}</span>
+                                </a-button>
+                                <a-button size="small" danger @click="openDeleteModal(template)" class="template-action-button template-action-button--danger">
+                                    <template #icon>
+                                        <DeleteOutlined />
+                                    </template>
+                                    <span>{{ t('template.delete_button') }}</span>
+                                </a-button>
                             </div>
-                        </div>
+                        </article>
                     </div>
                 </a-spin>
-            </div>
+            </section>
         </div>
 
-        <a-modal 
-            v-model:open="showCreateModal" 
-            :title="t('template.create_title')" 
+        <a-modal
+            v-model:open="showCreateModal"
+            :title="t('template.create_title')"
             @ok="createTemplate"
             :ok-text="t('common.confirm')"
             :cancel-text="t('common.cancel')"
@@ -276,9 +281,9 @@ onMounted(() => {
             </div>
         </a-modal>
 
-        <a-modal 
-            v-model:open="showEditModal" 
-            :title="t('template.edit_title')" 
+        <a-modal
+            v-model:open="showEditModal"
+            :title="t('template.edit_title')"
             @ok="updateTemplate"
             :ok-text="t('common.confirm')"
             :cancel-text="t('common.cancel')"
@@ -300,3 +305,51 @@ onMounted(() => {
         </a-modal>
     </div>
 </template>
+
+<style scoped>
+.template-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 34px;
+    font-weight: 600;
+}
+
+.template-action-button :deep(.ant-btn-icon) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.template-action-button :deep(.ant-btn-icon .anticon) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.template-action-button span {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.1;
+}
+
+.template-action-button--subtle {
+    border-color: #dbe5f0;
+    background: #ffffff;
+    color: #0f172a;
+}
+
+.template-action-button--subtle:hover {
+    border-color: #8ddfc7;
+    color: #0f172a;
+}
+
+.template-action-button--danger {
+    font-weight: 600;
+}
+</style>

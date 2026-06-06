@@ -29,6 +29,8 @@ const theme = ref({
     token: {
         colorPrimary: '#67eac3',
         borderRadius: 8,
+        fontFamily: '"Plus Jakarta Sans", "Noto Sans SC", "Microsoft YaHei", sans-serif',
+        fontFamilyCode: '"JetBrains Mono", "Cascadia Code", monospace',
     },
     components: {
         Menu: {
@@ -110,6 +112,8 @@ const theme = ref({
 </template>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 /* 禁止选择文本的样式 */
 h1,
 li,
