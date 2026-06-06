@@ -63,7 +63,7 @@ export class Dex {
     
     const mpname = info.name;
     const unpath = p.join(getAppDir(), "instance", mpname);
-    
+
     await this.parallelTasks(zps, mpname, plat, info, unpath);
     await this.filterMods(unpath, mpname);
     await this.installModLoader(plat, info, unpath, isServerMode, template);

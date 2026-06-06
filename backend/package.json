@@ -42,6 +42,7 @@
     "fs-extra": "^11.3.1",
     "got": "^14.4.8",
     "multer": "^2.0.2",
+    "murmurhash": "^2.0.1",
     "p-map": "^7.0.3",
     "p-retry": "^7.0.0",
     "picocolors": "^1.1.1",

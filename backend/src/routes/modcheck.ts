@@ -43,6 +43,7 @@ export function setupModCheckSocket(socketIo: SocketServer): void {
           enableModrinth: appConfig.filter.modrinth,
           enableMixin: appConfig.filter.mixins,
           enableHash: appConfig.filter.hashes,
+          enableMcmod: appConfig.filter.mcmod,
           messageWS,
         });
 

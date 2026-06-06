@@ -4,6 +4,7 @@ import { HashFilter } from "./strategies/HashFilter.js";
 import { MixinFilter } from "./strategies/MixinFilter.js";
 import { DexpubFilter } from "./strategies/DexpubFilter.js";
 import { ModrinthFilter } from "./strategies/ModrinthFilter.js";
+import { McmodFilter } from "./strategies/McmodFilter.js";
 import { IModCheckResult, IModCheckConfig, IFileInfo, ModSide, IFilterConfig } from "./types.js";
 import { JarParser } from "../utils/jar-parser.js";
 import { logger } from "../utils/logger.js";
@@ -19,6 +20,7 @@ export interface IModCheckProgressCallback {
 const DEFAULT_CONFIG: IModCheckConfig = {
   enableDexpub: true,
   enableModrinth: true,
+  enableMcmod: true,
   enableMixin: true,
   enableHash: true,
   timeout: 30000,
@@ -113,6 +115,7 @@ export class ModCheckService {
       modrinth: this.config.enableModrinth,
       mixins: this.config.enableMixin,
       hashes: this.config.enableHash,
+      mcmod: this.config.enableMcmod,
     };
   }
 
@@ -273,6 +276,10 @@ export class ModCheckService {
       checkPromises.push(this.runCheckWithTimeout(this.checkHash, file, "Hash"));
     }
 
+    if (this.config.enableMcmod) {
+      checkPromises.push(this.runCheckWithTimeout(this.checkMcmod, file, "Mcmod"));
+    }
+
     return Promise.all(checkPromises);
   }
 
@@ -352,8 +359,9 @@ export class ModCheckService {
     const priority: { [key: string]: number } = {
       "Dexpub": 1,
       "Modrinth": 2,
-      "Mixin": 3,
-      "Hash": 4,
+      "Mcmod": 3,
+      "Mixin": 4,
+      "Hash": 5,
     };
 
     successfulResults.sort((a, b) => priority[a.source] - priority[b.source]);
@@ -430,7 +438,20 @@ export class ModCheckService {
     const files = [file];
     const clientMods = await strategy.filter(files);
     const filename = path.basename(file.filename);
-    
+
+    if (clientMods.some(f => path.basename(f) === filename)) {
+      return { clientSide: "required", serverSide: "unsupported" };
+    }
+
+    return null;
+  }
+
+  private async checkMcmod(file: IFileInfo): Promise<{ clientSide: ModSide; serverSide: ModSide } | null> {
+    const strategy = new McmodFilter();
+    const files = [file];
+    const clientMods = await strategy.filter(files);
+    const filename = path.basename(file.filename);
+
     if (clientMods.some(f => path.basename(f) === filename)) {
       return { clientSide: "required", serverSide: "unsupported" };
     }

@@ -15,6 +15,7 @@ interface AppConfig {
     dexpub: boolean;
     mixins: boolean;
     modrinth: boolean;
+    mcmod: boolean;
   };
   oaf: boolean;
   autoZip: boolean;
@@ -42,7 +43,7 @@ interface SettingCategory {
 
 const config = ref<AppConfig>({
   mirror: { bmclapi: false, mcimirror: false },
-  filter: { hashes: false, dexpub: false, mixins: false, modrinth: false },
+  filter: { hashes: false, dexpub: false, mixins: false, modrinth: false, mcmod: false },
   oaf: false,
   autoZip: false,
   javaPath: undefined
@@ -76,6 +77,13 @@ const settings = computed<SettingCategory[]>(() => {
           name: t('setting.filter_modrinth_name'),
           description: t('setting.filter_modrinth_desc'),
           path: 'filter.modrinth',
+          defaultValue: false
+        },
+        {
+          key: 'mcmod',
+          name: t('setting.filter_mcmod_name'),
+          description: t('setting.filter_mcmod_desc'),
+          path: 'filter.mcmod',
           defaultValue: false
         },
         {

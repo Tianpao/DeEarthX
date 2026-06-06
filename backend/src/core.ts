@@ -32,7 +32,9 @@ export class Core {
                 origin: '*',
                 methods: ['GET', 'POST'],
                 credentials: true
-            }
+            },
+            pingTimeout: 120000,
+            pingInterval: 25000
         })
         this.dex = new Dex(this.io)
         this.galaxy = new Galaxy()

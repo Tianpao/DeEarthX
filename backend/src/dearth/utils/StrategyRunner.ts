@@ -2,6 +2,7 @@ import { HashFilter } from "../strategies/HashFilter.js";
 import { MixinFilter } from "../strategies/MixinFilter.js";
 import { DexpubFilter } from "../strategies/DexpubFilter.js";
 import { ModrinthFilter } from "../strategies/ModrinthFilter.js";
+import { McmodFilter } from "../strategies/McmodFilter.js";
 import { IFilterConfig, IFileInfo } from "../types.js";
 import { logger } from "../../utils/logger.js";
 import type { MessageWS } from "../../utils/socketio.js";
@@ -68,7 +69,22 @@ export async function runFilterStrategies(
     messageWS.filterModsProgress(gsDecidedFiles.size + hashAndModrinthMods.length, files.length, "Hash/Modrinth API 检查");
   }
 
-  // 第三优先级：Mixin（最低优先级）
+  // 第三优先级：Mcmod API（在 Hash/Modrinth 之后，Mixin 之前）
+  if (config.mcmod) {
+    logger.info("开始 Mcmod API 检查客户端模组");
+    const unprocessedFiles = files.filter(f => !skipMixinFiles.has(f.filename));
+    const mcmodMods = await new McmodFilter().filter(unprocessedFiles);
+    mcmodMods.forEach(mod => {
+      skipMixinFiles.add(mod);
+    });
+    clientMods.push(...mcmodMods);
+
+    if (messageWS) {
+      messageWS.filterModsProgress(skipMixinFiles.size, files.length, "Mcmod API 检查");
+    }
+  }
+
+  // 第四优先级：Mixin（最低优先级）
   // GS 判定过的文件和 Hash/Modrinth 检测出的客户端模组，Mixin 都不可覆盖
   if (config.mixins) {
     logger.info("开始 Mixin 检查客户端模组");

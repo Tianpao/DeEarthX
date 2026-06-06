@@ -24,6 +24,7 @@ export interface IInfoFile {
 export interface IFileInfo {
   filename: string;
   hash: string;
+  murmur2?: number;
   mixins: IMixinFile[];
   infos: IInfoFile[];
   fileData?: Buffer;
@@ -78,6 +79,7 @@ export interface IFilterConfig {
   dexpub: boolean;
   mixins: boolean;
   modrinth: boolean;
+  mcmod: boolean;
 }
 
 /**
@@ -120,6 +122,7 @@ export interface IModCheckResult {
 export interface IModCheckConfig {
   enableDexpub: boolean;
   enableModrinth: boolean;
+  enableMcmod: boolean;
   enableMixin: boolean;
   enableHash: boolean;
   timeout: number;

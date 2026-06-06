@@ -1,3 +1,7 @@
 packages:
   - 'backend'
   - 'front'
+allowBuilds:
+  core-js: true
+  esbuild: true
+  unrs-resolver: true

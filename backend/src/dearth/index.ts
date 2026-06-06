@@ -21,5 +21,6 @@ export {
   HashFilter,
   MixinFilter,
   DexpubFilter,
-  ModrinthFilter
+  ModrinthFilter,
+  McmodFilter
 } from "./strategies/index.js";
