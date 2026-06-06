@@ -165,6 +165,8 @@
     "filter_dexpub_desc": "過濾 Galaxy Square 平台中記錄的客戶端檔案",
     "filter_modrinth_name": "Modrinth API 過濾",
     "filter_modrinth_desc": "透過 Modrinth API 檢查模組的客戶端/伺服器相容性",
+    "filter_mcmod_name": "MCMOD 過濾",
+    "filter_mcmod_desc": "透過 MCMOD 資料庫檢查模組的客戶端/伺服器相容性",
     "filter_mixins_name": "Mixin 過濾",
     "filter_mixins_desc": "過濾 Client Mixin 相關檔案",
     "mirror_mcimirror_name": "MCIM 鏡像來源",

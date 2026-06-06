@@ -3,22 +3,14 @@ import zhCn from '../../lang/zh_cn.json';
 import zhHk from '../../lang/zh_hk.json';
 import zhTw from '../../lang/zh_tw.json';
 import enUs from '../../lang/en_us.json';
-import jaJp from '../../lang/ja_jp.json';
-import frFr from '../../lang/fr_fr.json';
-import deDe from '../../lang/de_de.json';
-import esEs from '../../lang/es_es.json';
 
-export type Language = 'zh_cn' | 'zh_hk' | 'zh_tw' | 'en_us' | 'ja_jp' | 'fr_fr' | 'de_de' | 'es_es';
+export type Language = 'zh_cn' | 'zh_hk' | 'zh_tw' | 'en_us';
 
 const messages = {
   zh_cn: zhCn,
   zh_hk: zhHk,
   zh_tw: zhTw,
-  en_us: enUs,
-  ja_jp: jaJp,
-  fr_fr: frFr,
-  de_de: deDe,
-  es_es: esEs
+  en_us: enUs
 };
 
 const LANGUAGE_STORAGE_KEY = 'deearthx_language';
