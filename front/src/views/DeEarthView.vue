@@ -63,7 +63,6 @@ async function handleCheck() {
         return;
     }
 
-    // 清理旧连接
     if (socket) {
         socket.disconnect();
         socket = null;
@@ -74,7 +73,6 @@ async function handleCheck() {
     showProgress.value = false;
     results.value = [];
 
-    // 连接 Socket.IO
     const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
     const wsPort = import.meta.env.VITE_WS_PORT || '37019';
     socket = io(`${wsHost}:${wsPort}/`, {
@@ -85,7 +83,6 @@ async function handleCheck() {
 
     socket.on('connect', () => {
         console.log('Socket.IO 已连接');
-        // 通过 Socket.IO 发送检查请求
         socket!.emit('modcheck:start', {
             folderPath: selectedFolder.value,
             bundleName: bundleName.value.trim()
@@ -145,102 +142,115 @@ async function handleCheck() {
 </script>
 
 <template>
-    <div class="tw:h-full tw:w-full tw:flex tw:flex-col tw:p-4 md:tw:p-6 tw:overflow-auto">
-        <div class="tw:mb-4 md:tw:mb-6">
-            <h1 class="tw:text-xl md:tw:text-2xl tw:font-bold tw:mb-2">模组检查</h1>
-            <p class="tw:text-gray-500 tw:text-sm md:tw:text-base">检查模组是否可以在客户端或服务端使用</p>
-        </div>
-
-        <a-card class="tw:mb-4 md:tw:mb-6">
-            <div class="tw:mb-4">
-                <a-button
-                    type="default"
-                    size="large"
-                    block
-                    @click="selectFolder"
-                    class="tw:mb-4"
-                >
-                    <template #icon>
-                        <FolderOpenOutlined />
-                    </template>
-                    选择 mods 文件夹
-                </a-button>
-                <div v-if="selectedFolder" class="tw:mb-4 tw:p-3 tw:bg-gray-50 tw:rounded tw:text-sm tw:text-gray-600">
-                    <span class="tw:font-medium">已选择:</span> {{ selectedFolder }}
-                </div>
+    <div class="tw:h-full tw:w-full tw:overflow-y-auto tw:p-6">
+        <div class="tw:mx-auto tw:flex tw:w-full tw:max-w-5xl tw:flex-col tw:gap-6">
+            <div>
+                <h1 class="tw:text-2xl tw:font-semibold tw:text-slate-900">模组检查</h1>
+                <p class="tw:mt-1 tw:text-sm tw:text-slate-500">检查模组是否适合客户端或服务端环境，并整理筛选结果。</p>
             </div>
 
-            <div class="tw:mb-4">
-                <a-input
-                    v-model:value="bundleName"
-                    placeholder="请输入整合包名字"
-                    size="large"
-                    allow-clear
+            <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
+                <div class="tw:grid tw:gap-4 lg:tw:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
+                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">选择 mods 文件夹</div>
+                        <a-button
+                            type="default"
+                            size="large"
+                            block
+                            @click="selectFolder"
+                        >
+                            <template #icon>
+                                <FolderOpenOutlined />
+                            </template>
+                            选择 mods 文件夹
+                        </a-button>
+                        <div v-if="selectedFolder" class="tw:mt-3 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-white tw:p-3 tw:text-sm tw:text-slate-600">
+                            <span class="tw:font-medium">已选择:</span> {{ selectedFolder }}
+                        </div>
+                    </div>
+
+                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
+                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">整合包信息</div>
+                        <a-input
+                            v-model:value="bundleName"
+                            placeholder="请输入整合包名字"
+                            size="large"
+                            allow-clear
+                        />
+                        <div class="tw:mt-2 tw:text-xs tw:text-slate-400">
+                            客户端模组将保存到 .rubbish/{{ bundleName || '整合包名字' }} 目录
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tw:mt-4 tw:flex tw:flex-wrap tw:gap-3">
+                    <a-button
+                        type="primary"
+                        size="large"
+                        :loading="checking"
+                        @click="handleCheck"
+                        :disabled="checking || !selectedFolder || !bundleName.trim()"
+                    >
+                        <template #icon>
+                            <FileSearchOutlined />
+                        </template>
+                        {{ checking ? '检查中...' : '开始检查' }}
+                    </a-button>
+                </div>
+            </section>
+
+            <section v-if="showProgress && checking" class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
+                <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">检查进度</div>
+                <a-progress
+                    :percent="progress.percent"
+                    :status="progress.percent === 100 ? 'success' : 'active'"
                 />
-                <div class="tw:mt-2 tw:text-xs tw:text-gray-400">
-                    客户端模组将保存到 .rubbish/{{ bundleName || '整合包名字' }} 目录
+                <div class="tw:mt-2 tw:text-sm tw:text-slate-500">
+                    正在处理: {{ progress.modName }} ({{ progress.current }} / {{ progress.total }})
                 </div>
-            </div>
+            </section>
 
-            <a-button
-                type="primary"
-                size="large"
-                :loading="checking"
-                block
-                @click="handleCheck"
-                :disabled="checking || !selectedFolder || !bundleName.trim()"
-            >
-                <template #icon>
-                    <FileSearchOutlined />
-                </template>
-                {{ checking ? '检查中...' : '开始检查' }}
-            </a-button>
-        </a-card>
+            <section v-if="showResults" class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
+                <div class="tw:mb-4 tw:flex tw:flex-col tw:gap-1 md:tw:flex-row md:tw:items-end md:tw:justify-between">
+                    <div>
+                        <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">检查结果</h2>
+                        <p class="tw:text-sm tw:text-slate-500">已完成的模组分类与筛选结果。</p>
+                    </div>
+                </div>
 
-        <!-- 进度显示 -->
-        <a-card v-if="showProgress && checking" class="tw:mb-4">
-            <a-progress
-                :percent="progress.percent"
-                :status="progress.percent === 100 ? 'success' : 'active'"
-            />
-            <div class="tw:text-sm tw:text-gray-500 tw:mt-2">
-                正在处理: {{ progress.modName }} ({{ progress.current }} / {{ progress.total }})
-            </div>
-        </a-card>
+                <div v-if="results.length > 0" class="tw:overflow-x-auto">
+                    <a-table
+                        :dataSource="results"
+                        :pagination="false"
+                        :scroll="{ y: 320, x: 'max-content' }"
+                        size="small"
+                        :bordered="true"
+                    >
+                        <a-table-column title="模组信息" key="modInfo" :width="280">
+                            <template #default="{ record }">
+                                <div class="tw:min-w-0 tw:overflow-hidden">
+                                    <div class="tw:truncate tw:text-sm tw:font-medium tw:text-slate-800">{{ record.filename }}</div>
+                                </div>
+                            </template>
+                        </a-table-column>
+                        <a-table-column title="类型" key="type" :width="120">
+                            <template #default="{ record }">
+                                <a-tag v-if="record.clientSide === 'required' || record.clientSide === 'optional'" color="purple">
+                                    客户端模组
+                                </a-tag>
+                                <a-tag v-else-if="record.serverSide === 'required' || record.serverSide === 'optional'" color="blue">
+                                    服务端模组
+                                </a-tag>
+                                <a-tag v-else color="gray">
+                                    未知
+                                </a-tag>
+                            </template>
+                        </a-table-column>
+                    </a-table>
+                </div>
 
-        <a-card v-if="showResults" title="检查结果">
-            <div class="tw:overflow-x-auto">
-                <a-table
-                    :dataSource="results"
-                    :pagination="false"
-                    :scroll="{ y: 300, x: 'max-content' }"
-                    size="small"
-                    :bordered="true"
-                >
-                    <a-table-column title="模组信息" key="modInfo" :width="250">
-                        <template #default="{ record }">
-                            <div class="tw:overflow-hidden tw:flex-1 tw:min-w-0">
-                                <div class="tw:font-medium tw:truncate tw:text-sm md:tw:text-base">{{ record.filename }}</div>
-                            </div>
-                        </template>
-                    </a-table-column>
-                    <a-table-column title="类型" key="type" :width="100">
-                        <template #default="{ record }">
-                            <a-tag v-if="record.clientSide === 'required' || record.clientSide === 'optional'" color="purple">
-                                客户端模组
-                            </a-tag>
-                            <a-tag v-else-if="record.serverSide === 'required' || record.serverSide === 'optional'" color="blue">
-                                服务端模组
-                            </a-tag>
-                            <a-tag v-else color="gray">
-                                未知
-                            </a-tag>
-                        </template>
-                    </a-table-column>
-                </a-table>
-            </div>
-        </a-card>
-
-        <a-empty v-if="showResults && results.length === 0" description="未找到模组文件" />
+                <a-empty v-else description="未找到模组文件" />
+            </section>
+        </div>
     </div>
 </template>

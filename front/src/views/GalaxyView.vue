@@ -1,24 +1,20 @@
 <template>
-    <div class="tw:h-full tw:w-full tw:p-4 tw:overflow-auto tw:bg-gray-50">
-        <div class="tw:max-w-2xl tw:mx-auto">
-            <div class="tw:text-center tw:mb-8">
-                <h1 class="tw:text-2xl tw:font-bold tw:tracking-tight">
-                    <span
-                        class="tw:bg-gradient-to-r tw:from-cyan-300 tw:to-purple-950 tw:bg-clip-text tw:text-transparent">
-                        {{ t('galaxy.title') }}
-                    </span>
-                </h1>
-                <p class="tw:text-gray-500 tw:mt-2">{{ t('galaxy.subtitle') }}</p>
+    <div class="tw:h-full tw:w-full tw:overflow-y-auto tw:p-6">
+        <div class="tw:mx-auto tw:flex tw:w-full tw:max-w-4xl tw:flex-col tw:gap-6">
+            <div>
+                <h1 class="tw:text-2xl tw:font-semibold tw:text-slate-900">{{ t('galaxy.title') }}</h1>
+                <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('galaxy.subtitle') }}</p>
             </div>
 
-            <div class="tw:bg-white tw:rounded-lg tw:shadow-sm tw:p-6 tw:mb-6">
-                <h2 class="tw:text-lg tw:font-semibold tw:text-gray-800 tw:mb-4 tw:flex tw:items-center tw:gap-2">
-                    <span class="tw:w-2 tw:h-2 tw:bg-purple-500 tw:rounded-full"></span>
-                    {{ t('galaxy.mod_submit_title') }}
-                </h2>
+            <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
+                <div class="tw:mb-5">
+                    <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">{{ t('galaxy.mod_submit_title') }}</h2>
+                    <p class="tw:mt-1 tw:text-sm tw:text-slate-500">上传模组文件或填写 modid，然后提交到 Galaxy Square。</p>
+                </div>
+
                 <div class="tw:flex tw:flex-col tw:gap-4">
-                    <div>
-                        <label class="tw:block tw:text-sm tw:font-medium tw:text-gray-700 tw:mb-2">
+                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
+                        <label class="tw:mb-2 tw:block tw:text-sm tw:font-medium tw:text-slate-700">
                             {{ t('galaxy.mod_type_label') }}
                         </label>
                         <a-radio-group v-model:value="modType" size="default" button-style="solid">
@@ -27,8 +23,8 @@
                         </a-radio-group>
                     </div>
 
-                    <div>
-                        <label class="tw:block tw:text-sm tw:font-medium tw:text-gray-700 tw:mb-2">
+                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
+                        <label class="tw:mb-2 tw:block tw:text-sm tw:font-medium tw:text-slate-700">
                             {{ t('galaxy.modid_label') }}
                         </label>
                         <a-input
@@ -37,13 +33,13 @@
                             size="large"
                             allow-clear
                         />
-                        <p class="tw:text-xs tw:text-gray-400 tw:mt-1">
+                        <p class="tw:mt-2 tw:text-xs tw:text-slate-400">
                             {{ t('galaxy.modid_count', { count: modidList.length }) }}
                         </p>
                     </div>
 
-                    <div>
-                        <label class="tw:block tw:text-sm tw:font-medium tw:text-gray-700 tw:mb-2">
+                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
+                        <label class="tw:mb-2 tw:block tw:text-sm tw:font-medium tw:text-slate-700">
                             {{ t('galaxy.upload_file_label') }}
                         </label>
                         <a-upload-dragger
@@ -62,22 +58,22 @@
                             </p>
                         </a-upload-dragger>
 
-                        <div v-if="hasDroppedFiles" class="tw:mt-2 tw:p-2 tw:bg-green-50 tw:rounded-lg tw:border tw:border-green-200">
-                            <div class="tw:flex tw:items-center tw:justify-between">
-                                <span class="tw:text-green-600 tw:text-sm">{{ t('galaxy.files_dropped', { count: droppedFilesCount }) }}</span>
-                                <a-button type="text" size="small" @click="handleClearDroppedFile" class="tw:text-gray-400 hover:tw:text-red-500">
+                        <div v-if="hasDroppedFiles" class="tw:mt-3 tw:rounded-lg tw:border tw:border-emerald-200 tw:bg-emerald-50 tw:p-3">
+                            <div class="tw:flex tw:items-center tw:justify-between tw:gap-3">
+                                <span class="tw:text-sm tw:text-emerald-700">{{ t('galaxy.files_dropped', { count: droppedFilesCount }) }}</span>
+                                <a-button type="text" size="small" @click="handleClearDroppedFile" class="tw:text-slate-400 hover:tw:text-red-500">
                                     <template #icon><CloseCircleOutlined /></template>
                                 </a-button>
                             </div>
-                            <div class="tw:mt-1 tw:max-h-20 tw:overflow-y-auto">
-                                <div v-for="(name, idx) in droppedFilesNames" :key="idx" class="tw:text-xs tw:text-gray-500 tw:truncate">
+                            <div class="tw:mt-2 tw:max-h-20 tw:overflow-y-auto tw:space-y-1">
+                                <div v-for="(name, idx) in droppedFilesNames" :key="idx" class="tw:text-xs tw:text-slate-500 tw:truncate">
                                     {{ name }}
                                 </div>
                             </div>
                         </div>
 
                         <div v-if="fileList.length > 0 || hasDroppedFiles" class="tw:mt-4">
-                            <p v-if="fileList.length > 0" class="tw:text-sm tw:font-medium tw:text-gray-700 tw:mb-2">
+                            <p v-if="fileList.length > 0" class="tw:mb-2 tw:text-sm tw:font-medium tw:text-slate-700">
                                 {{ t('galaxy.file_selected', { count: fileList.length }) }}
                             </p>
                             <div v-if="uploading" class="tw:mb-4">
@@ -98,7 +94,7 @@
                         </div>
                     </div>
 
-                    <div v-if="modidList.length > 0" class="tw:mt-2">
+                    <div v-if="modidList.length > 0" class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
                         <a-button
                             type="primary"
                             size="large"
@@ -113,7 +109,7 @@
                         </a-button>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 </template>
@@ -147,7 +143,6 @@ const modidInput = computed({
     }
 });
 
-// Galaxy 只接受 .jar 文件
 const validDroppedFiles = computed(() => {
     if (droppedFilePaths && 'value' in droppedFilePaths && droppedFilePaths.value.length > 0) {
         const validExtensions = ['.jar'];
@@ -167,7 +162,6 @@ const droppedFilesNames = computed(() => {
     });
 });
 
-// 监听拖放，无效文件时提示
 watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.value : [], (paths) => {
     if (paths.length > 0) {
         const validExtensions = ['.jar'];
