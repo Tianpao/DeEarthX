@@ -20,7 +20,10 @@ export interface MirrorUrls {
 
 export function getMirrorUrls(): MirrorUrls {
   const config = Config.getConfig();
-  if (config.mirror.mcimirror) {
+  const mcimMode = config.mirror.mcimirror;
+
+  // 'on': 全部使用 MCIM 镜像
+  if (mcimMode === 'on') {
     return {
       modrinth_url: "https://mod.mcimirror.top/modrinth",
       curseforge_url: "https://mod.mcimirror.top/curseforge",
@@ -28,6 +31,18 @@ export function getMirrorUrls(): MirrorUrls {
       curseforge_Durl: "https://mod.mcimirror.top",
     };
   }
+
+  // 'partial': 仅 Modrinth 下载使用 MCIM，API 使用官方
+  if (mcimMode === 'partial') {
+    return {
+      modrinth_url: "https://api.modrinth.com",
+      curseforge_url: "https://api.curseforge.com",
+      modrinth_Durl: "https://mod.mcimirror.top",
+      curseforge_Durl: "https://edge.forgecdn.net",
+    };
+  }
+
+  // 'off': 全部使用官方源
   return {
     modrinth_url: "https://api.modrinth.com",
     curseforge_url: "https://api.curseforge.com",

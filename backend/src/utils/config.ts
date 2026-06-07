@@ -6,7 +6,7 @@ import { getAppDir } from './appdir.js';
 export interface IConfig {
   mirror: {
     bmclapi: boolean;
-    mcimirror: boolean;
+    mcimirror: 'on' | 'off' | 'partial';
   };
   filter: {
     hashes: boolean;
@@ -25,7 +25,7 @@ export interface IConfig {
 const DEFAULT_CONFIG: IConfig = {
   mirror: {
     bmclapi: true,
-    mcimirror: true,
+    mcimirror: 'on',
   },
   filter: {
     hashes: true,
@@ -57,17 +57,34 @@ function getEnv<T>(key: string, defaultValue: T): T {
   if (value === undefined) {
     return defaultValue;
   }
-  
+
   if (typeof defaultValue === 'boolean') {
     return (value.toLowerCase() === 'true') as unknown as T;
   }
-  
+
   if (typeof defaultValue === 'number') {
     const num = parseInt(value, 10);
     return (isNaN(num) ? defaultValue : num) as unknown as T;
   }
-  
+
   return value as unknown as T;
+}
+
+/**
+ * 验证并规范化 mcimirror 配置值
+ */
+function normalizeMcimirror(value: unknown): 'on' | 'off' | 'partial' {
+  if (value === 'on' || value === 'off' || value === 'partial') {
+    return value;
+  }
+  // 兼容旧的布尔值配置
+  if (value === true) {
+    return 'on';
+  }
+  if (value === false) {
+    return 'off';
+  }
+  return 'on'; // 默认值
 }
 
 /**
@@ -103,7 +120,7 @@ export class Config {
     const envConfig: IConfig = {
       mirror: {
         bmclapi: getEnv('DEEARTHX_MIRROR_BMCLAPI', config.mirror.bmclapi),
-        mcimirror: getEnv('DEEARTHX_MIRROR_MCIMIRROR', config.mirror.mcimirror)
+        mcimirror: normalizeMcimirror(getEnv('DEEARTHX_MIRROR_MCIMIRROR', config.mirror.mcimirror))
       },
       filter: {
         hashes: getEnv('DEEARTHX_FILTER_HASHES', config.filter.hashes),

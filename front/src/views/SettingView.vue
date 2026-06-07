@@ -17,7 +17,7 @@ import axios from '../utils/axios';
 interface AppConfig {
   mirror: {
     bmclapi: boolean;
-    mcimirror: boolean;
+    mcimirror: 'on' | 'off' | 'partial';
   };
   filter: {
     hashes: boolean;
@@ -39,19 +39,28 @@ interface SettingItem {
   defaultValue: boolean;
 }
 
+interface SettingSelectItem {
+  key: string;
+  name: string;
+  description: string;
+  path: string;
+  options: { label: string; value: string }[];
+}
+
 interface SettingCategory {
   id: string;
   title: string;
   icon: Component;
   accent: 'emerald' | 'sky' | 'slate';
   items: SettingItem[];
+  selectItems?: SettingSelectItem[];
   hasLanguage?: boolean;
 }
 
 const { t, locale } = useI18n();
 
 const config = ref<AppConfig>({
-  mirror: { bmclapi: false, mcimirror: false },
+  mirror: { bmclapi: false, mcimirror: 'on' },
   filter: { hashes: false, dexpub: false, mixins: false, modrinth: false, mcmod: false },
   oaf: false,
   autoZip: false,
@@ -129,14 +138,20 @@ const settings = computed<SettingCategory[]>(() => {
       title: t('setting.category_mirror'),
       icon: CloudDownloadOutlined,
       accent: 'sky',
-      items: [
+      selectItems: [
         {
           key: 'mcimirror',
           name: t('setting.mirror_mcimirror_name'),
           description: t('setting.mirror_mcimirror_desc'),
           path: 'mirror.mcimirror',
-          defaultValue: false
-        },
+          options: [
+            { label: t('setting.mirror_mcim_on'), value: 'on' },
+            { label: t('setting.mirror_mcim_partial'), value: 'partial' },
+            { label: t('setting.mirror_mcim_off'), value: 'off' }
+          ]
+        }
+      ],
+      items: [
         {
           key: 'bmclapi',
           name: t('setting.mirror_bmclapi_name'),
@@ -202,6 +217,33 @@ function getConfigValue(path: string): boolean {
 }
 
 function setConfigValue(path: string, newValue: boolean): void {
+  const keys = path.split('.');
+  let obj: any = config.value;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    obj = obj[keys[i]];
+  }
+
+  obj[keys[keys.length - 1]] = newValue;
+}
+
+function getSelectConfigValue(path: string): string {
+  const keys = path.split('.');
+  let value: any = config.value;
+
+  for (const key of keys) {
+    value = value[key];
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  console.warn(`Config value at path "${path}" is not a string:`, value);
+  return 'on';
+}
+
+function setSelectConfigValue(path: string, newValue: string): void {
   const keys = path.split('.');
   let obj: any = config.value;
 
@@ -337,6 +379,32 @@ onUnmounted(() => {
               @change="setConfigValue(item.path, $event)"
               :checked-children="t('setting.switch_on')"
               :un-checked-children="t('setting.switch_off')"
+            />
+          </article>
+
+          <article
+            v-for="item in category.selectItems"
+            :key="item.key"
+            class="setting-card tw:flex tw:min-h-[72px] tw:items-center tw:justify-between tw:gap-2.5 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-2.5 tw:transition-colors hover:tw:bg-white"
+            :class="categoryAccentClasses[category.accent].border"
+          >
+            <div class="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2.5">
+              <div
+                class="tw:flex tw:h-6 tw:w-6 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md"
+                :class="[categoryAccentClasses[category.accent].soft, categoryAccentClasses[category.accent].text]"
+              >
+                <CloudDownloadOutlined />
+              </div>
+              <div class="tw:min-w-0 tw:flex-1">
+                <h3 class="tw:text-[13px] tw:font-semibold tw:text-slate-900">{{ item.name }}</h3>
+                <p class="tw:mt-0.5 tw:line-clamp-1 tw:text-xs tw:leading-4 tw:text-slate-500">{{ item.description }}</p>
+              </div>
+            </div>
+            <a-segmented
+              :value="getSelectConfigValue(item.path)"
+              :options="item.options"
+              @change="setSelectConfigValue(item.path, $event)"
+              class="tw:shrink-0"
             />
           </article>
         </div>
