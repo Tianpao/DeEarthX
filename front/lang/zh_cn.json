@@ -188,7 +188,6 @@
     "language_desc": "选择界面显示语言",
     "language_chinese": "简体中文",
     "language_english": "English",
-    "config_saved": "配置已保存",
     "config_load_failed": "加载配置失败",
     "config_save_failed": "保存配置失败",
     "export_config": "导出配置",

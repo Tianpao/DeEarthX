@@ -186,7 +186,6 @@
     "language_desc": "選擇介面顯示語言",
     "language_chinese": "簡體中文",
     "language_english": "English",
-    "config_saved": "設定已儲存",
     "config_load_failed": "載入設定失敗",
     "config_save_failed": "儲存設定失敗",
     "export_config": "匯出設定",

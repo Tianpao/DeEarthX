@@ -274,7 +274,6 @@ async function saveConfig(newConfig: AppConfig) {
     await axios.post('/config/post', newConfig, {
       headers: { 'Content-Type': 'application/json' }
     });
-    message.success(t('setting.config_saved'));
   } catch (error) {
     console.error('保存配置失败:', error);
     message.error(t('setting.config_save_failed'));
@@ -302,12 +301,12 @@ onUnmounted(() => {
 <template>
   <div class="tw:h-full tw:w-full tw:overflow-y-auto tw:p-6">
     <div class="tw:mx-auto tw:flex tw:w-full tw:max-w-5xl tw:flex-col tw:gap-6">
-      <div>
-        <h1 class="tw:flex tw:flex-wrap tw:items-baseline tw:gap-x-3 tw:text-2xl tw:font-semibold tw:text-slate-900">
-          <span class="flowing-brand-text">{{ t('common.app_name') }}</span>
-          <span>{{ t('menu.setting') }}</span>
-        </h1>
-        <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('setting.subtitle') }}</p>
+      <div class="tw:flex tw:items-center tw:justify-between">
+        <div>
+          <h1 class="tw:text-2xl tw:font-semibold tw:text-slate-900">{{ t('menu.setting') }}</h1>
+          <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('setting.subtitle') }}</p>
+        </div>
+        <span class="flowing-brand-text tw:text-4xl tw:font-semibold">{{ t('common.app_name') }}</span>
       </div>
 
       <section

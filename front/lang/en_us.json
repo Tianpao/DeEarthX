@@ -188,7 +188,6 @@
     "language_desc": "Select interface display language",
     "language_chinese": "简体中文",
     "language_english": "English",
-    "config_saved": "Configuration saved",
     "config_load_failed": "Failed to load configuration",
     "config_save_failed": "Failed to save configuration",
     "export_config": "Export Config",
