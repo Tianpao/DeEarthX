@@ -3,17 +3,18 @@ import { GithubOutlined } from '@ant-design/icons-vue';
 import { open } from "@tauri-apps/plugin-shell";
 import { ref, onMounted, computed } from "vue";
 import { useI18n } from 'vue-i18n';
+import axiosInstance from '@/utils/axios';
 
 const { t } = useI18n();
 const githubUrl = 'https://github.com/Tianpao/DeEarthX';
 
 interface Sponsor {
-    id: string;
+    id: number | string;
     name: string;
     imageUrl: string;
     type: string;
     url: string;
-    tone: 'gold' | 'blue' | 'emerald' | 'violet';
+    tone: 'gold' | 'silver' | 'bronze' | 'blue' | 'emerald' | 'violet';
 }
 
 interface VersionInfo {
@@ -25,6 +26,17 @@ interface VersionInfo {
 const sponsors = ref<Sponsor[]>([]);
 const currentVersion = ref<string>(t('common.loading'));
 const buildTime = ref<string>('');
+
+const localSponsors: Sponsor[] = [
+    {
+        id: "elfidc",
+        name: "亿讯云",
+        imageUrl: "./elfidc.svg",
+        type: t('about.sponsor_type_gold'),
+        url: "https://www.elfidc.com",
+        tone: 'gold'
+    }
+];
 
 async function getVersionFromJson(): Promise<VersionInfo> {
     try {
@@ -50,16 +62,23 @@ async function getCurrentVersion() {
 }
 
 async function fetchSponsors() {
-    sponsors.value = [
-        {
-            id: "elfidc",
-            name: "亿讯云",
-            imageUrl: "./elfidc.svg",
-            type: t('about.sponsor_type_gold'),
-            url: "https://www.elfidc.com",
-            tone: 'gold'
+    try {
+        const response = await axiosInstance.get<Sponsor[]>('http://localhost:37019/sponsor/', {
+            timeout: 5000
+        });
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+            sponsors.value = response.data.map(s => ({
+                ...s,
+                type: s.tone === 'gold' ? t('about.sponsor_type_gold') :
+                      s.tone === 'silver' ? '银牌赞助' : '铜牌赞助'
+            }));
+        } else {
+            sponsors.value = localSponsors;
         }
-    ];
+    } catch (error) {
+        console.warn('获取云端赞助商列表失败，使用本地数据:', error);
+        sponsors.value = localSponsors;
+    }
 }
 
 const thanksList = computed(() => {
@@ -95,6 +114,8 @@ const thanksList = computed(() => {
 
 const sponsorToneClasses: Record<Sponsor['tone'], string> = {
     gold: 'tw:bg-amber-50 tw:text-amber-700 tw:ring-1 tw:ring-amber-200',
+    silver: 'tw:bg-slate-100 tw:text-slate-600 tw:ring-1 tw:ring-slate-200',
+    bronze: 'tw:bg-orange-50 tw:text-orange-700 tw:ring-1 tw:ring-orange-200',
     blue: 'tw:bg-sky-50 tw:text-sky-700 tw:ring-1 tw:ring-sky-200',
     emerald: 'tw:bg-emerald-50 tw:text-emerald-700 tw:ring-1 tw:ring-emerald-200',
     violet: 'tw:bg-violet-50 tw:text-violet-700 tw:ring-1 tw:ring-violet-200'
