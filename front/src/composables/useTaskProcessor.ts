@@ -3,7 +3,6 @@ import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
-import { useFileUpload } from '@/composables/useFileUpload';
 import { useModeSelection } from '@/composables/useModeSelection';
 import { useTemplateSelection } from '@/composables/useTemplateSelection';
 import { useProgress } from '@/composables/useProgress';
@@ -13,18 +12,31 @@ import axiosInstance from '@/utils/axios';
 export function useTaskProcessor() {
     const { t } = useI18n();
     const killCoreProcess = inject<(() => void) | undefined>("killCoreProcess");
-    const droppedFilePaths = inject<ReturnType<typeof import('@/composables/useDragDrop').useDragDrop>['droppedFilePaths']>('droppedFilePaths');
     const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
-    // Initialize all sub-composables
-    const {
-        uploadedFiles,
-        uploadDisabled,
-        beforeUpload,
-        handleFileChange,
-        handleFileDrop
-    } = useFileUpload();
+    // 文件路径（用于统一UI显示，可能带有 selected- 前缀表示通过对话框选择）
+    const droppedFilePath = ref<string | null>(null);
+    const uploadDisabled = ref(false);
 
+    function setDroppedFilePath(path: string) {
+        droppedFilePath.value = path;
+    }
+
+    function clearDroppedFilePath() {
+        droppedFilePath.value = null;
+    }
+
+    // 获取实际的文件路径（去除 selected- 前缀）
+    function getActualFilePath(): string | null {
+        if (!droppedFilePath.value) return null;
+        const path = droppedFilePath.value;
+        if (path.startsWith('selected-')) {
+            return path.substring(8); // 移除 'selected-' 前缀
+        }
+        return path;
+    }
+
+    // Initialize all sub-composables
     const {
         javaAvailable,
         selectedMode,
@@ -77,91 +89,15 @@ export function useTaskProcessor() {
     const startButtonDisabled = ref(false);
 
     function resetState() {
-        uploadedFiles.value = [];
         uploadDisabled.value = false;
         startButtonDisabled.value = false;
         resetProgress();
+        droppedFilePath.value = null;
         if (clearDroppedFile) {
             clearDroppedFile();
         }
         if (killCoreProcess && typeof killCoreProcess === 'function') {
             killCoreProcess();
-        }
-    }
-
-    async function runDeEarthX(file: File, socket: Socket) {
-        message.success(t('home.start_production'));
-        showSteps.value = true;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            message.loading(t('home.task_preparing'));
-            const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
-            const apiPort = import.meta.env.VITE_API_PORT || '37019';
-            let url = `http://${apiHost}:${apiPort}/start?mode=${selectedMode.value}`;
-
-            if (selectedMode.value === 'server' && selectedTemplate.value) {
-                url += `&template=${encodeURIComponent(selectedTemplate.value)}`;
-            }
-
-            uploadProgress.value = { status: 'active', percent: 0, display: true };
-            startTime.value = Date.now();
-
-            await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', url, true);
-
-                xhr.upload.addEventListener('progress', (event) => {
-                    if (event.lengthComputable) {
-                        const percent = Math.round((event.loaded / event.total) * 100);
-                        uploadProgress.value.percent = percent;
-                        uploadProgress.value.uploadedSize = event.loaded;
-                        uploadProgress.value.totalSize = event.total;
-
-                        const elapsedTime = (Date.now() - startTime.value) / 1000;
-                        if (elapsedTime > 0) {
-                            uploadProgress.value.speed = event.loaded / elapsedTime;
-
-                            const remainingBytes = event.total - event.loaded;
-                            uploadProgress.value.remainingTime = remainingBytes / uploadProgress.value.speed;
-                        }
-                    }
-                });
-
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        uploadProgress.value.status = 'success';
-                        uploadProgress.value.percent = 100;
-                        setTimeout(() => {
-                            uploadProgress.value.display = false;
-                        }, 2000);
-                        resolve(xhr.response);
-                    } else {
-                        uploadProgress.value.status = 'exception';
-                        reject(new Error(`HTTP ${xhr.status}`));
-                    }
-                });
-
-                xhr.addEventListener('error', () => {
-                    uploadProgress.value.status = 'exception';
-                    reject(new Error('网络错误'));
-                });
-
-                xhr.addEventListener('abort', () => {
-                    uploadProgress.value.status = 'exception';
-                    reject(new Error('上传已取消'));
-                });
-
-                xhr.send(formData);
-            });
-        } catch (error) {
-            console.error('请求失败:', error);
-            message.error(t('home.request_failed'));
-            uploadProgress.value.status = 'exception';
-            resetState();
-            socket.disconnect();
         }
     }
 
@@ -191,19 +127,9 @@ export function useTaskProcessor() {
     }
 
     function handleStartProcess() {
-        // 获取有效的拖放文件（仅 .zip/.mrpack）
-        let validPath: string | null = null;
-        if (droppedFilePaths && 'value' in droppedFilePaths && droppedFilePaths.value.length > 0) {
-            const validExtensions = ['.zip', '.mrpack'];
-            const path = droppedFilePaths.value[0];
-            const ext = path.toLowerCase().substring(path.lastIndexOf('.'));
-            if (validExtensions.includes(ext)) {
-                validPath = path;
-            }
-        }
-        const hasUploadedFile = uploadedFiles.value.length > 0;
+        const actualPath = getActualFilePath();
 
-        if (!validPath && !hasUploadedFile) {
+        if (!actualPath) {
             message.warning(t('home.please_select_file'));
             return;
         }
@@ -224,15 +150,7 @@ export function useTaskProcessor() {
 
         socket.on('connect', () => {
             message.success(t('home.ws_connected'));
-
-            if (validPath) {
-                runDeEarthXFromPath(validPath, socket);
-            } else if (hasUploadedFile) {
-                const file = uploadedFiles.value[0].originFileObj;
-                if (file) {
-                    runDeEarthX(file, socket);
-                }
-            }
+            runDeEarthXFromPath(actualPath, socket);
         });
 
         socket.on("finish", (timeSpent: number) => {
@@ -301,11 +219,11 @@ export function useTaskProcessor() {
 
     return {
         // File upload
-        uploadedFiles,
         uploadDisabled,
-        beforeUpload,
-        handleFileChange,
-        handleFileDrop,
+        // File path
+        droppedFilePath,
+        setDroppedFilePath,
+        clearDroppedFilePath,
         // Mode selection
         javaAvailable,
         selectedMode,

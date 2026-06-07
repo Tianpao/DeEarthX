@@ -177,11 +177,7 @@ const languageOptions = computed(() => {
     { label: '简体中文', value: 'zh_cn' },
     { label: '繁體中文（香港）', value: 'zh_hk' },
     { label: '繁體中文（台灣）', value: 'zh_tw' },
-    { label: 'English', value: 'en_us' },
-    { label: '日本語', value: 'ja_jp' },
-    { label: 'Français', value: 'fr_fr' },
-    { label: 'Deutsch', value: 'de_de' },
-    { label: 'Español', value: 'es_es' }
+    { label: 'English', value: 'en_us' }
   ];
 });
 

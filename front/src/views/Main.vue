@@ -1,21 +1,17 @@
 <script lang="ts" setup>
-import { inject, computed, watch } from 'vue';
-import { InboxOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
+import { inject, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { formatFileSize, formatTime } from '@/utils/format';
 import { useTaskProcessor } from '@/composables/useTaskProcessor';
+import FileSelector from '@/components/FileSelector.vue';
 
 const { t } = useI18n();
 const droppedFilePaths = inject<ReturnType<typeof import('@/composables/useDragDrop').useDragDrop>['droppedFilePaths']>('droppedFilePaths');
 const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
 const {
-    uploadedFiles,
     uploadDisabled,
-    beforeUpload,
-    handleFileChange,
-    handleFileDrop,
     selectedMode,
     modeOptions,
     handleModeSelect,
@@ -37,30 +33,32 @@ const {
     serverInstallInfo,
     filterModsInfo,
     startButtonDisabled,
-    handleStartProcess
+    handleStartProcess,
+    droppedFilePath,
+    setDroppedFilePath,
+    clearDroppedFilePath
 } = useTaskProcessor();
 
-// 主页只接受 .zip/.mrpack，取第一个文件
-const validDroppedFile = computed(() => {
-    if (droppedFilePaths && 'value' in droppedFilePaths && droppedFilePaths.value.length > 0) {
-        const validExtensions = ['.zip', '.mrpack'];
-        const path = droppedFilePaths.value[0];
-        const ext = path.toLowerCase().substring(path.lastIndexOf('.'));
-        if (validExtensions.includes(ext)) {
-            return path;
+// 文件列表（单个文件）
+const filePaths = computed({
+    get: () => droppedFilePath.value ? [droppedFilePath.value] : [],
+    set: (value) => {
+        if (value.length > 0) {
+            setDroppedFilePath(value[0]);
+            uploadDisabled.value = true;
+        } else {
+            clearDroppedFilePath();
+            uploadDisabled.value = false;
         }
     }
-    return null;
 });
 
-const hasDroppedFile = computed(() => validDroppedFile.value !== null);
-const droppedFileName = computed(() => {
-    if (validDroppedFile.value) {
-        const path = validDroppedFile.value;
-        return path.substring(Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/')) + 1);
-    }
-    return '';
-});
+import { computed } from 'vue';
+
+function handleFileRemove() {
+    clearDroppedFilePath();
+    uploadDisabled.value = false;
+}
 
 // 监听拖放，无效文件时提示
 watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.value : [], (paths) => {
@@ -81,15 +79,15 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
             if (clearDroppedFile) {
                 clearDroppedFile();
             }
+        } else {
+            setDroppedFilePath(firstPath);
+            uploadDisabled.value = true;
+            if (clearDroppedFile) {
+                clearDroppedFile();
+            }
         }
     }
 });
-
-function handleClearDroppedFile() {
-    if (clearDroppedFile) {
-        clearDroppedFile();
-    }
-}
 </script>
 <template>
     <div class="tw:h-full tw:w-full tw:relative tw:flex tw:flex-col">
@@ -99,24 +97,16 @@ function handleClearDroppedFile() {
                     <h1 class="tw:text-4xl tw:text-center tw:animate-pulse">{{ t('common.app_name') }}</h1>
                     <h1 class="tw:text-sm tw:text-gray-500 tw:text-center">{{ t('home.title') }}</h1>
                 </div>
-                <a-upload-dragger :disabled="uploadDisabled" class="tw:w-full tw:max-w-md tw:h-48" name="file"
-                    action="/" :multiple="false" :before-upload="beforeUpload" @change="handleFileChange"
-                    @drop="handleFileDrop" v-model:fileList="uploadedFiles" accept=".zip,.mrpack">
-                    <p class="ant-upload-drag-icon">
-                        <inbox-outlined></inbox-outlined>
-                    </p>
-                    <p class="ant-upload-text">{{ t('home.upload_title') }}</p>
-                    <p class="ant-upload-hint">
-                        {{ t('home.upload_hint') }}
-                    </p>
-                </a-upload-dragger>
-                <div v-if="hasDroppedFile" class="tw:w-full tw:max-w-md tw:mt-2 tw:p-2 tw:bg-green-50 tw:rounded-lg tw:border tw:border-green-200">
-                    <div class="tw:flex tw:items-center tw:justify-between">
-                        <span class="tw:text-green-600 tw:text-sm tw:truncate">{{ t('home.file_dropped', { name: droppedFileName }) }}</span>
-                        <a-button type="text" size="small" @click="handleClearDroppedFile" class="tw:text-gray-400 hover:tw:text-red-500">
-                            <template #icon><CloseCircleOutlined /></template>
-                        </a-button>
-                    </div>
+                <div class="tw:w-full tw:max-w-md">
+                    <FileSelector
+                        :accept="['zip', 'mrpack']"
+                        :multiple="false"
+                        :disabled="uploadDisabled"
+                        v-model:files="filePaths"
+                        @remove="handleFileRemove"
+                        :title="t('home.upload_title')"
+                        :hint="t('home.upload_hint')"
+                    />
                 </div>
                 <div class="tw:flex tw:items-center tw:gap-2 tw:mt-8">
                     <a-select ref="select" :options="modeOptions" :value="selectedMode"

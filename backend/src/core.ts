@@ -13,6 +13,7 @@ import { Server as SocketServer } from "socket.io";
 import { setupTemplateRoutes } from "./routes/templates.js";
 import { setupModCheckSocket } from "./routes/modcheck.js";
 import { setupDownloadRoutes } from "./routes/download.js";
+import { setupSponsorRoutes } from "./routes/sponsor.js";
 
 export class Core {
     private config: IConfig;
@@ -86,6 +87,7 @@ export class Core {
         this.setupJavaRoutes();
         this.setupTemplateRoutes();
         this.setupDownloadRoutes();
+        this.setupSponsorRoutes();
     }
 
     private setupMiddleware() {
@@ -285,6 +287,10 @@ export class Core {
 
     private setupDownloadRoutes() {
         setupDownloadRoutes(this.app, this.io);
+    }
+
+    private setupSponsorRoutes() {
+        setupSponsorRoutes(this.app);
     }
 
     public async start() {

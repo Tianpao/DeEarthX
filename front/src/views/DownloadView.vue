@@ -37,7 +37,7 @@ const loaderLabels: Record<string, string> = {
           <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
             <div class="tw:mb-3">
               <div class="tw:text-sm tw:font-medium tw:text-slate-800">{{ t('download.step1_title') }}</div>
-              <div class="tw:mt-1 tw:text-xs tw:text-slate-500">选择需要安装的 Minecraft 版本</div>
+              <div class="tw:mt-1 tw:text-xs tw:text-slate-500">{{ t('download.step1_desc') }}</div>
             </div>
             <a-select
               v-model:value="selectedMcVersion"
@@ -57,7 +57,7 @@ const loaderLabels: Record<string, string> = {
           <div v-if="selectedMcVersion && availableLoaders.length > 0" class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
             <div class="tw:mb-3">
               <div class="tw:text-sm tw:font-medium tw:text-slate-800">{{ t('download.step2_title') }}</div>
-              <div class="tw:mt-1 tw:text-xs tw:text-slate-500">选择服务端加载器类型</div>
+              <div class="tw:mt-1 tw:text-xs tw:text-slate-500">{{ t('download.step2_desc') }}</div>
             </div>
             <a-radio-group v-model:value="selectedLoader" @change="handleLoaderChange" size="large" class="tw:flex tw:flex-wrap tw:gap-2">
               <a-radio-button
@@ -73,7 +73,7 @@ const loaderLabels: Record<string, string> = {
           <div v-if="selectedLoader" class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
             <div class="tw:mb-3">
               <div class="tw:text-sm tw:font-medium tw:text-slate-800">{{ t('download.step3_title') }}</div>
-              <div class="tw:mt-1 tw:text-xs tw:text-slate-500">选择可用的加载器版本</div>
+              <div class="tw:mt-1 tw:text-xs tw:text-slate-500">{{ t('download.step3_desc') }}</div>
             </div>
             <a-select
               v-model:value="selectedLoaderVersion"
@@ -103,7 +103,7 @@ const loaderLabels: Record<string, string> = {
           <div v-if="selectedLoaderVersion" class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
             <div class="tw:mb-4">
               <div class="tw:text-sm tw:font-medium tw:text-slate-800">{{ t('download.step4_title') }}</div>
-              <div class="tw:mt-1 tw:text-xs tw:text-slate-500">选择安装方式并开始执行</div>
+              <div class="tw:mt-1 tw:text-xs tw:text-slate-500">{{ t('download.step4_desc') }}</div>
             </div>
 
             <a-radio-group v-model:value="autoInstall" class="tw:flex tw:flex-col tw:gap-3">
@@ -164,7 +164,7 @@ const loaderLabels: Record<string, string> = {
           </div>
 
           <div v-if="serverInstallProgress.display && !installCompleted" class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
-            <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">安装进度</div>
+            <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('download.install_progress') }}</div>
             <a-progress :percent="serverInstallProgress.percent" :status="serverInstallProgress.status" />
             <div v-if="serverInstallInfo.currentStep" class="tw:mt-2 tw:text-xs tw:text-slate-500">
               {{ serverInstallInfo.currentStep }}

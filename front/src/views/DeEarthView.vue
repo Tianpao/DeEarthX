@@ -5,6 +5,9 @@ import { FileSearchOutlined, FolderOpenOutlined } from '@ant-design/icons-vue';
 import { open } from '@tauri-apps/plugin-dialog';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface ModCheckResult {
     filename: string;
@@ -39,27 +42,27 @@ async function selectFolder() {
         const selected = await open({
             directory: true,
             multiple: false,
-            title: '选择 mods 文件夹'
+            title: t('deearth.select_folder_title')
         });
 
         if (selected) {
             selectedFolder.value = selected;
-            message.success(`已选择文件夹: ${selected}`);
+            message.success(t('deearth.select_folder_success', { path: selected }));
         }
     } catch (error) {
         console.error('选择文件夹失败:', error);
-        message.error('选择文件夹失败');
+        message.error(t('deearth.select_folder_failed'));
     }
 }
 
 async function handleCheck() {
     if (!selectedFolder.value) {
-        message.warning('请先选择 mods 文件夹');
+        message.warning(t('deearth.please_select_folder'));
         return;
     }
 
     if (!bundleName.value.trim()) {
-        message.warning('请输入整合包名字');
+        message.warning(t('deearth.please_enter_name'));
         return;
     }
 
@@ -111,7 +114,7 @@ async function handleCheck() {
     });
 
     socket.on('modcheck_complete', (data: any) => {
-        message.success(`检查完成，共检查 ${data.results.length} 个模组，筛选出 ${data.filteredCount} 个客户端模组`);
+        message.success(t('deearth.check_complete', { total: data.results.length, filtered: data.filteredCount }));
         results.value = data.results;
         showResults.value = true;
         showProgress.value = false;
@@ -120,7 +123,7 @@ async function handleCheck() {
     });
 
     socket.on('modcheck_error', (data: any) => {
-        message.error(`检查失败: ${data.error}`);
+        message.error(t('deearth.check_failed', { error: data.error }));
         checking.value = false;
         showProgress.value = false;
         socket?.disconnect();
@@ -132,7 +135,7 @@ async function handleCheck() {
 
     socket.on('connect_error', (error: any) => {
         console.error('Socket.IO 连接错误:', error);
-        message.error('连接错误');
+        message.error(t('deearth.connect_error'));
         checking.value = false;
         showProgress.value = false;
     });
@@ -145,14 +148,14 @@ async function handleCheck() {
     <div class="tw:h-full tw:w-full tw:overflow-y-auto tw:p-6">
         <div class="tw:mx-auto tw:flex tw:w-full tw:max-w-5xl tw:flex-col tw:gap-6">
             <div>
-                <h1 class="tw:text-2xl tw:font-semibold tw:text-slate-900">模组检查</h1>
-                <p class="tw:mt-1 tw:text-sm tw:text-slate-500">检查模组是否适合客户端或服务端环境，并整理筛选结果。</p>
+                <h1 class="tw:text-2xl tw:font-semibold tw:text-slate-900">{{ t('deearth.title') }}</h1>
+                <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('deearth.subtitle') }}</p>
             </div>
 
             <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
                 <div class="tw:grid tw:gap-4 lg:tw:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                     <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
-                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">选择 mods 文件夹</div>
+                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.select_mods_folder') }}</div>
                         <a-button
                             type="default"
                             size="large"
@@ -162,23 +165,23 @@ async function handleCheck() {
                             <template #icon>
                                 <FolderOpenOutlined />
                             </template>
-                            选择 mods 文件夹
+                            {{ t('deearth.select_mods_folder') }}
                         </a-button>
                         <div v-if="selectedFolder" class="tw:mt-3 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-white tw:p-3 tw:text-sm tw:text-slate-600">
-                            <span class="tw:font-medium">已选择:</span> {{ selectedFolder }}
+                            <span class="tw:font-medium">{{ t('deearth.selected') }}:</span> {{ selectedFolder }}
                         </div>
                     </div>
 
                     <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
-                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">整合包信息</div>
+                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.bundle_info') }}</div>
                         <a-input
                             v-model:value="bundleName"
-                            placeholder="请输入整合包名字"
+                            :placeholder="t('deearth.bundle_name_placeholder')"
                             size="large"
                             allow-clear
                         />
                         <div class="tw:mt-2 tw:text-xs tw:text-slate-400">
-                            客户端模组将保存到 .rubbish/{{ bundleName || '整合包名字' }} 目录
+                            {{ t('deearth.bundle_name_hint', { name: bundleName || t('deearth.bundle_name_placeholder') }) }}
                         </div>
                     </div>
                 </div>
@@ -194,27 +197,27 @@ async function handleCheck() {
                         <template #icon>
                             <FileSearchOutlined />
                         </template>
-                        {{ checking ? '检查中...' : '开始检查' }}
+                        {{ checking ? t('deearth.checking') : t('deearth.start_check') }}
                     </a-button>
                 </div>
             </section>
 
             <section v-if="showProgress && checking" class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
-                <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">检查进度</div>
+                <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.check_progress') }}</div>
                 <a-progress
                     :percent="progress.percent"
                     :status="progress.percent === 100 ? 'success' : 'active'"
                 />
                 <div class="tw:mt-2 tw:text-sm tw:text-slate-500">
-                    正在处理: {{ progress.modName }} ({{ progress.current }} / {{ progress.total }})
+                    {{ t('deearth.processing', { name: progress.modName, current: progress.current, total: progress.total }) }}
                 </div>
             </section>
 
             <section v-if="showResults" class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
                 <div class="tw:mb-4 tw:flex tw:flex-col tw:gap-1 md:tw:flex-row md:tw:items-end md:tw:justify-between">
                     <div>
-                        <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">检查结果</h2>
-                        <p class="tw:text-sm tw:text-slate-500">已完成的模组分类与筛选结果。</p>
+                        <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">{{ t('deearth.check_results') }}</h2>
+                        <p class="tw:text-sm tw:text-slate-500">{{ t('deearth.check_results_desc') }}</p>
                     </div>
                 </div>
 
@@ -226,30 +229,30 @@ async function handleCheck() {
                         size="small"
                         :bordered="true"
                     >
-                        <a-table-column title="模组信息" key="modInfo" :width="280">
+                        <a-table-column :title="t('deearth.mod_info')" key="modInfo" :width="280">
                             <template #default="{ record }">
                                 <div class="tw:min-w-0 tw:overflow-hidden">
                                     <div class="tw:truncate tw:text-sm tw:font-medium tw:text-slate-800">{{ record.filename }}</div>
                                 </div>
                             </template>
                         </a-table-column>
-                        <a-table-column title="类型" key="type" :width="120">
+                        <a-table-column :title="t('deearth.mod_type')" key="type" :width="120">
                             <template #default="{ record }">
                                 <a-tag v-if="record.clientSide === 'required' || record.clientSide === 'optional'" color="purple">
-                                    客户端模组
+                                    {{ t('deearth.client_mod') }}
                                 </a-tag>
                                 <a-tag v-else-if="record.serverSide === 'required' || record.serverSide === 'optional'" color="blue">
-                                    服务端模组
+                                    {{ t('deearth.server_mod') }}
                                 </a-tag>
                                 <a-tag v-else color="gray">
-                                    未知
+                                    {{ t('deearth.unknown') }}
                                 </a-tag>
                             </template>
                         </a-table-column>
                     </a-table>
                 </div>
 
-                <a-empty v-else description="未找到模组文件" />
+                <a-empty v-else :description="t('deearth.no_mods_found')" />
             </section>
         </div>
     </div>

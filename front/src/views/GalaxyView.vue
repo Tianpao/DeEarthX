@@ -9,7 +9,7 @@
             <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
                 <div class="tw:mb-5">
                     <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">{{ t('galaxy.mod_submit_title') }}</h2>
-                    <p class="tw:mt-1 tw:text-sm tw:text-slate-500">上传模组文件或填写 modid，然后提交到 Galaxy Square。</p>
+                    <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('galaxy.mod_submit_desc') }}</p>
                 </div>
 
                 <div class="tw:flex tw:flex-col tw:gap-4">
@@ -42,40 +42,16 @@
                         <label class="tw:mb-2 tw:block tw:text-sm tw:font-medium tw:text-slate-700">
                             {{ t('galaxy.upload_file_label') }}
                         </label>
-                        <a-upload-dragger
-                            :fileList="fileList"
-                            :before-upload="beforeUpload"
-                            @remove="handleRemove"
-                            accept=".jar"
-                            multiple
-                        >
-                            <p class="tw-ant-upload-drag-icon">
-                                <InboxOutlined />
-                            </p>
-                            <p class="tw-ant-upload-text">{{ t('galaxy.upload_file_hint') }}</p>
-                            <p class="tw-ant-upload-hint">
-                                {{ t('galaxy.upload_file_support') }}
-                            </p>
-                        </a-upload-dragger>
+                        <FileSelector
+                            :accept="['jar']"
+                            :multiple="true"
+                            v-model:files="droppedFiles"
+                            @remove="handleRemoveFile"
+                            :title="t('galaxy.upload_file_hint')"
+                            :hint="t('galaxy.upload_file_support')"
+                        />
 
-                        <div v-if="hasDroppedFiles" class="tw:mt-3 tw:rounded-lg tw:border tw:border-emerald-200 tw:bg-emerald-50 tw:p-3">
-                            <div class="tw:flex tw:items-center tw:justify-between tw:gap-3">
-                                <span class="tw:text-sm tw:text-emerald-700">{{ t('galaxy.files_dropped', { count: droppedFilesCount }) }}</span>
-                                <a-button type="text" size="small" @click="handleClearDroppedFile" class="tw:text-slate-400 hover:tw:text-red-500">
-                                    <template #icon><CloseCircleOutlined /></template>
-                                </a-button>
-                            </div>
-                            <div class="tw:mt-2 tw:max-h-20 tw:overflow-y-auto tw:space-y-1">
-                                <div v-for="(name, idx) in droppedFilesNames" :key="idx" class="tw:text-xs tw:text-slate-500 tw:truncate">
-                                    {{ name }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div v-if="fileList.length > 0 || hasDroppedFiles" class="tw:mt-4">
-                            <p v-if="fileList.length > 0" class="tw:mb-2 tw:text-sm tw:font-medium tw:text-slate-700">
-                                {{ t('galaxy.file_selected', { count: fileList.length }) }}
-                            </p>
+                        <div v-if="droppedFiles.length > 0" class="tw:mt-4">
                             <div v-if="uploading" class="tw:mb-4">
                                 <a-progress :percent="uploadProgress" :status="uploadProgress === 100 ? 'success' : 'active'" />
                             </div>
@@ -116,11 +92,11 @@
 
 <script lang="ts" setup>
 import { ref, computed, inject, watch } from 'vue';
-import { UploadOutlined, InboxOutlined, SendOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
+import { UploadOutlined, SendOutlined } from '@ant-design/icons-vue';
 import { message, Modal } from 'ant-design-vue';
-import type { UploadFile, UploadProps } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import axiosInstance from '@/utils/axios';
+import FileSelector from '@/components/FileSelector.vue';
 
 const { t } = useI18n();
 const droppedFilePaths = inject<ReturnType<typeof import('@/composables/useDragDrop').useDragDrop>['droppedFilePaths']>('droppedFilePaths');
@@ -130,8 +106,10 @@ const modType = ref<'client' | 'server'>('client');
 const modidList = ref<string[]>([]);
 const uploading = ref(false);
 const submitting = ref(false);
-const fileList = ref<UploadFile[]>([]);
 const uploadProgress = ref(0);
+
+// 文件路径列表
+const droppedFiles = ref<string[]>([]);
 
 const modidInput = computed({
     get: () => modidList.value.join(','),
@@ -143,25 +121,11 @@ const modidInput = computed({
     }
 });
 
-const validDroppedFiles = computed(() => {
-    if (droppedFilePaths && 'value' in droppedFilePaths && droppedFilePaths.value.length > 0) {
-        const validExtensions = ['.jar'];
-        return droppedFilePaths.value.filter(path => {
-            const ext = path.toLowerCase().substring(path.lastIndexOf('.'));
-            return validExtensions.includes(ext);
-        });
-    }
-    return [];
-});
+function handleRemoveFile(index: number) {
+    droppedFiles.value = droppedFiles.value.filter((_, i) => i !== index);
+}
 
-const hasDroppedFiles = computed(() => validDroppedFiles.value.length > 0);
-const droppedFilesCount = computed(() => validDroppedFiles.value.length);
-const droppedFilesNames = computed(() => {
-    return validDroppedFiles.value.map(path => {
-        return path.substring(Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/')) + 1);
-    });
-});
-
+// 监听拖放
 watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.value : [], (paths) => {
     if (paths.length > 0) {
         const validExtensions = ['.jar'];
@@ -174,41 +138,17 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
             if (clearDroppedFile) {
                 clearDroppedFile();
             }
+        } else {
+            droppedFiles.value = [...droppedFiles.value, ...validFiles];
+            if (clearDroppedFile) {
+                clearDroppedFile();
+            }
         }
     }
 });
 
-function handleClearDroppedFile() {
-    if (clearDroppedFile) {
-        clearDroppedFile();
-    }
-}
-
-const beforeUpload: UploadProps['beforeUpload'] = (file) => {
-    console.log(file.name);
-    const uploadFile: UploadFile = {
-        uid: `${Date.now()}-${Math.random()}`,
-        name: file.name,
-        status: 'done',
-        url: '',
-        originFileObj: file,
-    };
-    fileList.value = [...fileList.value, uploadFile];
-    return false;
-};
-
-const handleRemove: UploadProps['onRemove'] = (file) => {
-    const index = fileList.value.indexOf(file);
-    const newFileList = fileList.value.slice();
-    newFileList.splice(index, 1);
-    fileList.value = newFileList;
-};
-
 const handleUpload = async () => {
-    const hasFiles = fileList.value.length > 0;
-    const hasPaths = hasDroppedFiles.value;
-
-    if (!hasFiles && !hasPaths) {
+    if (droppedFiles.value.length === 0) {
         message.warning(t('galaxy.please_select_file'));
         return;
     }
@@ -217,98 +157,27 @@ const handleUpload = async () => {
     uploadProgress.value = 0;
 
     try {
-        if (hasPaths) {
-            const paths = validDroppedFiles.value;
-            await new Promise((resolve, reject) => {
-                axiosInstance.post('http://localhost:37019/galaxy/upload-path', { paths })
-                    .then(response => {
-                        if (response.data.modids && Array.isArray(response.data.modids)) {
-                            let addedCount = 0;
-                            response.data.modids.forEach((modid: string) => {
-                                if (modid && !modidList.value.includes(modid)) {
-                                    modidList.value.push(modid);
-                                    addedCount++;
-                                }
-                            });
-                            message.success(t('galaxy.upload_success', { count: addedCount }));
-                        } else {
-                            message.error(t('galaxy.data_format_error'));
-                        }
-                        resolve(response);
-                    })
-                    .catch(error => {
-                        message.error(t('galaxy.upload_error'));
-                        reject(error);
-                    });
-            });
-            handleClearDroppedFile();
-        } else {
-            const formData = new FormData();
-            fileList.value.forEach((file) => {
-                if (file.originFileObj) {
-                    const blob = file.originFileObj;
-                    const encodedFileName = encodeURIComponent(file.name);
-                    const fileWithCorrectName = new File([blob], encodedFileName, { type: blob.type });
-                    formData.append('files', fileWithCorrectName);
+        const paths = droppedFiles.value;
+        const response = await axiosInstance.post('http://localhost:37019/galaxy/upload-path', { paths });
+
+        if (response.data.modids && Array.isArray(response.data.modids)) {
+            let addedCount = 0;
+            response.data.modids.forEach((modid: string) => {
+                if (modid && !modidList.value.includes(modid)) {
+                    modidList.value.push(modid);
+                    addedCount++;
                 }
             });
-
-            await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', 'http://localhost:37019/galaxy/upload', true);
-
-                xhr.upload.addEventListener('progress', (event) => {
-                    if (event.lengthComputable) {
-                        uploadProgress.value = Math.round((event.loaded / event.total) * 100);
-                    }
-                });
-
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const data = JSON.parse(xhr.responseText);
-                            console.log(data);
-                            if (data.modids && Array.isArray(data.modids)) {
-                                let addedCount = 0;
-                                data.modids.forEach((modid: string) => {
-                                    if (modid && !modidList.value.includes(modid)) {
-                                        modidList.value.push(modid);
-                                        addedCount++;
-                                    }
-                                });
-                                message.success(t('galaxy.upload_success', { count: addedCount }));
-                            } else {
-                                message.error(t('galaxy.data_format_error'));
-                            }
-                            resolve(xhr.responseText);
-                        } catch (e) {
-                            message.error(t('galaxy.data_format_error'));
-                            reject(e);
-                        }
-                    } else {
-                        message.error(t('galaxy.upload_failed'));
-                        reject(new Error(`HTTP ${xhr.status}`));
-                    }
-                });
-
-                xhr.addEventListener('error', () => {
-                    message.error(t('galaxy.upload_error'));
-                    reject(new Error('网络错误'));
-                });
-
-                xhr.addEventListener('abort', () => {
-                    message.error(t('galaxy.upload_error'));
-                    reject(new Error('上传已取消'));
-                });
-
-                xhr.send(formData);
-            });
+            message.success(t('galaxy.upload_success', { count: addedCount }));
+        } else {
+            message.error(t('galaxy.data_format_error'));
         }
     } catch (error) {
         console.error('上传失败:', error);
+        message.error(t('galaxy.upload_error'));
     } finally {
         uploading.value = false;
-        fileList.value = [];
+        droppedFiles.value = [];
         uploadProgress.value = 0;
     }
 };

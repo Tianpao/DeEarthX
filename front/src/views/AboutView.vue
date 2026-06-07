@@ -30,7 +30,7 @@ const buildTime = ref<string>('');
 const localSponsors: Sponsor[] = [
     {
         id: "elfidc",
-        name: "亿讯云",
+        name: t('about.sponsor_elfidc'),
         imageUrl: "./elfidc.svg",
         type: t('about.sponsor_type_gold'),
         url: "https://www.elfidc.com",
@@ -70,7 +70,7 @@ async function fetchSponsors() {
             sponsors.value = response.data.map(s => ({
                 ...s,
                 type: s.tone === 'gold' ? t('about.sponsor_type_gold') :
-                      s.tone === 'silver' ? '银牌赞助' : '铜牌赞助'
+                      s.tone === 'silver' ? t('about.sponsor_type_silver') : t('about.sponsor_type_bronze')
             }));
         } else {
             sponsors.value = localSponsors;
@@ -85,7 +85,7 @@ const thanksList = computed(() => {
     return [
         {
             id: "user",
-            name: "天跑",
+            name: t('about.author_tianpao'),
             avatar: "./tianpao.jpg",
             contribution: t('about.contribution_author'),
             bilibiliUrl: "https://space.bilibili.com/1728953419"
@@ -190,7 +190,7 @@ onMounted(() => {
             <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
                 <div class="tw:mb-4">
                     <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">{{ t('about.development_team') }}</h2>
-                    <p class="tw:mt-1 tw:text-sm tw:text-slate-500">核心开发与基础设施支持成员</p>
+                    <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('about.development_team_desc') }}</p>
                 </div>
 
                 <div class="tw:flex tw:flex-col tw:gap-3">
@@ -219,7 +219,7 @@ onMounted(() => {
                                 class="tw:min-w-[96px]"
                                 @click="openBilibili(item.bilibiliUrl)"
                             >
-                                B站主页
+                                {{ t('about.bilibili_home') }}
                             </a-button>
                         </div>
                     </article>
@@ -229,7 +229,7 @@ onMounted(() => {
             <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
                 <div class="tw:mb-4">
                     <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">{{ t('about.sponsor') }}</h2>
-                    <p class="tw:mt-1 tw:text-sm tw:text-slate-500">感谢长期提供资源与基础服务支持的合作伙伴</p>
+                    <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('about.sponsor_desc') }}</p>
                 </div>
 
                 <div class="tw:flex tw:flex-col tw:gap-3">
@@ -256,7 +256,7 @@ onMounted(() => {
                                 </div>
                             </div>
                         </div>
-                        <span class="tw:text-sm tw:font-medium tw:text-slate-500">访问官网</span>
+                        <span class="tw:text-sm tw:font-medium tw:text-slate-500">{{ t('about.visit_website') }}</span>
                     </button>
                 </div>
             </section>
