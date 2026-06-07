@@ -1,6 +1,15 @@
 <script lang="ts" setup>
-import { ref, watch, onMounted, computed } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
+import type { Component } from 'vue';
 import { message } from 'ant-design-vue';
+import {
+  ApiOutlined,
+  CloudDownloadOutlined,
+  GlobalOutlined,
+  SettingOutlined,
+  SafetyCertificateOutlined,
+  ToolOutlined
+} from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { setLanguage, type Language } from '../utils/i18n';
 import axios from '../utils/axios';
@@ -33,13 +42,13 @@ interface SettingItem {
 interface SettingCategory {
   id: string;
   title: string;
-  icon: string;
-  bgColor: string;
-  textColor: string;
+  icon: Component;
+  accent: 'emerald' | 'sky' | 'slate';
   items: SettingItem[];
-  hasJava?: boolean;
   hasLanguage?: boolean;
 }
+
+const { t, locale } = useI18n();
 
 const config = ref<AppConfig>({
   mirror: { bmclapi: false, mcimirror: false },
@@ -49,14 +58,34 @@ const config = ref<AppConfig>({
   javaPath: undefined
 });
 
+const categoryAccentClasses: Record<SettingCategory['accent'], { badge: string; soft: string; text: string; border: string }> = {
+  emerald: {
+    badge: 'tw:bg-emerald-50 tw:text-emerald-700 tw:ring-1 tw:ring-emerald-200',
+    soft: 'tw:bg-emerald-50',
+    text: 'tw:text-emerald-700',
+    border: 'hover:tw:border-emerald-200'
+  },
+  sky: {
+    badge: 'tw:bg-sky-50 tw:text-sky-700 tw:ring-1 tw:ring-sky-200',
+    soft: 'tw:bg-sky-50',
+    text: 'tw:text-sky-700',
+    border: 'hover:tw:border-sky-200'
+  },
+  slate: {
+    badge: 'tw:bg-slate-100 tw:text-slate-700 tw:ring-1 tw:ring-slate-200',
+    soft: 'tw:bg-slate-100',
+    text: 'tw:text-slate-700',
+    border: 'hover:tw:border-slate-300'
+  }
+};
+
 const settings = computed<SettingCategory[]>(() => {
   return [
     {
       id: 'filter',
       title: t('setting.category_filter'),
-      icon: '🧩',
-      bgColor: 'bg-emerald-100',
-      textColor: 'text-emerald-800',
+      icon: SafetyCertificateOutlined,
+      accent: 'emerald',
       items: [
         {
           key: 'hashes',
@@ -98,9 +127,8 @@ const settings = computed<SettingCategory[]>(() => {
     {
       id: 'mirror',
       title: t('setting.category_mirror'),
-      icon: '⬇️',
-      bgColor: 'bg-cyan-100',
-      textColor: 'text-cyan-800',
+      icon: CloudDownloadOutlined,
+      accent: 'sky',
       items: [
         {
           key: 'mcimirror',
@@ -121,9 +149,8 @@ const settings = computed<SettingCategory[]>(() => {
     {
       id: 'system',
       title: t('setting.category_system'),
-      icon: '🛠️',
-      bgColor: 'bg-purple-100',
-      textColor: 'text-purple-800',
+      icon: ToolOutlined,
+      accent: 'slate',
       hasLanguage: true,
       items: [
         {
@@ -161,8 +188,6 @@ const languageOptions = computed(() => {
 function handleLanguageChange(value: Language) {
   setLanguage(value);
 }
-
-const { t, locale } = useI18n();
 
 function getConfigValue(path: string): boolean {
   const keys = path.split('.');
@@ -218,10 +243,6 @@ async function saveConfig(newConfig: AppConfig) {
   }
 }
 
-onMounted(() => {
-  loadConfig();
-});
-
 let isInitialLoad = true;
 watch(config, (newValue) => {
   if (isInitialLoad) {
@@ -230,103 +251,131 @@ watch(config, (newValue) => {
   }
   saveConfig(newValue);
 }, { deep: true });
+
+onMounted(() => {
+  loadConfig();
+});
+
+onUnmounted(() => {
+  isInitialLoad = true;
+});
 </script>
 
 <template>
-  <div class="tw:h-full tw:w-full tw:p-8 tw:overflow-auto tw:bg-gradient-to-br tw:from-slate-50 tw:via-blue-50 tw:to-indigo-50">
-    <div class="tw:max-w-3xl tw:mx-auto">
-      <div class="tw:text-center tw:mb-10 tw:animate-fade-in">
-        <h1 class="tw:text-4xl tw:font-bold tw:tracking-tight tw:mb-3">
-          <span class="tw:bg-gradient-to-r tw:from-emerald-500 tw:to-cyan-500 tw:bg-clip-text tw:text-transparent">
-            {{ t('common.app_name') }}
-          </span>
-          <span class="tw:text-gray-800">{{ t('menu.setting') }}</span>
+  <div class="tw:h-full tw:w-full tw:overflow-y-auto tw:p-6">
+    <div class="tw:mx-auto tw:flex tw:w-full tw:max-w-5xl tw:flex-col tw:gap-6">
+      <div>
+        <h1 class="tw:flex tw:flex-wrap tw:items-baseline tw:gap-x-3 tw:text-2xl tw:font-semibold tw:text-slate-900">
+          <span class="flowing-brand-text">{{ t('common.app_name') }}</span>
+          <span>{{ t('menu.setting') }}</span>
         </h1>
-        <p class="tw:text-gray-500 tw:text-lg">{{ t('setting.subtitle') }}</p>
+        <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('setting.subtitle') }}</p>
       </div>
 
-      <div
-        v-for="(category, index) in settings"
+      <section
+        v-for="category in settings"
         :key="category.id"
-        class="tw-bg-white tw:rounded-2xl tw:shadow-lg tw:p-7 tw:mb-6 tw:animate-fade-in-up tw:group tw:border tw:border-gray-100 tw:hover:tw:border-emerald-200 tw:transition-all duration-300"
-        :style="{ animationDelay: `${index * 0.1}s` }"
+        class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm"
       >
-        <h2 class="tw:text-xl tw:font-bold tw:text-gray-800 tw-mb-6 tw:flex tw:items-center tw:group-hover:tw:translate-x-2 tw:transition-transform duration-300">
-          <span :class="[category.bgColor, category.textColor, 'tw-w-10 tw:h-10 tw:rounded-xl tw:flex tw:items-center tw:justify-center tw-mr-3 tw:shadow-md']">
-            {{ category.icon }}
-          </span>
-          {{ category.title }}
-        </h2>
+        <div class="tw:mb-4 tw:flex tw:items-center tw:gap-3">
+          <div class="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+            <div
+              class="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg"
+              :class="categoryAccentClasses[category.accent].badge"
+            >
+              <component :is="category.icon" class="tw:text-[18px]" />
+            </div>
+            <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">{{ category.title }}</h2>
+          </div>
+        </div>
 
-        <div class="tw:grid tw:grid-cols-1 md:tw:grid-cols-2 lg:tw:grid-cols-3 tw:gap-4">
-          <div
+        <div class="tw:grid tw:grid-cols-1 tw:gap-3 md:tw:grid-cols-2 xl:tw:grid-cols-3">
+          <article
             v-if="category.hasLanguage"
-            class="tw:flex tw:flex-col tw-justify-between tw-p-4 tw:border tw:border-gray-100 tw:rounded-xl tw-hover:bg-gradient-to-r tw:hover:from-emerald-50 tw:hover:to-cyan-50 tw:hover:border-emerald-200 tw:transition-all duration-300 tw:group/item"
+            class="setting-card tw:flex tw:min-h-[72px] tw:items-center tw:justify-between tw:gap-2.5 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-2.5 tw:transition-colors hover:tw:bg-white"
+            :class="categoryAccentClasses[category.accent].border"
           >
-            <div class="tw:flex-1">
-              <p class="tw:text-gray-700 tw:font-semibold tw:text-sm tw:group-hover/item:tw:text-emerald-700 tw:transition-colors tw:flex tw:items-center tw:gap-2">
-                <span>🌐</span> {{ t('setting.language_title') }}
-              </p>
-              <p class="tw:text-xs tw:text-gray-500 tw:mt-2">{{ t('setting.language_desc') }}</p>
-              <div class="tw-mt-3">
-                <a-select
-                  :value="locale"
-                  :options="languageOptions"
-                  @change="handleLanguageChange"
-                  class="tw:w-full"
-                />
+            <div class="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2.5">
+              <div
+                class="tw:flex tw:h-6 tw:w-6 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md"
+                :class="[categoryAccentClasses[category.accent].soft, categoryAccentClasses[category.accent].text]"
+              >
+                <GlobalOutlined />
+              </div>
+              <div class="tw:min-w-0 tw:flex-1">
+                <h3 class="tw:text-[13px] tw:font-semibold tw:text-slate-900">{{ t('setting.language_title') }}</h3>
+                <p class="tw:mt-0.5 tw:line-clamp-1 tw:text-xs tw:leading-4 tw:text-slate-500">{{ t('setting.language_desc') }}</p>
               </div>
             </div>
-          </div>
-          <div
+            <a-select
+              :value="locale"
+              :options="languageOptions"
+              @change="handleLanguageChange"
+              class="tw:w-32 tw:shrink-0"
+            />
+          </article>
+
+          <article
             v-for="item in category.items"
             :key="item.key"
-            class="tw:flex tw:items-center tw:justify-between tw-p-4 tw:border tw:border-gray-100 tw:rounded-xl tw-hover:bg-gradient-to-r tw:hover:from-emerald-50 tw:hover:to-cyan-50 tw:hover:border-emerald-200 tw:transition-all duration-300 tw:group/item"
+            class="setting-card tw:flex tw:min-h-[72px] tw:items-center tw:justify-between tw:gap-2.5 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-2.5 tw:transition-colors hover:tw:bg-white"
+            :class="categoryAccentClasses[category.accent].border"
           >
-            <div class="tw:flex-1">
-              <p class="tw:text-gray-700 tw:font-semibold tw:text-sm tw:group-hover/item:tw:text-emerald-700 tw:transition-colors">{{ item.name }}</p>
-              <p class="tw:text-xs tw:text-gray-500 tw:mt-1">{{ item.description }}</p>
+            <div class="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2.5">
+              <div
+                class="tw:flex tw:h-6 tw:w-6 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md"
+                :class="[categoryAccentClasses[category.accent].soft, categoryAccentClasses[category.accent].text]"
+              >
+                <ApiOutlined v-if="category.id === 'filter'" />
+                <CloudDownloadOutlined v-else-if="category.id === 'mirror'" />
+                <SettingOutlined v-else />
+              </div>
+              <div class="tw:min-w-0 tw:flex-1">
+                <h3 class="tw:text-[13px] tw:font-semibold tw:text-slate-900">{{ item.name }}</h3>
+                <p class="tw:mt-0.5 tw:line-clamp-1 tw:text-xs tw:leading-4 tw:text-slate-500">{{ item.description }}</p>
+              </div>
             </div>
             <a-switch
+              class="tw:shrink-0"
               :checked="getConfigValue(item.path)"
               @change="setConfigValue(item.path, $event)"
               :checked-children="t('setting.switch_on')"
               :un-checked-children="t('setting.switch_off')"
             />
-          </div>
+          </article>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+.flowing-brand-text {
+  background: linear-gradient(110deg, #10b981 0%, #0ea5e9 32%, #22c55e 64%, #38bdf8 82%, #10b981 100%);
+  background-size: 260% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: flowingTextColor 4.8s linear infinite;
 }
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.setting-card {
+  text-wrap: pretty;
 }
 
-.tw-animate-fade-in {
-    animation: fadeIn 0.6s ease-out;
+@keyframes flowingTextColor {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 260% 50%;
+  }
 }
 
-.tw-animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out;
-    animation-fill-mode: both;
+@media (prefers-reduced-motion: reduce) {
+  .flowing-brand-text {
+    animation: none;
+  }
 }
 </style>
