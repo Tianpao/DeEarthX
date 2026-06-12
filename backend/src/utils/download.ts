@@ -81,11 +81,11 @@ export async function verifySHA1(filePath: string, expectedHash: string): Promis
 
 // ── Simple download ─────────────────────────────────────────────────
 
-async function simpleDownload(url: string, filePath: string): Promise<void> {
+async function simpleDownload(url: string, filePath: string, extraHeaders?: Record<string, string>): Promise<void> {
   const tempPath = filePath + ".downloading";
   const res = await got.get(url, {
     responseType: "buffer",
-    headers: { "user-agent": "DeEarthX" },
+    headers: { "user-agent": "DeEarthX", ...extraHeaders },
     followRedirect: true,
   });
   fse.outputFileSync(tempPath, res.rawBody);
@@ -112,6 +112,7 @@ async function chunkedDownload(
   url: string,
   filePath: string,
   chunkSize = 5 * 1024 * 1024,
+  extraHeaders?: Record<string, string>,
 ): Promise<void> {
   const tempPath = filePath + ".downloading";
 
@@ -134,7 +135,7 @@ async function chunkedDownload(
 
   try {
     const head = await got.head(url, {
-      headers: { "user-agent": "DeEarthX" },
+      headers: { "user-agent": "DeEarthX", ...extraHeaders },
       followRedirect: true,
       timeout: { request: 30000 },
     });
@@ -146,13 +147,13 @@ async function chunkedDownload(
     }
   } catch {
     logger.debug(`HEAD 请求失败，回退到普通下载: ${url}`);
-    await simpleDownload(url, filePath);
+    await simpleDownload(url, filePath, extraHeaders);
     return;
   }
 
   if (!supportsRange) {
     logger.debug(`文件较小或服务器不支持分块下载，使用普通下载: ${url}`);
-    await simpleDownload(url, filePath);
+    await simpleDownload(url, filePath, extraHeaders);
     return;
   }
 
@@ -177,6 +178,7 @@ async function chunkedDownload(
           headers: {
             "user-agent": "DeEarthX",
             "Range": `bytes=${start}-${end}`,
+            ...extraHeaders,
           },
           followRedirect: true,
           timeout: { request: 60000 },
@@ -227,7 +229,7 @@ async function chunkedDownload(
 
     if (!rangeSupported) {
       logger.warn(`服务器不支持分块下载，切换到普通下载: ${url}`);
-      await simpleDownload(url, filePath);
+      await simpleDownload(url, filePath, extraHeaders);
       return;
     }
 
@@ -247,6 +249,7 @@ async function downloadFile(
   expectedHash?: string,
   forceDownload = false,
   useChunked = false,
+  extraHeaders?: Record<string, string>,
 ) {
   await pRetry(
     async () => {
@@ -271,9 +274,9 @@ async function downloadFile(
         await fse.ensureDir(path.dirname(filePath));
 
         if (useChunked) {
-          await chunkedDownload(url, filePath);
+          await chunkedDownload(url, filePath, 5 * 1024 * 1024, extraHeaders);
         } else {
-          await simpleDownload(url, filePath);
+          await simpleDownload(url, filePath, extraHeaders);
         }
 
         logger.debug(`下载 ${url} 成功`);
@@ -338,6 +341,7 @@ export async function Wfastdownload(
   ws: MessageWS,
   enableHashVerify = true,
   useChunked = false,
+  extraHeaders?: Record<string, string>,
 ) {
   logger.info(
     `开始 Web 下载 ${data.length} 个文件${enableHashVerify ? '（启用 hash 验证）' : ''}${useChunked ? '（启用分块下载）' : ''}`,
@@ -349,7 +353,7 @@ export async function Wfastdownload(
     async (item: string[], index: number) => {
       const [url, filePath, expectedHash] = item;
       try {
-        await downloadFile(url, filePath, enableHashVerify ? expectedHash : undefined, false, useChunked);
+        await downloadFile(url, filePath, enableHashVerify ? expectedHash : undefined, false, useChunked, extraHeaders);
         if (!completed.has(index)) {
           completed.add(index);
           ws.download(data.length, completed.size, filePath);

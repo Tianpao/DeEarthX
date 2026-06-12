@@ -16,14 +16,16 @@ export interface CurseForgeManifest {
 export class CurseForge implements XPlatform {
   private urls: MirrorUrls;
   private apiGot: Got;
+  private apiKey: string;
 
   constructor() {
     this.urls = getMirrorUrls();
+    this.apiKey = "$2a$10$ydk0TLDG/Gc6uPMdz7mad.iisj2TaMDytVcIW4gcVP231VKngLBKy";
     this.apiGot = got.extend({
       prefixUrl: "https://api.curseforge.com",
       headers: {
         "User-Agent": "DeEarthX",
-        "x-api-key": "$2a$10$ydk0TLDG/Gc6uPMdz7mad.iisj2TaMDytVcIW4gcVP231VKngLBKy",
+        "x-api-key": this.apiKey,
         "Content-Type": "application/json",
       }
     });
@@ -74,6 +76,6 @@ export class CurseForge implements XPlatform {
       logger.warn("CurseForge: 没有找到可下载的文件");
       return;
     }
-    await Wfastdownload(tmp, ws, true, true);
+    await Wfastdownload(tmp, ws, true, true, { "x-api-key": this.apiKey });
   }
 }
