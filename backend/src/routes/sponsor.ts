@@ -10,6 +10,8 @@ export interface Sponsor {
     tone: "gold" | "silver" | "bronze";
 }
 
+let sponsorCache: Sponsor[] | null = null;
+
 export function setupSponsorRoutes(app: express.Application) {
     const router: Router = express.Router();
     const gotClient: Got = got.extend({
@@ -22,8 +24,15 @@ export function setupSponsorRoutes(app: express.Application) {
 
     // GET /sponsor/ - 获取所有赞助商（公开API）
     router.get("/", async (_req, res) => {
+        if (sponsorCache) {
+            logger.info("返回缓存的赞助商列表", { count: sponsorCache.length });
+            res.json(sponsorCache);
+            return;
+        }
+
         try {
             const response = await gotClient.get<Sponsor[]>("sponsor/");
+            sponsorCache = response.body;
             logger.info("获取赞助商列表成功", { count: response.body.length });
             res.json(response.body);
         } catch (error) {
