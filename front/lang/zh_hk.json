@@ -19,7 +19,10 @@
     "error": "錯誤",
     "success": "成功",
     "warning": "警告",
-    "info": "提示"
+    "info": "提示",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "還原"
   },
   "menu": {
     "home": "主頁",

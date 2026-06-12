@@ -1,15 +1,11 @@
 <script lang="ts" setup>
 import { ref, provide, onMounted, onUnmounted } from 'vue';
-import { LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
-import { useI18n } from 'vue-i18n';
-import { useVersion } from '@/composables/useVersion';
 import { useBackend } from '@/composables/useBackend';
 import { useMenu } from '@/composables/useMenu';
 import { useDragDrop } from '@/composables/useDragDrop';
+import TitleBar from '@/components/TitleBar.vue';
 
-const { t } = useI18n();
-const { version } = useVersion();
-const { backendStatus, backendErrorInfo, createKillCoreProcessHandler } = useBackend();
+const { createKillCoreProcessHandler } = useBackend();
 const { selectedKeys, menuItems, handleMenuClick, route } = useMenu();
 const { droppedFilePaths, clearDroppedFile, setupDragDropListener, cleanup: cleanupDragDrop } = useDragDrop();
 
@@ -45,41 +41,8 @@ const theme = ref({
 <template>
     <a-config-provider :theme="theme">
         <div class="tw:h-screen tw:w-screen tw:flex tw:flex-col tw:overflow-hidden">
-            <!-- 顶部导航栏 -->
-            <a-page-header
-                class="tw:h-14 tw:px-6 tw:flex tw:items-center tw:bg-white tw:shadow-sm tw:z-10 tw:transition-all tw:duration-300"
-                style="border: none;"
-
-            >
-                <!-- <template #extra>
-                    <a-button @click="openAuthorBilibili">作者B站</a-button>
-                </template> -->
-                <!-- 后端状态图标 -->
-                <template #title>
-                    <div class="tw:flex tw:items-center tw:gap-3">
-                        <span>
-                            <span style="color: #000000; font-weight: 500;">{{ t('common.app_name') }}</span>
-                            <span style="color: #888888; font-size: 12px; margin-left: 5px;">{{ version }}</span>
-                        </span>
-                        <span
-                            class="tw:flex tw:items-center tw:gap-2"
-                            :title="backendErrorInfo || t('message.backend_running')"
-                        >
-                            <LoadingOutlined v-if="backendStatus === 'loading'" style="color: #1890ff; font-size: 18px;" />
-                            <CheckCircleOutlined v-else-if="backendStatus === 'success'" style="color: #52c41a; font-size: 18px;" />
-                            <CloseCircleOutlined v-else style="color: #ff4d4f; font-size: 18px;" />
-                            <span class="tw:text-xs tw:ml-1"
-                                  :style="{
-                                      color: backendStatus === 'loading' ? '#1890ff' :
-                                             backendStatus === 'success' ? '#52c41a' : '#ff4d4f'
-                                  }">
-                                {{ backendStatus === 'loading' ? t('common.status_loading') :
-                                   backendStatus === 'success' ? t('common.status_success') : t('common.status_error') }}
-                            </span>
-                        </span>
-                    </div>
-                </template>
-            </a-page-header>
+            <!-- 自定义标题栏 -->
+            <TitleBar />
 
             <!-- 主体内容区域 -->
             <div class="tw:flex tw:flex-1 tw:overflow-hidden">

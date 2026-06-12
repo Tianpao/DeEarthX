@@ -19,7 +19,10 @@
     "error": "Error",
     "success": "Success",
     "warning": "Warning",
-    "info": "Info"
+    "info": "Info",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore"
   },
   "menu": {
     "home": "Home",
