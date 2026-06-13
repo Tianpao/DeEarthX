@@ -8,6 +8,7 @@ import { execPromise } from "./utils/utils.js";
 import { getAppDir } from "./utils/appdir.js";
 import { MessageWS } from "./utils/socketio.js";
 import { logger } from "./utils/logger.js";
+import { version_compare } from "./utils/java.js";
 import { extractMrpackFromZip, processZipEntries, createZipArchive } from "./utils/zip-processor.js";
 import { Server } from "socket.io";
 
@@ -50,22 +51,24 @@ export class Dex {
     const processedBuffer = await extractMrpackFromZip(buffer, filename);
     const zps = await processZipEntries(processedBuffer, (f, t, i) => this.message.unzip(f, t, i));
     const { contain, info } = await zps._getinfo();
-    
+
     if (!contain || !info) {
       logger.error("整合包信息为空");
       this.message.handleError(new Error("该整合包似乎不是有效的整合包。"));
       return;
     }
-    
+
     const plat = what_platform(contain);
     logger.debug("检测到平台", { 平台: plat });
     logger.debug("整合包信息", info);
-    
+
+    const mlinfo = await platform(plat).getinfo(info);
     const mpname = info.name;
     const unpath = p.join(getAppDir(), "instance", mpname);
+    const mcVersion = mlinfo.minecraft;
 
     await this.parallelTasks(zps, mpname, plat, info, unpath);
-    await this.filterMods(unpath, mpname);
+    await this.filterMods(unpath, mpname, mcVersion);
     await this.installModLoader(plat, info, unpath, isServerMode, template);
     await this.completeTask(startTime, unpath, mpname, isServerMode);
   }
@@ -78,7 +81,14 @@ export class Dex {
     this.message.statusChange();
   }
 
-  private async filterMods(unpath: string, mpname: string) {
+  private async filterMods(unpath: string, mpname: string, mcVersion: string) {
+    // Minecraft 1.12.2 及以下版本跳过模组检查
+    if (version_compare(mcVersion, "1.12.2") <= 0) {
+      logger.info(`Minecraft 版本 ${mcVersion} <= 1.12.2，跳过模组检查`);
+      this.message.statusChange();
+      return;
+    }
+
     const config = Config.getConfig();
     await new ModFilterService(p.join(unpath, "mods"), p.join(getAppDir(), ".rubbish", mpname), config.filter, this.message).filter();
     this.message.statusChange();

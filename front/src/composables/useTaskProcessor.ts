@@ -50,11 +50,9 @@ export function useTaskProcessor() {
     }
 
     async function runDeEarthXFromPath(filePath: string, socket: Socket) {
-        message.success(t('home.start_production'));
         store.showSteps = true;
 
         try {
-            message.loading(t('home.task_preparing'));
             const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
             const apiPort = import.meta.env.VITE_API_PORT || '37019';
             let url = `http://${apiHost}:${apiPort}/start-path?mode=${store.selectedMode}`;
@@ -85,7 +83,6 @@ export function useTaskProcessor() {
 
         store.startTask();
 
-        message.loading(t('home.ws_connecting'));
         const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
         const wsPort = import.meta.env.VITE_WS_PORT || '37019';
         const socket = io(`${wsHost}:${wsPort}/`, {
@@ -96,7 +93,7 @@ export function useTaskProcessor() {
         socket.connect();
 
         socket.on('connect', () => {
-            message.success(t('home.ws_connected'));
+            // 连接成功不弹提示，只有失败才弹
             runDeEarthXFromPath(actualPath, socket);
         });
 

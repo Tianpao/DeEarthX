@@ -79,7 +79,6 @@ export class Forge {
     }
     await this.install();
     if (version_compare(this.minecraft, "1.18.0") === -1) {
-      console.log("需要wshell");
       await this.wshell();
     }
   }
@@ -116,7 +115,6 @@ export class Forge {
     }
 
     const downlist = [...new Set(_downlist)];
-    console.log(downlist);
     await fastdownload(downlist);
   }
 

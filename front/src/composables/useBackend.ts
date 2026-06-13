@@ -40,7 +40,7 @@ export function useBackend() {
         if (portStatus === 'correct_backend') {
             backendStatus.value = 'success';
             backendErrorInfo.value = '';
-            message.success(t('message.backend_running'));
+            // 后端已在运行，不弹提示
             return;
         }
 
@@ -64,16 +64,18 @@ export function useBackend() {
                         if (response.data.status === 200) {
                             backendStatus.value = 'success';
                             backendErrorInfo.value = '';
-                            message.success(t('message.backend_started'));
+                            // 后端启动成功，不弹提示
                         } else {
                             backendStatus.value = 'error';
                             backendErrorInfo.value = t('common.status_error');
+                            message.error(t('message.backend_start_failed', { count: 1 }));
                             router.push('/error');
                         }
                     } catch (error) {
                         console.error("后端连接失败:", error);
                         backendStatus.value = 'error';
                         backendErrorInfo.value = t('common.status_error');
+                        message.error(t('message.backend_start_failed', { count: 1 }));
                         router.push('/error');
                     }
                 }, 3000);

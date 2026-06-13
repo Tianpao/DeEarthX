@@ -58,7 +58,6 @@ export class Minecraft {
       const zip = await Azip(await fs.promises.readFile(mcpath));
       for await (const entry of zip) {
         if (entry.entryName.startsWith("META-INF/libraries/") && !entry.entryName.endsWith("/")) {
-          console.log(entry.entryName);
           const data = entry.getData();
           const filepath = `${this.path}/libraries/${entry.entryName.replace("META-INF/libraries/", "")}`;
           const dir = p.dirname(filepath);
@@ -71,7 +70,6 @@ export class Minecraft {
       const dmc = fastdownload([`https://bmclapi2.bangbang93.com/version/${this.minecraft}/server`, lowv]);
       
       const download = (async () => {
-        console.log("并行");
         const json = await got.get(`https://bmclapi2.bangbang93.com/version/${this.minecraft}/json`, {
           headers: {
             "User-Agent": "DeEarthX"
@@ -80,7 +78,6 @@ export class Minecraft {
         
         await Promise.all(json.libraries.map(async e => {
           try{
-            console.log(version_compare(this.minecraft, "1.12.2"));
           if (!e.downloads.artifact && version_compare(this.minecraft, "1.12.2") !== 1) {
             return;
           }

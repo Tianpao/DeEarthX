@@ -9,10 +9,10 @@ import { logger } from "../utils/logger.js";
 export async function cleanupInstallFiles(instancePath: string): Promise<void> {
   const filesToClean: string[] = [];
 
-  // 1. 收集 forge-*-installer.jar 文件
+  // 1. 收集 forge-*-installer.jar 和 forge-*-installer.jar.log 文件
   const entries = await fs.promises.readdir(instancePath, { withFileTypes: true });
   for (const entry of entries) {
-    if (entry.isFile() && /^forge-.*-installer\.jar$/.test(entry.name)) {
+    if (entry.isFile() && /^forge-.*-installer\.jar(\.log)?$/.test(entry.name)) {
       filesToClean.push(path.join(instancePath, entry.name));
     }
   }
