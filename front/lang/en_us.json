@@ -185,6 +185,8 @@
     "system_oaf_desc": "Automatically open directory after server production is completed",
     "system_autozip_name": "Auto package to zip",
     "system_autozip_desc": "Automatically package to zip after server production is completed (not packaged in server mode)",
+    "system_sponsor_ad_name": "Show Sponsor Ads",
+    "system_sponsor_ad_desc": "Display sponsor ads carousel in the title bar (rotates every 5 seconds)",
     "switch_on": "On",
     "switch_off": "Off",
     "language_title": "Language Settings",

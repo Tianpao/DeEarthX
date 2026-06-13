@@ -183,6 +183,8 @@
     "system_oaf_desc": "伺服器製作完成後自動開啟目錄",
     "system_autozip_name": "自動打包成 zip",
     "system_autozip_desc": "伺服器製作完成後自動打包成 zip（開伺服器模式不打包）",
+    "system_sponsor_ad_name": "顯示贊助商廣告",
+    "system_sponsor_ad_desc": "在標題欄顯示贊助商廣告輪播（每5秒切換一次）",
     "switch_on": "開",
     "switch_off": "關",
     "language_title": "語言設定",

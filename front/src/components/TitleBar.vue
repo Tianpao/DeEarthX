@@ -1,16 +1,20 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { MinusOutlined, CloseOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { useVersion } from '@/composables/useVersion';
 import { useI18n } from 'vue-i18n';
 import { useBackend } from '@/composables/useBackend';
+import SponsorAd from '@/components/SponsorAd.vue';
+import axios from '@/utils/axios';
 
 const { t } = useI18n();
 const { version } = useVersion();
 const { backendStatus, backendErrorInfo } = useBackend();
 const appWindow = getCurrentWindow();
 const isCloseHover = ref(false);
+const showSponsorAd = ref(true);
+const sponsorAdRef = ref<InstanceType<typeof SponsorAd> | null>(null);
 
 // 开始拖拽窗口
 async function startDragging(e: MouseEvent) {
@@ -28,6 +32,35 @@ async function minimize() {
 async function close() {
     await appWindow.close();
 }
+
+async function loadConfig() {
+    try {
+        const response = await axios.get('/config/get');
+        showSponsorAd.value = response.data.showSponsorAd ?? true;
+    } catch (error) {
+        console.error('加载配置失败:', error);
+    }
+}
+
+// 监听配置变化事件
+function handleConfigChange() {
+    loadConfig();
+}
+
+watch(showSponsorAd, (visible) => {
+    if (sponsorAdRef.value) {
+        sponsorAdRef.value.setVisible(visible);
+    }
+});
+
+onMounted(() => {
+    loadConfig();
+    window.addEventListener('config-changed', handleConfigChange);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('config-changed', handleConfigChange);
+});
 </script>
 
 <template>
@@ -52,6 +85,7 @@ async function close() {
                        backendStatus === 'success' ? t('common.status_success') : t('common.status_error') }}
                 </span>
             </span>
+            <SponsorAd v-if="showSponsorAd" ref="sponsorAdRef" />
         </div>
         <div class="titlebar-buttons">
             <button class="titlebar-btn minimize" @mousedown.stop @click="minimize" :title="t('common.minimize')">

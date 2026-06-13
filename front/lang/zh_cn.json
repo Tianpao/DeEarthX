@@ -185,6 +185,8 @@
     "system_oaf_desc": "服务端制作完成后自动打开目录",
     "system_autozip_name": "自动打包成 zip",
     "system_autozip_desc": "服务端制作完成后自动打包成 zip（开服模式不打包）",
+    "system_sponsor_ad_name": "显示赞助商广告",
+    "system_sponsor_ad_desc": "在标题栏显示赞助商广告轮播（每5秒切换一次）",
     "switch_on": "开",
     "switch_off": "关",
     "language_title": "语言设置",

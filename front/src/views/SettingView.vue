@@ -28,6 +28,7 @@ interface AppConfig {
   };
   oaf: boolean;
   autoZip: boolean;
+  showSponsorAd: boolean;
   javaPath?: string;
 }
 
@@ -64,6 +65,7 @@ const config = ref<AppConfig>({
   filter: { hashes: false, dexpub: false, mixins: false, modrinth: false, mcmod: false },
   oaf: false,
   autoZip: false,
+  showSponsorAd: true,
   javaPath: undefined
 });
 
@@ -181,6 +183,13 @@ const settings = computed<SettingCategory[]>(() => {
           description: t('setting.system_autozip_desc'),
           path: 'autoZip',
           defaultValue: false
+        },
+        {
+          key: 'showSponsorAd',
+          name: t('setting.system_sponsor_ad_name'),
+          description: t('setting.system_sponsor_ad_desc'),
+          path: 'showSponsorAd',
+          defaultValue: true
         }
       ]
     }
@@ -274,6 +283,8 @@ async function saveConfig(newConfig: AppConfig) {
     await axios.post('/config/post', newConfig, {
       headers: { 'Content-Type': 'application/json' }
     });
+    // 通知其他组件配置已更新
+    window.dispatchEvent(new CustomEvent('config-changed'));
   } catch (error) {
     console.error('保存配置失败:', error);
     message.error(t('setting.config_save_failed'));
