@@ -137,7 +137,6 @@
     "name_placeholder": "Please enter template name",
     "version": "Version",
     "version_placeholder": "Please enter version number",
-    "description": "Description",
     "description_placeholder": "Please enter template description",
     "author": "Author",
     "author_placeholder": "Please enter author name",

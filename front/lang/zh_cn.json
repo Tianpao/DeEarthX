@@ -137,7 +137,6 @@
     "name_placeholder": "请输入模板名称",
     "version": "版本",
     "version_placeholder": "请输入版本号",
-    "description": "描述",
     "description_placeholder": "请输入模板描述",
     "author": "作者",
     "author_placeholder": "请输入作者名称",
