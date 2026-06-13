@@ -56,6 +56,7 @@
     "unzip_progress": "解压进度",
     "download_progress": "下载进度",
     "server_install_progress": "服务端安装",
+    "server_install_starting": "正在开始安装...",
     "server_install_step": "步骤",
     "server_install_message": "消息",
     "server_install_completed": "安装完成！",

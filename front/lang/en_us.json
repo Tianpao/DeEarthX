@@ -56,6 +56,7 @@
     "unzip_progress": "Extraction Progress",
     "download_progress": "Download Progress",
     "server_install_progress": "Server Installation",
+    "server_install_starting": "Starting installation...",
     "server_install_step": "Step",
     "server_install_message": "Message",
     "server_install_completed": "Installation completed!",

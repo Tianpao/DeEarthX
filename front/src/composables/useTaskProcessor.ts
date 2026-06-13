@@ -1,64 +1,28 @@
-import { ref, inject } from 'vue';
+import { inject } from 'vue';
+import { storeToRefs } from 'pinia';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
-import { useModeSelection } from '@/composables/useModeSelection';
-import { useTemplateSelection } from '@/composables/useTemplateSelection';
-import { useProgress } from '@/composables/useProgress';
+import { sendNotification } from '@tauri-apps/plugin-notification';
+import { useProgressStore } from '@/stores/progress';
 import { useErrorHandler } from '@/composables/useErrorHandler';
-import axiosInstance from '@/utils/axios';
 
 export function useTaskProcessor() {
     const { t } = useI18n();
-    const killCoreProcess = inject<(() => void) | undefined>("killCoreProcess");
-    const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
-
-    // 文件路径（用于统一UI显示，可能带有 selected- 前缀表示通过对话框选择）
-    const droppedFilePath = ref<string | null>(null);
-    const uploadDisabled = ref(false);
-
-    function setDroppedFilePath(path: string) {
-        droppedFilePath.value = path;
-    }
-
-    function clearDroppedFilePath() {
-        droppedFilePath.value = null;
-    }
-
-    // 获取实际的文件路径（去除 selected- 前缀）
-    function getActualFilePath(): string | null {
-        if (!droppedFilePath.value) return null;
-        const path = droppedFilePath.value;
-        if (path.startsWith('selected-')) {
-            return path.substring(8); // 移除 'selected-' 前缀
-        }
-        return path;
-    }
-
-    // Initialize all sub-composables
+    const store = useProgressStore();
     const {
+        uploadDisabled,
+        droppedFilePath,
         javaAvailable,
         selectedMode,
-        modeOptions,
-        handleModeSelect
-    } = useModeSelection();
-
-    const {
         showTemplateModal,
         templates,
         loadingTemplates,
         selectedTemplate,
         currentTemplateName,
-        loadTemplates,
-        openTemplateModal,
-        selectTemplate
-    } = useTemplateSelection();
-
-    const {
         showSteps,
         currentStep,
-        stepItems,
         unzipProgress,
         downloadProgress,
         uploadProgress,
@@ -67,32 +31,16 @@ export function useTaskProcessor() {
         serverInstallInfo,
         filterModsInfo,
         startTime,
-        resetProgress,
-        updateUnzipProgress,
-        updateDownloadProgress,
-        handleFinish,
-        handleServerInstallStart,
-        handleServerInstallStep,
-        handleServerInstallProgress,
-        handleServerInstallComplete,
-        handleServerInstallError,
-        handleFilterModsStart,
-        handleFilterModsProgress,
-        handleFilterModsComplete,
-        handleFilterModsError
-    } = useProgress();
+        startButtonDisabled
+    } = storeToRefs(store);
 
-    const {
-        handleError
-    } = useErrorHandler();
+    const killCoreProcess = inject<(() => void) | undefined>("killCoreProcess");
+    const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
-    const startButtonDisabled = ref(false);
+    const { handleError } = useErrorHandler();
 
     function resetState() {
-        uploadDisabled.value = false;
-        startButtonDisabled.value = false;
-        resetProgress();
-        droppedFilePath.value = null;
+        store.resetState();
         if (clearDroppedFile) {
             clearDroppedFile();
         }
@@ -103,20 +51,21 @@ export function useTaskProcessor() {
 
     async function runDeEarthXFromPath(filePath: string, socket: Socket) {
         message.success(t('home.start_production'));
-        showSteps.value = true;
+        store.showSteps = true;
 
         try {
             message.loading(t('home.task_preparing'));
             const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
             const apiPort = import.meta.env.VITE_API_PORT || '37019';
-            let url = `http://${apiHost}:${apiPort}/start-path?mode=${selectedMode.value}`;
+            let url = `http://${apiHost}:${apiPort}/start-path?mode=${store.selectedMode}`;
 
-            if (selectedMode.value === 'server' && selectedTemplate.value) {
-                url += `&template=${encodeURIComponent(selectedTemplate.value)}`;
+            if (store.selectedMode === 'server' && store.selectedTemplate) {
+                url += `&template=${encodeURIComponent(store.selectedTemplate)}`;
             }
 
-            startTime.value = Date.now();
+            store.startTime = Date.now();
 
+            const { default: axiosInstance } = await import('@/utils/axios');
             await axiosInstance.post(url, { path: filePath });
         } catch (error) {
             console.error('请求失败:', error);
@@ -127,16 +76,14 @@ export function useTaskProcessor() {
     }
 
     function handleStartProcess() {
-        const actualPath = getActualFilePath();
+        const actualPath = store.getActualFilePath();
 
         if (!actualPath) {
             message.warning(t('home.please_select_file'));
             return;
         }
 
-        startButtonDisabled.value = true;
-        uploadDisabled.value = true;
-        showSteps.value = true;
+        store.startTask();
 
         message.loading(t('home.ws_connecting'));
         const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
@@ -154,57 +101,75 @@ export function useTaskProcessor() {
         });
 
         socket.on("finish", (timeSpent: number) => {
-            handleFinish(timeSpent);
+            const time = Math.round(timeSpent / 1000);
+            store.incrementStep();
+
+            // 根据模式显示不同的完成消息
+            if (store.selectedMode === 'server') {
+                const info = store.serverInstallInfo;
+                if (info.installPath) {
+                    message.success(t('home.server_install_completed') + ` ${t('home.server_install_duration')}: ${time}s`);
+                } else {
+                    message.success(t('home.production_complete', { time }));
+                }
+            } else {
+                message.success(t('home.production_complete', { time }));
+            }
+
+            sendNotification({ title: t('common.app_name'), body: t('home.production_complete', { time }) });
             socket.disconnect();
-            setTimeout(() => resetState(), 8000);
+            store.completeTask();
         });
 
         socket.on("unzip", (data: any) => {
-            updateUnzipProgress(data);
+            store.updateUnzipProgress(data);
         });
 
         socket.on("downloading", (data: any) => {
-            updateDownloadProgress(data);
+            store.updateDownloadProgress(data);
         });
 
         socket.on("changed", () => {
-            currentStep.value++;
+            store.incrementStep();
         });
 
         socket.on("server_install_start", (data: any) => {
-            handleServerInstallStart(data);
+            store.handleServerInstallStart(data);
         });
 
         socket.on("server_install_step", (data: any) => {
-            handleServerInstallStep(data);
+            store.handleServerInstallStep(data);
         });
 
         socket.on("server_install_progress", (data: any) => {
-            handleServerInstallProgress(data);
+            store.handleServerInstallProgress(data);
         });
 
         socket.on("server_install_complete", (data: any) => {
-            handleServerInstallComplete(data);
+            store.handleServerInstallComplete(data);
+            // finish 事件会统一发送通知，这里不再重复发送
         });
 
         socket.on("server_install_error", (data: any) => {
-            handleServerInstallError(data);
+            store.handleServerInstallError(data);
         });
 
         socket.on("filter_mods_start", (data: any) => {
-            handleFilterModsStart(data);
+            store.handleFilterModsStart(data);
         });
 
         socket.on("filter_mods_progress", (data: any) => {
-            handleFilterModsProgress(data);
+            store.handleFilterModsProgress(data);
         });
 
         socket.on("filter_mods_complete", (data: any) => {
-            handleFilterModsComplete(data);
+            store.handleFilterModsComplete(data);
+            const timeSpent = Math.round(data.duration / 1000);
+            message.success(t('home.filter_mods_completed', { filtered: data.filteredCount, moved: data.movedCount }) + ` ${t('home.server_install_duration')}: ${timeSpent}s`);
         });
 
         socket.on("filter_mods_error", (data: any) => {
-            handleFilterModsError(data);
+            store.handleFilterModsError(data);
         });
 
         socket.on("error", (error: any) => {
@@ -212,6 +177,7 @@ export function useTaskProcessor() {
             resetState();
             socket.disconnect();
         });
+
         socket.on('disconnect', () => {
             console.log('WebSocket连接关闭');
         });
@@ -222,26 +188,26 @@ export function useTaskProcessor() {
         uploadDisabled,
         // File path
         droppedFilePath,
-        setDroppedFilePath,
-        clearDroppedFilePath,
+        setDroppedFilePath: store.setDroppedFilePath,
+        clearDroppedFilePath: store.clearDroppedFilePath,
         // Mode selection
         javaAvailable,
         selectedMode,
-        modeOptions,
-        handleModeSelect,
+        modeOptions: store.modeOptions,
+        handleModeSelect: store.handleModeSelect,
         // Template selection
         showTemplateModal,
         templates,
         loadingTemplates,
         selectedTemplate,
         currentTemplateName,
-        loadTemplates,
-        openTemplateModal,
-        selectTemplate,
+        loadTemplates: store.loadTemplates,
+        openTemplateModal: store.openTemplateModal,
+        selectTemplate: store.selectTemplate,
         // Progress
         showSteps,
         currentStep,
-        stepItems,
+        stepItems: store.stepItems,
         unzipProgress,
         downloadProgress,
         uploadProgress,

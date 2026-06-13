@@ -109,12 +109,13 @@ export class Dex {
     const config = Config.getConfig();
     const latest = Date.now();
     const duration = latest - startTime;
-    
+
     if (isServerMode) {
       this.message.serverInstallComplete(unpath, duration);
-    } else {
-      this.message.finish(startTime, latest);
     }
+
+    // 无论是服务端模式还是上传模式，都发送 finish 事件
+    this.message.finish(startTime, latest);
 
     if (!isServerMode && config.autoZip) {
       await createZipArchive(unpath, mpname);

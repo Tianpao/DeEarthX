@@ -1,12 +1,14 @@
 <script lang="ts" setup>
-import { inject, watch } from 'vue';
+import { inject, watch, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { formatFileSize, formatTime } from '@/utils/format';
 import { useTaskProcessor } from '@/composables/useTaskProcessor';
+import { useProgressStore } from '@/stores/progress';
 import FileSelector from '@/components/FileSelector.vue';
 
 const { t } = useI18n();
+const store = useProgressStore();
 const droppedFilePaths = inject<ReturnType<typeof import('@/composables/useDragDrop').useDragDrop>['droppedFilePaths']>('droppedFilePaths');
 const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
@@ -39,6 +41,11 @@ const {
     clearDroppedFilePath
 } = useTaskProcessor();
 
+// 页面加载时检查并恢复状态
+onMounted(() => {
+    store.checkAndRestoreState();
+});
+
 // 文件列表（单个文件）
 const filePaths = computed({
     get: () => droppedFilePath.value ? [droppedFilePath.value] : [],
@@ -52,8 +59,6 @@ const filePaths = computed({
         }
     }
 });
-
-import { computed } from 'vue';
 
 function handleFileRemove() {
     clearDroppedFilePath();

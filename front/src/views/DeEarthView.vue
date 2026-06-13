@@ -1,34 +1,32 @@
 <script lang="ts" setup>
-import { ref, onUnmounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { FileSearchOutlined, FolderOpenOutlined } from '@ant-design/icons-vue';
 import { open } from '@tauri-apps/plugin-dialog';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { useI18n } from 'vue-i18n';
+import { storeToRefs } from 'pinia';
+import { useDeearthStore } from '@/stores/deearth';
 
 const { t } = useI18n();
+const store = useDeearthStore();
 
-interface ModCheckResult {
-    filename: string;
-    filePath: string;
-    clientSide: 'required' | 'optional' | 'unsupported' | 'unknown';
-    serverSide: 'required' | 'optional' | 'unsupported' | 'unknown';
-    source: string;
-    checked: boolean;
-    errors?: string[];
-    allResults: any[];
-}
-
-const selectedFolder = ref<string>('');
-const bundleName = ref<string>('');
-const checking = ref(false);
-const results = ref<ModCheckResult[]>([]);
-const showResults = ref(false);
-const progress = ref({ current: 0, total: 0, percent: 0, modName: '' });
-const showProgress = ref(false);
+const {
+    selectedFolder,
+    bundleName,
+    checking,
+    results,
+    showResults,
+    progress,
+    showProgress
+} = storeToRefs(store);
 
 let socket: Socket | null = null;
+
+onMounted(() => {
+    store.checkAndRestoreState();
+});
 
 onUnmounted(() => {
     if (socket) {
@@ -46,7 +44,7 @@ async function selectFolder() {
         });
 
         if (selected) {
-            selectedFolder.value = selected;
+            store.setSelectedFolder(selected);
             message.success(t('deearth.select_folder_success', { path: selected }));
         }
     } catch (error) {
@@ -71,10 +69,7 @@ async function handleCheck() {
         socket = null;
     }
 
-    checking.value = true;
-    showResults.value = false;
-    showProgress.value = false;
-    results.value = [];
+    store.startCheck();
 
     const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
     const wsPort = import.meta.env.VITE_WS_PORT || '37019';
@@ -95,37 +90,30 @@ async function handleCheck() {
     socket.on('modcheck_start', (data: any) => {
         console.log('开始检查:', data);
         showProgress.value = true;
-        progress.value = {
+        store.updateProgress({
             current: 0,
             total: data.totalMods || 0,
-            percent: 0,
             modName: ''
-        };
+        });
     });
 
     socket.on('modcheck_progress', (data: any) => {
-        const percent = data.total > 0 ? Math.round((data.current / data.total) * 100) : 0;
-        progress.value = {
+        store.updateProgress({
             current: data.current,
             total: data.total,
-            percent,
             modName: data.modName
-        };
+        });
     });
 
     socket.on('modcheck_complete', (data: any) => {
         message.success(t('deearth.check_complete', { total: data.results.length, filtered: data.filteredCount }));
-        results.value = data.results;
-        showResults.value = true;
-        showProgress.value = false;
-        checking.value = false;
+        store.completeCheck(data);
         socket?.disconnect();
     });
 
     socket.on('modcheck_error', (data: any) => {
         message.error(t('deearth.check_failed', { error: data.error }));
-        checking.value = false;
-        showProgress.value = false;
+        store.errorCheck();
         socket?.disconnect();
     });
 
@@ -136,8 +124,7 @@ async function handleCheck() {
     socket.on('connect_error', (error: any) => {
         console.error('Socket.IO 连接错误:', error);
         message.error(t('deearth.connect_error'));
-        checking.value = false;
-        showProgress.value = false;
+        store.errorCheck();
     });
 
     socket.connect();
