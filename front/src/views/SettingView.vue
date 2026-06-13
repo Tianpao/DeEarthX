@@ -1,7 +1,6 @@
 <script lang="ts" setup>
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import type { Component } from 'vue';
-import { message } from 'ant-design-vue';
 import {
   ApiOutlined,
   CloudDownloadOutlined,
@@ -12,25 +11,7 @@ import {
 } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { setLanguage, type Language } from '../utils/i18n';
-import axios from '../utils/axios';
-
-interface AppConfig {
-  mirror: {
-    bmclapi: boolean;
-    mcimirror: 'on' | 'off' | 'partial';
-  };
-  filter: {
-    hashes: boolean;
-    dexpub: boolean;
-    mixins: boolean;
-    modrinth: boolean;
-    mcmod: boolean;
-  };
-  oaf: boolean;
-  autoZip: boolean;
-  showSponsorAd: boolean;
-  javaPath?: string;
-}
+import { useSettingStore } from '../stores';
 
 interface SettingItem {
   key: string;
@@ -59,15 +40,7 @@ interface SettingCategory {
 }
 
 const { t, locale } = useI18n();
-
-const config = ref<AppConfig>({
-  mirror: { bmclapi: false, mcimirror: 'on' },
-  filter: { hashes: false, dexpub: false, mixins: false, modrinth: false, mcmod: false },
-  oaf: false,
-  autoZip: false,
-  showSponsorAd: true,
-  javaPath: undefined
-});
+const settingStore = useSettingStore();
 
 const categoryAccentClasses: Record<SettingCategory['accent'], { badge: string; soft: string; text: string; border: string }> = {
   emerald: {
@@ -210,102 +183,37 @@ function handleLanguageChange(value: Language) {
 }
 
 function getConfigValue(path: string): boolean {
-  const keys = path.split('.');
-  let value: any = config.value;
-
-  for (const key of keys) {
-    value = value[key];
-  }
-
+  const value = settingStore.getConfigValue(path);
   if (typeof value === 'boolean') {
     return value;
   }
-
   console.warn(`Config value at path "${path}" is not a boolean:`, value);
   return false;
 }
 
 function setConfigValue(path: string, newValue: boolean): void {
-  const keys = path.split('.');
-  let obj: any = config.value;
-
-  for (let i = 0; i < keys.length - 1; i++) {
-    obj = obj[keys[i]];
-  }
-
-  obj[keys[keys.length - 1]] = newValue;
+  settingStore.setConfigValue(path, newValue);
 }
 
 function getSelectConfigValue(path: string): string {
-  const keys = path.split('.');
-  let value: any = config.value;
-
-  for (const key of keys) {
-    value = value[key];
-  }
-
+  const value = settingStore.getConfigValue(path);
   if (typeof value === 'string') {
     return value;
   }
-
   console.warn(`Config value at path "${path}" is not a string:`, value);
   return 'on';
 }
 
 function setSelectConfigValue(path: string, newValue: string): void {
-  const keys = path.split('.');
-  let obj: any = config.value;
-
-  for (let i = 0; i < keys.length - 1; i++) {
-    obj = obj[keys[i]];
-  }
-
-  obj[keys[keys.length - 1]] = newValue;
-}
-
-async function loadConfig() {
-  try {
-    const response = await axios.get('/config/get');
-    config.value = response.data;
-    console.log('[Setting] 配置已从后端刷新');
-  } catch (error) {
-    console.error('加载配置失败:', error);
-    message.error(t('setting.config_load_failed'));
-  }
+  settingStore.setConfigValue(path, newValue);
 }
 
 defineExpose({
-  refreshConfig: loadConfig
+  refreshConfig: () => settingStore.refreshConfig()
 });
-
-async function saveConfig(newConfig: AppConfig) {
-  try {
-    await axios.post('/config/post', newConfig, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-    // 通知其他组件配置已更新
-    window.dispatchEvent(new CustomEvent('config-changed'));
-  } catch (error) {
-    console.error('保存配置失败:', error);
-    message.error(t('setting.config_save_failed'));
-  }
-}
-
-let isInitialLoad = true;
-watch(config, (newValue) => {
-  if (isInitialLoad) {
-    isInitialLoad = false;
-    return;
-  }
-  saveConfig(newValue);
-}, { deep: true });
 
 onMounted(() => {
-  loadConfig();
-});
-
-onUnmounted(() => {
-  isInitialLoad = true;
+  settingStore.initialize();
 });
 </script>
 
