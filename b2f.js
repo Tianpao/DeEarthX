@@ -33,8 +33,9 @@ switch (args[0]) {
         break;
     case "b2r": //build to root
         const exePath = "./front/src-tauri/target/release/bundle/nsis/DeEarthX-V3_1.0.0_x64-setup.exe";
-        const rootExePath = "./DeEarthX-V3_x64-setup.exe";
-        const zipPath = "./DeEarthX-V3_x64-setup.zip";
+        const buildDir = "./build";
+        const rootExePath = "./build/DeEarthX-V3_x64-setup.exe";
+        const zipPath = "./build/DeEarthX-V3_x64-setup.zip";
 
         if (!fs.existsSync(exePath)) {
             console.error(`错误: 源文件不存在: ${exePath}`);
@@ -42,7 +43,13 @@ switch (args[0]) {
             process.exit(1);
         }
 
-        // 移动 exe 到根目录
+        // 确保 build 目录存在
+        if (!fs.existsSync(buildDir)) {
+            fs.mkdirSync(buildDir, { recursive: true });
+            console.log(`创建目录: ${buildDir}`);
+        }
+
+        // 移动 exe 到 build 目录
         fs.renameSync(exePath, rootExePath);
         console.log(`移动文件: ${exePath} -> ${rootExePath}`);
 
