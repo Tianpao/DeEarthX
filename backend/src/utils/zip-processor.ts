@@ -13,7 +13,8 @@ const BLACKLISTED_PATHS = [
   "overrides/essential",
   "overrides/resourcepacks",
   "overrides/PCL",
-  "overrides/CustomSkinLoader"
+  "overrides/CustomSkinLoader",
+  "overrides/servers.dat"
 ];
 
 export function isBlacklistedEntry(filename: string): boolean {

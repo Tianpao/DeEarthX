@@ -5,6 +5,7 @@ import { NeoForge } from "./neoforge.js";
 import fs from "node:fs";
 import { MessageWS } from "../utils/socketio.js";
 import { getAppDir } from "../utils/appdir.js";
+import { cleanupInstallFiles } from "../utils/cleanup.js";
 
 interface XModloader {
   setup(): Promise<void>;
@@ -102,6 +103,9 @@ export async function mlsetup(ml: string, mcv: string, mlv: string, path: string
         }
       }
     }
+
+    // 清理安装文件和日志
+    await cleanupInstallFiles(path);
   } catch (error) {
     if (messageWS) {
       messageWS.serverInstallError(error instanceof Error ? error.message : String(error));
