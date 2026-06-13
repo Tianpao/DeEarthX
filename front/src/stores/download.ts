@@ -72,6 +72,9 @@ export const useDownloadStore = defineStore('download', () => {
   // 完成时间戳
   const taskCompletedAt = ref<number>(0);
 
+  // Socket 实例（全局保存，避免切换页面丢失）
+  let socketInstance: any = null;
+
   const canInstall = computed(() =>
     !!selectedMcVersion.value && !!selectedLoader.value && !!selectedLoaderVersion.value
   );
@@ -239,11 +242,18 @@ export const useDownloadStore = defineStore('download', () => {
     if (taskCompletedAt.value > 0 && Date.now() - taskCompletedAt.value > 180000) {
       resetState();
     }
+  }
 
-    // 如果安装进行中但已超时（超过 10 分钟），也重置
-    if (installing.value && serverInstallInfo.value.status === 'installing') {
-      resetState();
-    }
+  function setSocketInstance(socket: any) {
+    socketInstance = socket;
+  }
+
+  function getSocketInstance() {
+    return socketInstance;
+  }
+
+  function clearSocketInstance() {
+    socketInstance = null;
   }
 
   return {
@@ -266,6 +276,9 @@ export const useDownloadStore = defineStore('download', () => {
     handleServerInstallComplete,
     handleServerInstallError,
     resetState,
-    checkAndRestoreState
+    checkAndRestoreState,
+    setSocketInstance,
+    getSocketInstance,
+    clearSocketInstance
   };
 });

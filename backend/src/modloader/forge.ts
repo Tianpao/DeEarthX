@@ -97,19 +97,20 @@ export class Forge {
       }
 
       if (entry.entryName === "install_profile.json") {
-        if (version_compare(this.minecraft, "26") != -1) {
-          return;
+        // NeoForge 26.x 以上版本不需要 mappings，跳过 mappings 下载
+        if (version_compare(this.loaderVersion, "26") >= 0) {
+          continue;
         }
         const json = JSON.parse((entry.getData()).toString()) as IForge;
         const vjson = await this.got.get(`version/${this.minecraft}/json`).json<IVersion>();
         if (version_compare(this.minecraft, "1.18") !== -1) {
-        const mojpath = this.MTP(json.data.MOJMAPS.server);
-        _downlist.push([`https://bmclapi2.bangbang93.com/${new URL(vjson.downloads.server_mappings.url).pathname.slice(1)}`, `${this.path}/libraries/${mojpath}`]);
+          const mojpath = this.MTP(json.data.MOJMAPS.server);
+          _downlist.push([`https://bmclapi2.bangbang93.com/${new URL(vjson.downloads.server_mappings.url).pathname.slice(1)}`, `${this.path}/libraries/${mojpath}`]);
         }
-        if (version_compare(this.minecraft, "1.12.2") === 1){
+        if (version_compare(this.minecraft, "1.12.2") === 1) {
           const mappingobj = json.data.MAPPINGS.server;
-        const path = this.MTP(mappingobj.replace(":mappings@txt", "@zip"));
-        _downlist.push([`https://bmclapi2.bangbang93.com/maven/${path}`, `${this.path}/libraries/${path}`]);
+          const path = this.MTP(mappingobj.replace(":mappings@txt", "@zip"));
+          _downlist.push([`https://bmclapi2.bangbang93.com/maven/${path}`, `${this.path}/libraries/${path}`]);
         }
       }
     }

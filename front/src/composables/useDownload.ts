@@ -18,8 +18,6 @@ export function useDownload() {
     serverInstallProgress, serverInstallInfo
   } = storeToRefs(store);
 
-  let socket: Socket | null = null;
-
   function startInstall() {
     if (!store.canInstall) return;
 
@@ -28,10 +26,11 @@ export function useDownload() {
     const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
     const wsPort = import.meta.env.VITE_WS_PORT || '37019';
 
-    socket = io(`ws://${wsHost}:${wsPort}`, { autoConnect: false, reconnection: false });
+    const socket = io(`ws://${wsHost}:${wsPort}`, { autoConnect: false, reconnection: false });
+    store.setSocketInstance(socket);
 
     socket.on('connect', () => {
-      axiosInstance.post(`/download/install?socketId=${socket!.id}`, {
+      axiosInstance.post(`/download/install?socketId=${socket.id}`, {
         loader: selectedLoader.value,
         mcVersion: selectedMcVersion.value,
         loaderVersion: selectedLoaderVersion.value,
@@ -57,26 +56,25 @@ export function useDownload() {
 
     socket.on('server_install_complete', (data: any) => {
       store.handleServerInstallComplete(data);
-      socket?.disconnect();
+      socket.disconnect();
+      store.clearSocketInstance();
     });
 
     socket.on('server_install_error', (data: any) => {
       store.handleServerInstallError(data.error || t('download.install_error'));
-      socket?.disconnect();
-    });
-
-    socket.on('disconnect', () => {
-      if (installing.value) {
-        store.handleServerInstallError(t('download.install_error'));
-      }
+      socket.disconnect();
+      store.clearSocketInstance();
     });
 
     socket.connect();
   }
 
   function resetState() {
-    socket?.disconnect();
-    socket = null;
+    const socket = store.getSocketInstance();
+    if (socket) {
+      socket.disconnect();
+      store.clearSocketInstance();
+    }
     store.resetState();
   }
 
@@ -89,10 +87,8 @@ export function useDownload() {
   });
 
   onUnmounted(() => {
-    if (socket) {
-      socket.disconnect();
-      socket = null;
-    }
+    // 安装进行中时不断开连接，让安装继续进行
+    // socket 保存在 store 中，切回来时进度还在
   });
 
   return {
