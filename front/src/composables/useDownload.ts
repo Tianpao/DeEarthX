@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import { storeToRefs } from 'pinia';
 import { useDownloadStore } from '@/stores/download';
 import axiosInstance from '@/utils/axios';
