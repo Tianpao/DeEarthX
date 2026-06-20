@@ -90,15 +90,15 @@ jobs:
         with:
           name: DeEarthX-V3-${{ github.ref_name }}-windows
           path: |
-            DeEarthX-V3_x64-setup.exe
-            DeEarthX-V3_x64-setup.zip
+            build/DeEarthX-V3_x64-setup.exe
+            build/DeEarthX-V3_x64-setup.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            DeEarthX-V3_x64-setup.exe
-            DeEarthX-V3_x64-setup.zip
+            build/DeEarthX-V3_x64-setup.exe
+            build/DeEarthX-V3_x64-setup.zip
           draft: false
           prerelease: false
           generate_release_notes: true
