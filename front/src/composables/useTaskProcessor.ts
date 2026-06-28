@@ -1,4 +1,4 @@
-import { inject } from 'vue';
+import { inject, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
@@ -38,6 +38,18 @@ export function useTaskProcessor() {
     const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
     const { handleError } = useErrorHandler();
+
+    // AI 检查弹窗状态
+    const showAiPromptModal = ref(false);
+    const aiPromptData = ref<{ modpackName: string; installPath: string }>({ modpackName: '', installPath: '' });
+    let aiCheckSocket: Socket | null = null;
+
+    function handleAiDecision(useAi: boolean) {
+        showAiPromptModal.value = false;
+        if (aiCheckSocket) {
+            aiCheckSocket.emit("ai_check_decision", { useAi });
+        }
+    }
 
     function resetState() {
         store.resetState();
@@ -93,7 +105,7 @@ export function useTaskProcessor() {
         socket.connect();
 
         socket.on('connect', () => {
-            // 连接成功不弹提示，只有失败才弹
+            aiCheckSocket = socket;
             runDeEarthXFromPath(actualPath, socket);
         });
 
@@ -144,7 +156,11 @@ export function useTaskProcessor() {
 
         socket.on("server_install_complete", (data: any) => {
             store.handleServerInstallComplete(data);
-            // finish 事件会统一发送通知，这里不再重复发送
+        });
+
+        socket.on("ai_check_prompt", (data: { modpackName: string; installPath: string }) => {
+            aiPromptData.value = data;
+            showAiPromptModal.value = true;
         });
 
         socket.on("server_install_error", (data: any) => {
@@ -215,6 +231,10 @@ export function useTaskProcessor() {
         startTime,
         // Task
         startButtonDisabled,
-        handleStartProcess
+        handleStartProcess,
+        // AI check
+        showAiPromptModal,
+        aiPromptData,
+        handleAiDecision
     };
 }

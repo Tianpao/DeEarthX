@@ -130,4 +130,40 @@ export class MessageWS {
       error
     });
   }
+
+  // AI 检查进度事件
+  aiCheckPrompt(modpackName: string, installPath: string) {
+    this.socket.emit("ai_check_prompt", {
+      modpackName,
+      installPath
+    });
+  }
+
+  aiCheckStart(totalMods: number) {
+    this.socket.emit("ai_check_start", {
+      totalMods,
+      message: "AI 正在分析模组..."
+    });
+  }
+
+  aiCheckProgress(current: number, total: number, modName: string) {
+    this.socket.emit("ai_check_progress", {
+      current,
+      total,
+      modName
+    });
+  }
+
+  aiCheckComplete(results: any[], duration: number) {
+    this.socket.emit("ai_check_complete", {
+      results,
+      duration
+    });
+  }
+
+  aiCheckError(error: string) {
+    this.socket.emit("ai_check_error", {
+      error
+    });
+  }
 }

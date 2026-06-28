@@ -19,6 +19,7 @@ export interface AppConfig {
   oaf: boolean;
   autoZip: boolean;
   showSponsorAd: boolean;
+  enableAI: boolean;
   javaPath?: string;
 }
 
@@ -28,6 +29,7 @@ const DEFAULT_CONFIG: AppConfig = {
   oaf: false,
   autoZip: false,
   showSponsorAd: true,
+  enableAI: false,
   javaPath: undefined
 };
 

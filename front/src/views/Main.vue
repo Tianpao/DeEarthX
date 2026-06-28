@@ -2,6 +2,7 @@
 import { inject, watch, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
+import { RobotOutlined } from '@ant-design/icons-vue';
 import { formatFileSize, formatTime } from '@/utils/format';
 import { useTaskProcessor } from '@/composables/useTaskProcessor';
 import { useProgressStore } from '@/stores/progress';
@@ -38,7 +39,10 @@ const {
     handleStartProcess,
     droppedFilePath,
     setDroppedFilePath,
-    clearDroppedFilePath
+    clearDroppedFilePath,
+    showAiPromptModal,
+    aiPromptData,
+    handleAiDecision
 } = useTaskProcessor();
 
 // 页面加载时检查并恢复状态
@@ -241,6 +245,37 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
                     </div>
                 </div>
             </a-spin>
+        </a-modal>
+
+        <!-- AI 查缺补漏提示弹窗 -->
+        <a-modal
+            v-model:open="showAiPromptModal"
+            :title="t('home.ai_check_title')"
+            :closable="true"
+            @cancel="handleAiDecision(false)"
+            width="420px"
+        >
+            <div class="tw:py-4">
+                <div class="tw:flex tw:items-center tw:gap-3 tw:mb-4">
+                    <RobotOutlined class="tw:text-2xl tw:text-blue-500" />
+                    <div>
+                        <h3 class="tw:text-base tw:font-semibold">{{ t('home.ai_check_prompt_title') }}</h3>
+                        <p class="tw:text-sm tw:text-gray-600 tw:mt-1">
+                            {{ t('home.ai_check_prompt_desc', { name: aiPromptData.modpackName }) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <template #footer>
+                <div class="tw:flex tw:justify-end tw:gap-2">
+                    <a-button @click="handleAiDecision(false)">
+                        {{ t('home.ai_check_skip') }}
+                    </a-button>
+                    <a-button type="primary" @click="handleAiDecision(true)">
+                        {{ t('home.ai_check_confirm') }}
+                    </a-button>
+                </div>
+            </template>
         </a-modal>
     </div>
 

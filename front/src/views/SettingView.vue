@@ -5,6 +5,7 @@ import {
   ApiOutlined,
   CloudDownloadOutlined,
   GlobalOutlined,
+  RobotOutlined,
   SettingOutlined,
   SafetyCertificateOutlined,
   ToolOutlined
@@ -163,6 +164,13 @@ const settings = computed<SettingCategory[]>(() => {
           description: t('setting.system_sponsor_ad_desc'),
           path: 'showSponsorAd',
           defaultValue: true
+        },
+        {
+          key: 'enableAI',
+          name: t('setting.system_ai_name'),
+          description: t('setting.system_ai_desc'),
+          path: 'enableAI',
+          defaultValue: false
         }
       ]
     }
@@ -284,6 +292,7 @@ onMounted(() => {
               >
                 <ApiOutlined v-if="category.id === 'filter'" />
                 <CloudDownloadOutlined v-else-if="category.id === 'mirror'" />
+                <RobotOutlined v-else-if="item.key === 'enableAI'" />
                 <SettingOutlined v-else />
               </div>
               <div class="tw:min-w-0 tw:flex-1">

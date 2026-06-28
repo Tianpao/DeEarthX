@@ -10,16 +10,26 @@ import { MessageWS } from "./utils/socketio.js";
 import { logger } from "./utils/logger.js";
 import { version_compare } from "./utils/java.js";
 import { extractMrpackFromZip, processZipEntries, createZipArchive } from "./utils/zip-processor.js";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 
 export class Dex {
   message!: MessageWS;
   io: Server;
+  private currentSocket: Socket | null = null;
+  private pendingAiResolver: ((useAi: boolean) => void) | null = null;
 
   constructor(io: Server) {
     this.io = io;
     this.io.on("connection", (socket) => {
       this.message = new MessageWS(socket);
+      this.currentSocket = socket;
+
+      socket.on("ai_check_decision", (data: { useAi: boolean }) => {
+        if (this.pendingAiResolver) {
+          this.pendingAiResolver(data.useAi);
+          this.pendingAiResolver = null;
+        }
+      });
     });
   }
 
@@ -124,7 +134,27 @@ export class Dex {
       this.message.serverInstallComplete(unpath, duration);
     }
 
-    // 无论是服务端模式还是上传模式，都发送 finish 事件
+    // AI 查缺补漏流程（仅服务端模式且启用 AI 时）
+    if (isServerMode && config.enableAI) {
+      this.message.aiCheckPrompt(mpname, unpath);
+
+      const useAi = await new Promise<boolean>((resolve) => {
+        this.pendingAiResolver = resolve;
+        setTimeout(() => {
+          if (this.pendingAiResolver) {
+            this.pendingAiResolver(false);
+            this.pendingAiResolver = null;
+          }
+        }, 30000);
+      });
+
+      if (useAi) {
+        // TODO: 实现 AI 查缺补漏逻辑
+        this.message.info("AI 查缺补漏: 开始分析模组...");
+        // await aiService.checkMods(unpath, this.message);
+      }
+    }
+
     this.message.finish(startTime, latest);
 
     if (!isServerMode && config.autoZip) {

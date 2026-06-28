@@ -125,7 +125,12 @@
     "template_load_failed": "加载模板列表失败",
     "template_apply_success": "模板应用成功",
     "template_apply_failed": "模板应用失败",
-    "file_dropped": "已选择文件: {name}"
+    "file_dropped": "已选择文件: {name}",
+    "ai_check_title": "AI 检查",
+    "ai_check_prompt_title": "AI 查缺补漏",
+    "ai_check_prompt_desc": "是否使用 AI 检查整合包 \"{name}\" 中缺失或多余的模组？",
+    "ai_check_confirm": "开始检查",
+    "ai_check_skip": "跳过"
   },
   "template": {
     "title": "模板管理",
@@ -187,6 +192,8 @@
     "system_autozip_desc": "服务端制作完成后自动打包成 zip（开服模式不打包）",
     "system_sponsor_ad_name": "显示赞助商广告",
     "system_sponsor_ad_desc": "在标题栏显示赞助商广告轮播（每5秒切换一次）",
+    "system_ai_name": "启用 AI 功能",
+    "system_ai_desc": "服务端制作完成后使用 AI 查缺补漏",
     "switch_on": "开",
     "switch_off": "关",
     "language_title": "语言设置",

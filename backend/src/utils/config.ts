@@ -18,6 +18,7 @@ export interface IConfig {
   oaf: boolean;
   autoZip: boolean;
   showSponsorAd: boolean;
+  enableAI: boolean;
   port?: number;
   host?: string;
   javaPath?: string;
@@ -38,6 +39,7 @@ const DEFAULT_CONFIG: IConfig = {
   oaf: true,
   autoZip: false,
   showSponsorAd: true,
+  enableAI: false,
   port: 37019,
   host: 'localhost',
   javaPath: undefined
@@ -134,6 +136,7 @@ export class Config {
       oaf: getEnv('DEEARTHX_OAF', config.oaf),
       autoZip: getEnv('DEEARTHX_AUTO_ZIP', config.autoZip),
       showSponsorAd: getEnv('DEEARTHX_SHOW_SPONSOR_AD', config.showSponsorAd ?? true),
+      enableAI: getEnv('DEEARTHX_ENABLE_AI', config.enableAI),
       port: getEnv('DEEARTHX_PORT', config.port || DEFAULT_CONFIG.port),
       host: getEnv('DEEARTHX_HOST', config.host || DEFAULT_CONFIG.host)
     };

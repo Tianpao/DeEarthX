@@ -125,7 +125,12 @@
     "template_load_failed": "Failed to load template list",
     "template_apply_success": "Template applied successfully",
     "template_apply_failed": "Failed to apply template",
-    "file_dropped": "File selected: {name}"
+    "file_dropped": "File selected: {name}",
+    "ai_check_title": "AI Check",
+    "ai_check_prompt_title": "AI Mod Check",
+    "ai_check_prompt_desc": "Use AI to check for missing or extra mods in \"{name}\"?",
+    "ai_check_confirm": "Start Check",
+    "ai_check_skip": "Skip"
   },
   "template": {
     "title": "Template Management",
@@ -187,6 +192,8 @@
     "system_autozip_desc": "Automatically package to zip after server production is completed (not packaged in server mode)",
     "system_sponsor_ad_name": "Show Sponsor Ads",
     "system_sponsor_ad_desc": "Display sponsor ads carousel in the title bar (rotates every 5 seconds)",
+    "system_ai_name": "Enable AI",
+    "system_ai_desc": "Use AI to check for missing/extra mods after server production",
     "switch_on": "On",
     "switch_off": "Off",
     "language_title": "Language Settings",
