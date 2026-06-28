@@ -8,6 +8,15 @@ import { sendNotification } from '@tauri-apps/plugin-notification';
 import { useProgressStore } from '@/stores/progress';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 
+export interface AiToolCallCard {
+  id: string;
+  tool: string;
+  params: Record<string, unknown>;
+  status: 'running' | 'success' | 'error';
+  result?: string;
+  error?: string;
+}
+
 export function useTaskProcessor() {
     const { t } = useI18n();
     const store = useProgressStore();
@@ -39,16 +48,30 @@ export function useTaskProcessor() {
 
     const { handleError } = useErrorHandler();
 
-    // AI 检查弹窗状态
+    // AI 弹窗状态
     const showAiPromptModal = ref(false);
     const aiPromptData = ref<{ modpackName: string; installPath: string }>({ modpackName: '', installPath: '' });
     let aiCheckSocket: Socket | null = null;
 
+    // AI 圆形按钮 + 窗口
+    const showAiButton = ref(false);
+    const showAiWindow = ref(false);
+    const aiToolCalls = ref<AiToolCallCard[]>([]);
+
     function handleAiDecision(useAi: boolean) {
         showAiPromptModal.value = false;
+        if (useAi) {
+            showAiButton.value = true;
+            showAiWindow.value = true;
+            aiToolCalls.value = [];
+        }
         if (aiCheckSocket) {
             aiCheckSocket.emit("ai_check_decision", { useAi });
         }
+    }
+
+    function toggleAiWindow() {
+        showAiWindow.value = !showAiWindow.value;
     }
 
     function resetState() {
@@ -113,7 +136,6 @@ export function useTaskProcessor() {
             const time = Math.round(timeSpent / 1000);
             store.incrementStep();
 
-            // 根据模式显示不同的完成消息
             if (store.selectedMode === 'server') {
                 const info = store.serverInstallInfo;
                 if (info.installPath) {
@@ -161,6 +183,15 @@ export function useTaskProcessor() {
         socket.on("ai_check_prompt", (data: { modpackName: string; installPath: string }) => {
             aiPromptData.value = data;
             showAiPromptModal.value = true;
+        });
+
+        socket.on("ai_tool_call", (data: AiToolCallCard) => {
+            const idx = aiToolCalls.value.findIndex(c => c.id === data.id);
+            if (idx >= 0) {
+                aiToolCalls.value[idx] = data;
+            } else {
+                aiToolCalls.value = [...aiToolCalls.value, data];
+            }
         });
 
         socket.on("server_install_error", (data: any) => {
@@ -232,9 +263,13 @@ export function useTaskProcessor() {
         // Task
         startButtonDisabled,
         handleStartProcess,
-        // AI check
+        // AI
         showAiPromptModal,
         aiPromptData,
-        handleAiDecision
+        handleAiDecision,
+        showAiButton,
+        showAiWindow,
+        toggleAiWindow,
+        aiToolCalls
     };
 }

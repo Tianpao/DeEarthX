@@ -130,7 +130,10 @@
     "ai_check_prompt_title": "AI Mod Check",
     "ai_check_prompt_desc": "Use AI to check for missing or extra mods in \"{name}\"?",
     "ai_check_confirm": "Start Check",
-    "ai_check_skip": "Skip"
+    "ai_check_skip": "Skip",
+    "ai_window_title": "AI Assistant",
+    "ai_no_tools": "AI is preparing...",
+    "ai_tool_params": "Params"
   },
   "template": {
     "title": "Template Management",

@@ -128,7 +128,10 @@
     "ai_check_prompt_title": "AI 查缺補漏",
     "ai_check_prompt_desc": "是否使用 AI 檢查整合包 \"{name}\" 中缺失或多餘的模組？",
     "ai_check_confirm": "開始檢查",
-    "ai_check_skip": "跳過"
+    "ai_check_skip": "跳過",
+    "ai_window_title": "AI 助手",
+    "ai_no_tools": "AI 正在準備中...",
+    "ai_tool_params": "參數"
   },
   "template": {
     "title": "模板管理",

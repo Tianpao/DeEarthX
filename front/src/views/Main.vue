@@ -2,9 +2,10 @@
 import { inject, watch, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
-import { RobotOutlined } from '@ant-design/icons-vue';
+import { RobotOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, CloseOutlined } from '@ant-design/icons-vue';
 import { formatFileSize, formatTime } from '@/utils/format';
 import { useTaskProcessor } from '@/composables/useTaskProcessor';
+import type { AiToolCallCard } from '@/composables/useTaskProcessor';
 import { useProgressStore } from '@/stores/progress';
 import FileSelector from '@/components/FileSelector.vue';
 
@@ -42,8 +43,28 @@ const {
     clearDroppedFilePath,
     showAiPromptModal,
     aiPromptData,
-    handleAiDecision
+    handleAiDecision,
+    showAiButton,
+    showAiWindow,
+    toggleAiWindow,
+    aiToolCalls
 } = useTaskProcessor();
+
+function getToolStatusIcon(status: AiToolCallCard['status']) {
+    switch (status) {
+        case 'running': return LoadingOutlined;
+        case 'success': return CheckCircleOutlined;
+        case 'error': return CloseCircleOutlined;
+    }
+}
+
+function getToolStatusColor(status: AiToolCallCard['status']) {
+    switch (status) {
+        case 'running': return 'tw:text-blue-500';
+        case 'success': return 'tw:text-green-500';
+        case 'error': return 'tw:text-red-500';
+    }
+}
 
 // 页面加载时检查并恢复状态
 onMounted(() => {
@@ -136,6 +157,15 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
         <div v-if="showSteps"
             class="tw:fixed tw:bottom-2 tw:left-1/2 tw:-translate-x-1/2 tw:w-[65%] tw:h-20 tw:flex tw:justify-center tw:items-center tw:text-sm tw:bg-white tw:rounded-xl tw:shadow-lg tw:px-4 tw:ml-10">
             <a-steps :current="currentStep" :items="stepItems" size="small" />
+            <!-- AI 圆形按钮 -->
+            <button
+                v-if="showAiButton"
+                @click="toggleAiWindow"
+                class="tw:ml-4 tw:shrink-0 tw:w-10 tw:h-10 tw:rounded-full tw:bg-blue-500 tw:text-white tw:flex tw:items-center tw:justify-center tw:shadow-md tw:hover:bg-blue-600 tw:transition-colors tw:cursor-pointer tw:border-0"
+                :title="t('home.ai_window_title')"
+            >
+                <RobotOutlined class="tw:text-lg" />
+            </button>
         </div>
         <div v-if="showSteps" ref="logContainer"
             class="tw:absolute tw:right-2 tw:bottom-32 tw:h-80 tw:w-64 tw:rounded-xl tw:overflow-y-auto">
@@ -247,7 +277,7 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
             </a-spin>
         </a-modal>
 
-        <!-- AI 查缺补漏提示弹窗 -->
+        <!-- AI 查缺补漏询问弹窗 -->
         <a-modal
             v-model:open="showAiPromptModal"
             :title="t('home.ai_check_title')"
@@ -277,6 +307,59 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
                 </div>
             </template>
         </a-modal>
+
+        <!-- AI 工具调用窗口 -->
+        <Transition name="ai-window">
+            <div v-if="showAiWindow"
+                class="tw:fixed tw:bottom-28 tw:right-6 tw:w-96 tw:max-h-[60vh] tw:bg-white tw:rounded-xl tw:shadow-2xl tw:border tw:border-gray-200 tw:flex tw:flex-col tw:z-50">
+                <!-- 标题栏 -->
+                <div class="tw:flex tw:items-center tw:justify-between tw:px-4 tw:py-3 tw:border-b tw:border-gray-100">
+                    <div class="tw:flex tw:items-center tw:gap-2">
+                        <RobotOutlined class="tw:text-blue-500" />
+                        <span class="tw:text-sm tw:font-semibold">{{ t('home.ai_window_title') }}</span>
+                    </div>
+                    <button @click="showAiWindow = false"
+                        class="tw:w-6 tw:h-6 tw:flex tw:items-center tw:justify-center tw:rounded-full tw:hover:bg-gray-100 tw:cursor-pointer tw:border-0 tw:bg-transparent">
+                        <CloseOutlined class="tw:text-xs tw:text-gray-400" />
+                    </button>
+                </div>
+                <!-- 工具调用卡片列表 -->
+                <div class="tw:flex-1 tw:overflow-y-auto tw:p-3 tw:space-y-2">
+                    <div v-if="aiToolCalls.length === 0" class="tw:text-sm tw:text-gray-400 tw:text-center tw:py-6">
+                        {{ t('home.ai_no_tools') }}
+                    </div>
+                    <div v-for="tool in aiToolCalls" :key="tool.id"
+                        class="tw:rounded-lg tw:border tw:border-gray-200 tw:p-3">
+                        <div class="tw:flex tw:items-center tw:gap-2 tw:mb-1">
+                            <component :is="getToolStatusIcon(tool.status)" :class="getToolStatusColor(tool.status)" />
+                            <span class="tw:text-sm tw:font-medium">{{ tool.tool }}</span>
+                        </div>
+                        <div v-if="Object.keys(tool.params).length > 0" class="tw:ml-6 tw:mb-1">
+                            <span class="tw:text-xs tw:text-gray-400">{{ t('home.ai_tool_params') }}:</span>
+                            <span class="tw:text-xs tw:text-gray-600 tw:ml-1">{{ JSON.stringify(tool.params) }}</span>
+                        </div>
+                        <div v-if="tool.result" class="tw:ml-6">
+                            <span class="tw:text-xs tw:text-green-600">{{ tool.result }}</span>
+                        </div>
+                        <div v-if="tool.error" class="tw:ml-6">
+                            <span class="tw:text-xs tw:text-red-500">{{ tool.error }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Transition>
     </div>
 
 </template>
+
+<style scoped>
+.ai-window-enter-active,
+.ai-window-leave-active {
+    transition: all 0.25s ease;
+}
+.ai-window-enter-from,
+.ai-window-leave-to {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+}
+</style>

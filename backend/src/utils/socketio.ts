@@ -166,4 +166,9 @@ export class MessageWS {
       error
     });
   }
+
+  // AI 工具调用事件
+  aiToolCall(data: { id: string; tool: string; params: Record<string, unknown>; status: 'running' | 'success' | 'error'; result?: string; error?: string }) {
+    this.socket.emit("ai_tool_call", data);
+  }
 }
