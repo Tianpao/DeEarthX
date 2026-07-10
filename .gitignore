@@ -13,7 +13,8 @@ dist-ssr
 *.local
 
 # Build output
-build/
+build/bin/
+.task/
 
 # Claude Code
 CLAUDE.md
@@ -30,12 +31,23 @@ CLAUDE.md
 *.sln
 *.sw?
 *.zip
-Dex-v3-core.exe
-core-x86_64-pc-windows-msvc.exe
-config.json
 *.exe
 *.jar
-instance
-*.mrpack
+config.json
+
+# App data
+instance/
 templates/
-package-lock.json
+*.mrpack
+*.zip
+
+# Go
+go.sum
+*.syso
+
+# Wails bindings (auto-generated)
+front/wailsjs/
+
+# Deprecated
+backend/
+template/
