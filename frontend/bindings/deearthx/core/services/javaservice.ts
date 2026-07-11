@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -18,12 +18,20 @@ import * as java$0 from "../java/models.js";
  * CheckJava checks Java availability
  */
 export function CheckJava(path: string): $CancellablePromise<java$0.JavaCheckResult> {
-    return $Call.ByID(1763314374, path);
+    return $Call.ByID(1763314374, path).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 /**
  * DetectJavaPaths detects installed Java paths
  */
-export function DetectJavaPaths(): $CancellablePromise<string[] | null> {
-    return $Call.ByID(1642912875);
+export function DetectJavaPaths(): $CancellablePromise<string[]> {
+    return $Call.ByID(1642912875).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
+
+// Private type creation functions
+const $$createType0 = java$0.JavaCheckResult.createFrom;
+const $$createType1 = $Create.Array($Create.Any);

@@ -6,7 +6,7 @@ import { Events } from '@wailsio/runtime';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useDeearthStore } from '@/stores/deearth';
-import { ModCheckService } from '@/bindings/deearthx/core/services';
+import { ModCheckService, DialogService } from '@/bindings/deearthx/core/services';
 
 const { t } = useI18n();
 const store = useDeearthStore();
@@ -62,11 +62,7 @@ onMounted(() => {
 
 async function selectFolder() {
     try {
-        const selected = await import('@tauri-apps/plugin-dialog').then(m => m.open({
-            directory: true,
-            multiple: false,
-            title: t('deearth.select_folder_title')
-        }));
+        const selected = await DialogService.OpenDirectory();
         if (selected) {
             store.setSelectedFolder(selected);
             message.success(t('deearth.select_folder_success', { path: selected }));

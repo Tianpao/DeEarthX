@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -18,7 +18,9 @@ import * as template$0 from "../template/models.js";
  * Create creates a new template
  */
 export function Create(name: string, version: string, description: string, author: string): $CancellablePromise<template$0.TemplateMetadata | null> {
-    return $Call.ByID(190190324, name, version, description, author);
+    return $Call.ByID(190190324, name, version, description, author).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
@@ -31,8 +33,10 @@ export function Delete(id: string): $CancellablePromise<void> {
 /**
  * List returns all templates
  */
-export function List(): $CancellablePromise<template$0.TemplateMetadata[] | null> {
-    return $Call.ByID(808957336);
+export function List(): $CancellablePromise<template$0.TemplateMetadata[]> {
+    return $Call.ByID(808957336).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 /**
@@ -48,3 +52,8 @@ export function OpenFolder(id: string): $CancellablePromise<void> {
 export function Update(id: string, metadata: template$0.TemplateMetadata): $CancellablePromise<void> {
     return $Call.ByID(107898193, id, metadata);
 }
+
+// Private type creation functions
+const $$createType0 = template$0.TemplateMetadata.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $Create.Array($$createType0);

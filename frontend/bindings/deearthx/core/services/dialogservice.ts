@@ -8,12 +8,19 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+
+/**
+ * OpenDirectory opens a native Windows folder picker and returns the selected path.
+ */
+export function OpenDirectory(): $CancellablePromise<string> {
+    return $Call.ByID(3660592233);
+}
 
 /**
  * OpenFile opens a native Windows file picker and returns the selected path.
  * extensions is a list of file extensions like ["*.zip", "*.mrpack"]
  */
-export function OpenFile(extensions: string[] | null): $CancellablePromise<string> {
+export function OpenFile(extensions: string[]): $CancellablePromise<string> {
     return $Call.ByID(177069516, extensions);
 }

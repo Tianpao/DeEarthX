@@ -6,4 +6,32 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
-Object.freeze($Create.Events);
+function configure() {
+    Object.freeze(Object.assign($Create.Events, {
+        "changed": $$createType0,
+        "downloading": $$createType0,
+        "error": $$createType0,
+        "file_drop": $$createType1,
+        "filter_mods_complete": $$createType0,
+        "filter_mods_progress": $$createType0,
+        "filter_mods_start": $$createType0,
+        "finish": $$createType0,
+        "info": $$createType0,
+        "modcheck_complete": $$createType0,
+        "modcheck_error": $$createType0,
+        "modcheck_progress": $$createType0,
+        "modcheck_start": $$createType0,
+        "server_install_complete": $$createType0,
+        "server_install_error": $$createType0,
+        "server_install_progress": $$createType0,
+        "server_install_start": $$createType0,
+        "server_install_step": $$createType0,
+        "unzip": $$createType0,
+    }));
+}
+
+// Private type creation functions
+const $$createType0 = $Create.Map($Create.Any, $Create.Any);
+const $$createType1 = $Create.Array($Create.Any);
+
+configure();

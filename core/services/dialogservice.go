@@ -6,8 +6,11 @@ import (
 )
 
 var (
-	comdlg32 = syscall.NewLazyDLL("comdlg32.dll")
-	procGetOpenFileNameW = comdlg32.NewProc("GetOpenFileNameW")
+	comdlg32                  = syscall.NewLazyDLL("comdlg32.dll")
+	shell32                   = syscall.NewLazyDLL("shell32.dll")
+	procGetOpenFileNameW      = comdlg32.NewProc("GetOpenFileNameW")
+	procSHBrowseForFolderW    = shell32.NewProc("SHBrowseForFolderW")
+	procSHGetPathFromIDListW  = shell32.NewProc("SHGetPathFromIDListW")
 )
 
 type openfilename struct {
@@ -38,6 +41,23 @@ const (
 	OFN_HIDEREADONLY  = 0x4
 )
 
+type browseinfo struct {
+	hwndOwner      syscall.Handle
+	pidlRoot       uintptr
+	pszDisplayName *uint16
+	lpszTitle      *uint16
+	ulFlags        uint32
+	lpfn           uintptr
+	lParam         uintptr
+	iImage         int32
+}
+
+const (
+	BIF_RETURNONLYFSDIRS = 0x0001
+	BIF_NEWDIALOGSTYLE   = 0x0040
+	MAX_PATH             = 260
+)
+
 // DialogService provides native file dialogs
 type DialogService struct{}
 
@@ -63,9 +83,8 @@ func (s *DialogService) OpenFile(extensions []string) string {
 
 	displayName := "Files (" + filterPattern + ")"
 	filterStr := syscall.StringToUTF16(displayName)
-	filterStr = append(filterStr, 0)
 	filterStr = append(filterStr, syscall.StringToUTF16(filterPattern)...)
-	filterStr = append(filterStr, 0, 0)
+	filterStr = append(filterStr, 0)
 
 	title, _ := syscall.UTF16PtrFromString("Select file")
 
@@ -80,6 +99,29 @@ func (s *DialogService) OpenFile(extensions []string) string {
 
 	ret, _, _ := procGetOpenFileNameW.Call(uintptr(unsafe.Pointer(&ofn)))
 	if ret == 0 {
+		return ""
+	}
+
+	return syscall.UTF16ToString(buf)
+}
+
+// OpenDirectory opens a native Windows folder picker and returns the selected path.
+func (s *DialogService) OpenDirectory() string {
+	title, _ := syscall.UTF16PtrFromString("Select folder")
+
+	bi := browseinfo{
+		lpszTitle: title,
+		ulFlags:   BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE,
+	}
+
+	ret, _, _ := procSHBrowseForFolderW.Call(uintptr(unsafe.Pointer(&bi)))
+	if ret == 0 {
+		return ""
+	}
+
+	buf := make([]uint16, MAX_PATH)
+	r, _, _ := procSHGetPathFromIDListW.Call(ret, uintptr(unsafe.Pointer(&buf[0])))
+	if r == 0 {
 		return ""
 	}
 

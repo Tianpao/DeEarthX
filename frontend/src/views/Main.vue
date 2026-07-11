@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { onMounted, computed } from 'vue';
+import { onMounted, computed, inject, watch, ref } from 'vue';
+import type { Ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
-import { Events } from '@wailsio/runtime';
 import { formatFileSize, formatTime } from '@/utils/format';
 import { useTaskProcessor } from '@/composables/useTaskProcessor';
 import { useProgressStore } from '@/stores/progress';
@@ -40,6 +40,10 @@ const {
     clearDroppedFilePath
 } = useTaskProcessor();
 
+// Inject drag-drop state from App.vue (set up by useDragDrop composable)
+const injectedDroppedFiles = inject<Ref<string[]>>("droppedFilePaths", ref<string[]>([]));
+const clearDroppedFile = inject<(() => void) | undefined>("clearDroppedFile");
+
 // 页面加载时检查并恢复状态
 onMounted(() => {
     store.checkAndRestoreState();
@@ -62,10 +66,11 @@ const filePaths = computed({
 function handleFileRemove() {
     clearDroppedFilePath();
     uploadDisabled.value = false;
+    if (clearDroppedFile) clearDroppedFile();
 }
 
-// 监听拖放
-Events.On("file_drop", (paths: string[]) => {
+// Watch drag-dropped files from useDragDrop composable
+watch(injectedDroppedFiles, (paths) => {
     if (!paths || paths.length === 0) return;
     if (paths.length > 1) {
         message.warning(t('home.only_one_file'));
@@ -77,7 +82,6 @@ Events.On("file_drop", (paths: string[]) => {
         message.warning(t('home.only_zip_mrpack'));
         return;
     }
-    // Write through v-model to update FileSelector
     filePaths.value = [firstPath];
     uploadDisabled.value = true;
 });

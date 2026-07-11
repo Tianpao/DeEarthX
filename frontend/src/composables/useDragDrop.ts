@@ -10,7 +10,8 @@ export function useDragDrop() {
         if (setupDone) return;
         setupDone = true;
 
-        Events.On("file_drop", (paths: string[]) => {
+        Events.On("file_drop", (ev: any) => {
+            const paths: string[] = Array.isArray(ev) ? ev : (ev?.data || []);
             if (paths && paths.length > 0) {
                 droppedFilePaths.value = [...paths];
             }

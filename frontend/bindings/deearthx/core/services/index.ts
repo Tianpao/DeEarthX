@@ -22,7 +22,7 @@ export {
     TemplateService
 };
 
-export type {
+export {
     FabricVersion,
     ForgePromo,
     ForgeVersion,
