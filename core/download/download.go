@@ -31,7 +31,10 @@ type DownloadClient struct {
 }
 
 func NewDownloadClient() *DownloadClient {
-	client := resty.New()
+	client := resty.NewWithTransportSettings(&resty.TransportSettings{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 16,
+	})
 	client.SetTimeout(60 * time.Second)
 	client.SetRetryCount(3)
 	client.SetRetryWaitTime(5 * time.Second)
@@ -139,8 +142,8 @@ func (dc *DownloadClient) simpleDownload(url, filePath string, headers map[strin
 func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[string]string) error {
 	tempPath := filePath + ".downloading"
 	useMCIMirror := IsMCIMirrorURL(url)
-	chunkSize := int64(5 * 1024 * 1024)
-	chunkConcurrency := 32
+	chunkSize := int64(1 * 1024 * 1024) // 1MB chunks for better progress granularity
+	chunkConcurrency := 8
 	if useMCIMirror {
 		chunkSize = 128 * 1024
 		chunkConcurrency = 64
@@ -165,14 +168,9 @@ func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[stri
 		fileSize, _ = strconv.ParseInt(contentLength, 10, 64)
 	}
 
-	acceptRanges := resp.Header().Get("Accept-Ranges") == "bytes"
-	minSize := chunkSize
-	if useMCIMirror {
-		minSize = 256 * 1024
-	}
-
-	if !acceptRanges || fileSize < minSize {
-		util.Logger.Info("[Download] No range support or too small, fallback to simple", "url", url)
+	// Files smaller than one chunk don't benefit from chunked download
+	if fileSize < chunkSize {
+		util.Logger.Info("[Download] File too small for chunked, using simple", "url", url, "size", fileSize)
 		return dc.simpleDownload(url, filePath, headers)
 	}
 
@@ -263,6 +261,9 @@ func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[stri
 }
 
 func (dc *DownloadClient) BatchDownload(items []DownloadOptions, concurrency int, progress ProgressCallback) error {
+	util.Logger.Info("[BatchDownload] Starting parallel download",
+		"fileCount", len(items),
+		"concurrency", concurrency)
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(items))

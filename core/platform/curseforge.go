@@ -168,8 +168,11 @@ func (cf *CurseForge) DownloadFiles(manifest map[string]interface{}, path string
 
 	// Download files
 	if len(downloadList) > 0 {
+		util.Logger.Info("[CurseForge] Built download list",
+			"manifestFiles", len(files),
+			"downloadList", len(downloadList))
 		dl := download.NewDownloadClient()
-		err = dl.BatchDownload(downloadList, 64, progress)
+		err = dl.BatchDownload(downloadList, 16, progress)
 		if err != nil {
 			return err
 		}

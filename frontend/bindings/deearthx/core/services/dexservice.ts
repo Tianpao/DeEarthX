@@ -8,12 +8,12 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 /**
  * StartTask starts processing a modpack from file data
  */
-export function StartTask(fileData: string, filename: string, mode: string, template: string): $CancellablePromise<void> {
+export function StartTask(fileData: string | null, filename: string, mode: string, template: string): $CancellablePromise<void> {
     return $Call.ByID(1446233042, fileData, filename, mode, template);
 }
 

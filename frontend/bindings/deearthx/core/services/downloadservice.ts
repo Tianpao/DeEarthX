@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -17,46 +17,36 @@ import * as $models from "./models.js";
 /**
  * GetFabricVersions returns Fabric loader versions
  */
-export function GetFabricVersions(mcVersion: string): $CancellablePromise<$models.FabricVersion[]> {
-    return $Call.ByID(2986853462, mcVersion).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function GetFabricVersions(mcVersion: string): $CancellablePromise<$models.FabricVersion[] | null> {
+    return $Call.ByID(2986853462, mcVersion);
 }
 
 /**
  * GetForgePromos returns the Forge promos map (MC version → latest/recommended)
  */
-export function GetForgePromos(): $CancellablePromise<{ [_ in string]?: $models.ForgePromo }> {
-    return $Call.ByID(1791868949).then(($result: any) => {
-        return $$createType3($result);
-    });
+export function GetForgePromos(): $CancellablePromise<{ [_ in string]?: $models.ForgePromo } | null> {
+    return $Call.ByID(1791868949);
 }
 
 /**
  * GetForgeVersions returns Forge versions for a MC version
  */
-export function GetForgeVersions(mcVersion: string): $CancellablePromise<$models.ForgeVersion[]> {
-    return $Call.ByID(1012175792, mcVersion).then(($result: any) => {
-        return $$createType5($result);
-    });
+export function GetForgeVersions(mcVersion: string): $CancellablePromise<$models.ForgeVersion[] | null> {
+    return $Call.ByID(1012175792, mcVersion);
 }
 
 /**
  * GetMinecraftVersions returns available Minecraft versions
  */
-export function GetMinecraftVersions(): $CancellablePromise<$models.MinecraftVersion[]> {
-    return $Call.ByID(2162660752).then(($result: any) => {
-        return $$createType7($result);
-    });
+export function GetMinecraftVersions(): $CancellablePromise<$models.MinecraftVersion[] | null> {
+    return $Call.ByID(2162660752);
 }
 
 /**
  * GetNeoForgeVersions returns NeoForge versions
  */
-export function GetNeoForgeVersions(mcVersion: string): $CancellablePromise<$models.NeoForgeVersion[]> {
-    return $Call.ByID(4086017086, mcVersion).then(($result: any) => {
-        return $$createType9($result);
-    });
+export function GetNeoForgeVersions(mcVersion: string): $CancellablePromise<$models.NeoForgeVersion[] | null> {
+    return $Call.ByID(4086017086, mcVersion);
 }
 
 /**
@@ -65,15 +55,3 @@ export function GetNeoForgeVersions(mcVersion: string): $CancellablePromise<$mod
 export function StartServerInstall(loader: string, mcVersion: string, loaderVersion: string): $CancellablePromise<void> {
     return $Call.ByID(3601213272, loader, mcVersion, loaderVersion);
 }
-
-// Private type creation functions
-const $$createType0 = $models.FabricVersion.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.ForgePromo.createFrom;
-const $$createType3 = $Create.Map($Create.Any, $$createType2);
-const $$createType4 = $models.ForgeVersion.createFrom;
-const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.MinecraftVersion.createFrom;
-const $$createType7 = $Create.Array($$createType6);
-const $$createType8 = $models.NeoForgeVersion.createFrom;
-const $$createType9 = $Create.Array($$createType8);

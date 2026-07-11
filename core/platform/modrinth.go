@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"deearthx/core/download"
+	"deearthx/core/util"
 )
 
 // ModrinthManifest represents Modrinth modpack manifest
@@ -86,7 +87,7 @@ func (m *Modrinth) DownloadFiles(manifest map[string]interface{}, path string, p
 
 	// Build download list
 	downloadList := []download.DownloadOptions{}
-	for idx, f := range files {
+	for _, f := range files {
 		fileMap, ok := f.(map[string]interface{})
 		if !ok {
 			continue
@@ -131,17 +132,15 @@ func (m *Modrinth) DownloadFiles(manifest map[string]interface{}, path string, p
 			ExpectedHash: expectedHash,
 			UseChunked:   true,
 		})
-
-		// Report progress
-		if progress != nil {
-			progress(len(files), idx+1, filepath.Base(filePath))
-		}
 	}
 
 	// Download files
 	if len(downloadList) > 0 {
+		util.Logger.Info("[Modrinth] Built download list",
+			"manifestFiles", len(files),
+			"downloadList", len(downloadList))
 		dl := download.NewDownloadClient()
-		err := dl.BatchDownload(downloadList, 64, progress)
+		err := dl.BatchDownload(downloadList, 16, progress)
 		if err != nil {
 			return err
 		}

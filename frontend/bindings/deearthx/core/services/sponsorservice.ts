@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -17,12 +17,6 @@ import * as sponsor$0 from "../sponsor/models.js";
 /**
  * List returns all sponsors
  */
-export function List(): $CancellablePromise<sponsor$0.Sponsor[]> {
-    return $Call.ByID(1117676910).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function List(): $CancellablePromise<sponsor$0.Sponsor[] | null> {
+    return $Call.ByID(1117676910);
 }
-
-// Private type creation functions
-const $$createType0 = sponsor$0.Sponsor.createFrom;
-const $$createType1 = $Create.Array($$createType0);

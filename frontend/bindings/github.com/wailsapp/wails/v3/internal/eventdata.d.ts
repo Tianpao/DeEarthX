@@ -8,25 +8,25 @@ import type { Events } from "@wailsio/runtime";
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
-            "changed": { [_ in string]?: any };
-            "downloading": { [_ in string]?: any };
-            "error": { [_ in string]?: any };
-            "file_drop": string[];
-            "filter_mods_complete": { [_ in string]?: any };
-            "filter_mods_progress": { [_ in string]?: any };
-            "filter_mods_start": { [_ in string]?: any };
-            "finish": { [_ in string]?: any };
-            "info": { [_ in string]?: any };
-            "modcheck_complete": { [_ in string]?: any };
-            "modcheck_error": { [_ in string]?: any };
-            "modcheck_progress": { [_ in string]?: any };
-            "modcheck_start": { [_ in string]?: any };
-            "server_install_complete": { [_ in string]?: any };
-            "server_install_error": { [_ in string]?: any };
-            "server_install_progress": { [_ in string]?: any };
-            "server_install_start": { [_ in string]?: any };
-            "server_install_step": { [_ in string]?: any };
-            "unzip": { [_ in string]?: any };
+            "changed": { [_ in string]?: any } | null;
+            "downloading": { [_ in string]?: any } | null;
+            "error": { [_ in string]?: any } | null;
+            "file_drop": string[] | null;
+            "filter_mods_complete": { [_ in string]?: any } | null;
+            "filter_mods_progress": { [_ in string]?: any } | null;
+            "filter_mods_start": { [_ in string]?: any } | null;
+            "finish": { [_ in string]?: any } | null;
+            "info": { [_ in string]?: any } | null;
+            "modcheck_complete": { [_ in string]?: any } | null;
+            "modcheck_error": { [_ in string]?: any } | null;
+            "modcheck_progress": { [_ in string]?: any } | null;
+            "modcheck_start": { [_ in string]?: any } | null;
+            "server_install_complete": { [_ in string]?: any } | null;
+            "server_install_error": { [_ in string]?: any } | null;
+            "server_install_progress": { [_ in string]?: any } | null;
+            "server_install_start": { [_ in string]?: any } | null;
+            "server_install_step": { [_ in string]?: any } | null;
+            "unzip": { [_ in string]?: any } | null;
         }
     }
 }

@@ -8,23 +8,18 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 /**
  * SubmitModIDs submits mod IDs to Galaxy Square
  */
-export function SubmitModIDs(modType: string, modIDs: string[]): $CancellablePromise<void> {
+export function SubmitModIDs(modType: string, modIDs: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(148186888, modType, modIDs);
 }
 
 /**
  * UploadModsFromPaths extracts mod IDs from file paths
  */
-export function UploadModsFromPaths(paths: string[]): $CancellablePromise<string[]> {
-    return $Call.ByID(2735013154, paths).then(($result: any) => {
-        return $$createType0($result);
-    });
+export function UploadModsFromPaths(paths: string[] | null): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2735013154, paths);
 }
-
-// Private type creation functions
-const $$createType0 = $Create.Array($Create.Any);

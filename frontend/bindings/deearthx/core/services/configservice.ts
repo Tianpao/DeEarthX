@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -18,9 +18,7 @@ import * as config$0 from "../config/models.js";
  * GetConfig returns the current configuration
  */
 export function GetConfig(): $CancellablePromise<config$0.IConfig | null> {
-    return $Call.ByID(4003623270).then(($result: any) => {
-        return $$createType1($result);
-    });
+    return $Call.ByID(4003623270);
 }
 
 /**
@@ -29,7 +27,3 @@ export function GetConfig(): $CancellablePromise<config$0.IConfig | null> {
 export function SaveConfig(cfg: config$0.IConfig | null): $CancellablePromise<void> {
     return $Call.ByID(1561391947, cfg);
 }
-
-// Private type creation functions
-const $$createType0 = config$0.IConfig.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
