@@ -12,7 +12,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "&/*": ["bindings/*"]
     },
     "strict": true,
     "noUnusedLocals": false,

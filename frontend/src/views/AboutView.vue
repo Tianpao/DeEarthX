@@ -3,7 +3,7 @@ import { GithubOutlined } from '@ant-design/icons-vue';
 import { ref, onMounted, computed } from "vue";
 import { useI18n } from 'vue-i18n';
 import {Browser} from '@wailsio/runtime'
-import axiosInstance from '@/utils/axios';
+import { SponsorAd } from '&/dex/backend/information/sponsorservice';
 
 const { t } = useI18n();
 const githubUrl = 'https://github.com/Tianpao/DeEarthX';
@@ -63,9 +63,8 @@ async function getCurrentVersion() {
 
 async function fetchSponsors() {
     try {
-        const response = await axiosInstance.get<Sponsor[]>('http://localhost:37019/sponsor/', {
-            timeout: 5000
-        });
+        const response = {data:await SponsorAd()} as {data:Sponsor[]}
+        console.log(response)
         if (response.data && Array.isArray(response.data) && response.data.length > 0) {
             sponsors.value = response.data.map(s => ({
                 ...s,

@@ -1,8 +1,11 @@
-module changeme
+module dex
 
 go 1.25.0
 
-require github.com/wailsapp/wails/v3 v3.0.0-alpha2.106
+require (
+	github.com/wailsapp/wails/v3 v3.0.0-alpha2.106
+	resty.dev/v3 v3.0.0-rc.3
+)
 
 require (
 	github.com/adrg/xdg v0.5.3 // indirect
@@ -13,5 +16,6 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/wailsapp/wails/webview2 v1.0.27 // indirect
+	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 )
