@@ -3,7 +3,6 @@ import { createRouter, createWebHistory } from "vue-router";
 import Main from "../views/Main.vue";
 import SettingView from "../views/SettingView.vue";
 import AboutView from "../views/AboutView.vue";
-import ErrorView from "../views/ErrorView.vue";
 import GalaxyView from "../views/GalaxyView.vue";
 import DeEarthView from "../views/DeEarthView.vue";
 import TemplateView from "../views/TemplateView.vue";
@@ -26,10 +25,6 @@ const router = createRouter({
         {
             path: "/about",
             component: AboutView
-        },
-        {
-            path: "/error",
-            component: ErrorView
         },
         {
             path: "/galaxy",

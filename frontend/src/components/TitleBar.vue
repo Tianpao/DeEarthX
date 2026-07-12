@@ -4,13 +4,11 @@ import { Window } from '@wailsio/runtime';
 import { MinusOutlined, CloseOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { useVersion } from '@/composables/useVersion';
 import { useI18n } from 'vue-i18n';
-import { useBackend } from '@/composables/useBackend';
 import SponsorAd from '@/components/SponsorAd.vue';
 import axios from '@/utils/axios';
 
 const { t } = useI18n();
 const { version } = useVersion();
-const { backendStatus, backendErrorInfo } = useBackend();
 //const appWindow = getCurrentWindow();
 const appWindow = Window
 const showSponsorAd = ref(true);
@@ -66,22 +64,6 @@ onUnmounted(() => {
             <img src="/icons/32x32.png" class="app-logo" alt="logo" />
             <span class="app-title">{{t('common.app_name') }}</span>
             <span class="app-version">{{ version }}</span>
-            <span
-                class="backend-status"
-                :title="backendErrorInfo || t('message.backend_running')"
-            >
-                <LoadingOutlined v-if="backendStatus === 'loading'" style="color: #1890ff;" />
-                <CheckCircleOutlined v-else-if="backendStatus === 'success'" style="color: #52c41a;" />
-                <CloseCircleOutlined v-else style="color: #ff4d4f;" />
-                <span class="status-text"
-                      :style="{
-                          color: backendStatus === 'loading' ? '#1890ff' :
-                                 backendStatus === 'success' ? '#52c41a' : '#ff4d4f'
-                      }">
-                    {{ backendStatus === 'loading' ? t('common.status_loading') :
-                       backendStatus === 'success' ? t('common.status_success') : t('common.status_error') }}
-                </span>
-            </span>
             <SponsorAd v-if="showSponsorAd" ref="sponsorAdRef" />
         </div>
         <div class="titlebar-buttons">

@@ -1,17 +1,14 @@
 <script lang="ts" setup>
 import { ref, provide, onMounted, onUnmounted } from 'vue';
-import { useBackend } from '@/composables/useBackend';
 import { useMenu } from '@/composables/useMenu';
 import { useDragDrop } from '@/composables/useDragDrop';
 import { useSettingStore } from '@/stores';
 import TitleBar from '@/components/TitleBar.vue';
 
-const { createKillCoreProcessHandler } = useBackend();
 const { selectedKeys, menuItems, handleMenuClick, route } = useMenu();
 const { droppedFilePaths, clearDroppedFile, setupDragDropListener, cleanup: cleanupDragDrop } = useDragDrop();
 const settingStore = useSettingStore();
 
-provide("killCoreProcess", createKillCoreProcessHandler());
 provide("droppedFilePaths", droppedFilePaths);
 provide("clearDroppedFile", clearDroppedFile);
 

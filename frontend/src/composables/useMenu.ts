@@ -24,7 +24,6 @@ export function useMenu() {
             '/': 'main',
             '/setting': 'setting',
             '/about': 'about',
-            '/error': 'main',
             '/galaxy': 'galaxy',
             '/deearth': 'deearth',
             '/template': 'template',
