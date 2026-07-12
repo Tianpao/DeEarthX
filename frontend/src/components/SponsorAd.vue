@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { open } from '@tauri-apps/plugin-shell';
 import axiosInstance from '@/utils/axios';
 import { useI18n } from 'vue-i18n';
+import { Browser } from '@wailsio/runtime';
 
 const { t } = useI18n();
 
@@ -74,10 +74,10 @@ async function openSponsorUrl(e: MouseEvent) {
     e.preventDefault();
     if (!currentSponsor.value) return;
     try {
-        await open(currentSponsor.value.url);
+        Browser.OpenURL(currentSponsor.value.url)
     } catch (error) {
         console.error("Failed to open sponsor URL:", error);
-        window.open(currentSponsor.value.url, '_blank');
+        Browser.OpenURL(currentSponsor.value.url);
     }
 }
 

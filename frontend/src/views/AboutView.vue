@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { GithubOutlined } from '@ant-design/icons-vue';
-import { open } from "@tauri-apps/plugin-shell";
 import { ref, onMounted, computed } from "vue";
 import { useI18n } from 'vue-i18n';
+import {Browser} from '@wailsio/runtime'
 import axiosInstance from '@/utils/axios';
 
 const { t } = useI18n();
@@ -81,6 +81,10 @@ async function fetchSponsors() {
     }
 }
 
+function open(url:string){
+    Browser.OpenURL(url)
+}
+
 const thanksList = computed(() => {
     return [
         {
@@ -123,7 +127,7 @@ const sponsorToneClasses: Record<Sponsor['tone'], string> = {
 
 async function contant(sponsor: Sponsor) {
     try {
-        await open(sponsor.url);
+        open(sponsor.url);
     } catch (error) {
         console.error("Failed to open sponsor URL:", error);
         window.open(sponsor.url, '_blank');
@@ -132,19 +136,19 @@ async function contant(sponsor: Sponsor) {
 
 async function openBilibili(url: string) {
     try {
-        await open(url);
+        open(url);
     } catch (error) {
         console.error("Failed to open Bilibili URL:", error);
-        window.open(url, '_blank');
+        open(url);
     }
 }
 
 async function openGithub() {
     try {
-        await open(githubUrl);
+        open(githubUrl);
     } catch (error) {
         console.error('Failed to open GitHub URL:', error);
-        window.open(githubUrl, '_blank');
+        open(githubUrl);
     }
 }
 
