@@ -10,6 +10,7 @@ import (
 
 type SponsorService struct {
 	client *resty.Client
+	Cache  *utils.MemoryCache
 }
 
 type Sponsor struct {
@@ -21,12 +22,13 @@ type Sponsor struct {
 }
 
 func (super *SponsorService) SponsorAd() any {
-	value := utils.NewMemoryCache().Get("Sponsor")
+	value := super.Cache.Get("Sponsor")
 	if value != nil {
 		return value
 	}
 	res, _ := resty.New().R().SetHeader("User-Agent", "DeEarthX").Get("https://galaxy.tianpao.top/sponsor/")
 	var sponsors []Sponsor
 	json.Unmarshal(res.Bytes(), &sponsors)
+	super.Cache.Set("Sponsor", sponsors)
 	return sponsors
 }

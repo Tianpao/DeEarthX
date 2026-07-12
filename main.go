@@ -8,6 +8,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	i "dex/backend/information"
+	u "dex/backend/utils"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -40,7 +41,7 @@ func main() {
 		Description: "A demo of using raw HTML & CSS",
 		Services:    []application.Service{
 			//application.NewService(&GreetService{}),
-			application.NewService(&i.SponsorService{}),
+			application.NewService(&i.SponsorService{Cache: u.NewMemoryCache()}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
