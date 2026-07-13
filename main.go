@@ -7,6 +7,7 @@ import (
 	"time"
 
 	i "dex/backend/information"
+	d "dex/backend/dearth"
 	e "dex/backend/events"
 	u "dex/backend/utils"
 
@@ -44,6 +45,7 @@ func main() {
 		Services: []application.Service{
 			//application.NewService(&GreetService{}),
 			application.NewService(&i.SponsorService{Cache: u.NewMemoryCache()}),
+			application.NewService(d.NewGalaxy()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

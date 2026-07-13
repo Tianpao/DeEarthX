@@ -95,7 +95,7 @@ import { ref, computed, inject, watch } from 'vue';
 import { UploadOutlined, SendOutlined } from '@ant-design/icons-vue';
 import { message, Modal } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
-import axiosInstance from '@/utils/axios';
+import { ExtractModIDs, SubmitModIDs } from '&/dex/backend/dearth/galaxy';
 import FileSelector from '@/components/FileSelector.vue';
 
 const { t } = useI18n();
@@ -157,12 +157,11 @@ const handleUpload = async () => {
     uploadProgress.value = 0;
 
     try {
-        const paths = droppedFiles.value;
-        const response = await axiosInstance.post('http://localhost:37019/galaxy/upload-path', { paths });
+        const modids = await ExtractModIDs(droppedFiles.value);
 
-        if (response.data.modids && Array.isArray(response.data.modids)) {
+        if (modids && Array.isArray(modids)) {
             let addedCount = 0;
-            response.data.modids.forEach((modid: string) => {
+            modids.forEach((modid: string) => {
                 if (modid && !modidList.value.includes(modid)) {
                     modidList.value.push(modid);
                     addedCount++;
@@ -192,20 +191,9 @@ const handleSubmit = () => {
         onOk: async () => {
             submitting.value = true;
             try {
-                const apiUrl = modType.value === 'client'
-                    ? 'http://localhost:37019/galaxy/submit/client'
-                    : 'http://localhost:37019/galaxy/submit/server';
-
-                const response = await axiosInstance.post(apiUrl,{
-                    modids: modidList.value,
-                });
-
-                if (response.status === 200) {
-                    message.success(t('galaxy.submit_success', { type: modTypeText }));
-                    modidList.value = [];
-                } else {
-                    message.error(t('galaxy.submit_failed'));
-                }
+                await SubmitModIDs(modType.value, modidList.value);
+                message.success(t('galaxy.submit_success', { type: modTypeText }));
+                modidList.value = [];
             } catch (error) {
                 message.error(t('galaxy.submit_error'));
             } finally {
