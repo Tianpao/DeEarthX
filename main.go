@@ -43,9 +43,9 @@ func main() {
 		Name:        "DeEarthX",
 		Description: "A demo of using raw HTML & CSS",
 		Services: []application.Service{
-			//application.NewService(&GreetService{}),
-			application.NewService(&i.SponsorService{Cache: u.NewMemoryCache()}),
+			application.NewService(i.NewSponsorService()),
 			application.NewService(d.NewGalaxy()),
+			application.NewService(u.NewConfigService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

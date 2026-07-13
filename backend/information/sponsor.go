@@ -8,9 +8,14 @@ import (
 	"resty.dev/v3"
 )
 
+func NewSponsorService() *SponsorService {
+	return &SponsorService{
+		Cache: utils.NewMemoryCache(),
+	}
+}
+
 type SponsorService struct {
-	client *resty.Client
-	Cache  *utils.MemoryCache
+	Cache *utils.MemoryCache
 }
 
 type Sponsor struct {

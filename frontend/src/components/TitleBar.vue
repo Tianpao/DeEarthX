@@ -4,14 +4,13 @@ import { Window } from '@wailsio/runtime';
 import { MinusOutlined, CloseOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { useVersion } from '@/composables/useVersion';
 import { useI18n } from 'vue-i18n';
+import { useSettingStore } from '@/stores/setting';
 import SponsorAd from '@/components/SponsorAd.vue';
-import axios from '@/utils/axios';
 
 const { t } = useI18n();
 const { version } = useVersion();
-//const appWindow = getCurrentWindow();
+const settingStore = useSettingStore();
 const appWindow = Window
-const showSponsorAd = ref(true);
 const sponsorAdRef = ref<InstanceType<typeof SponsorAd> | null>(null);
 
 // 最小化
@@ -28,33 +27,14 @@ async function close() {
     await appWindow.Close()
 }
 
-async function loadConfig() {
-    try {
-        const response = await axios.get('/config/get');
-        showSponsorAd.value = response.data.showSponsorAd ?? true;
-    } catch (error) {
-        console.error('加载配置失败:', error);
-    }
-}
-
-// 监听配置变化事件
-function handleConfigChange() {
-    loadConfig();
-}
-
-watch(showSponsorAd, (visible) => {
+watch(() => settingStore.config.showSponsorAd, (visible) => {
     if (sponsorAdRef.value) {
         sponsorAdRef.value.setVisible(visible);
     }
-});
+}, { immediate: true });
 
 onMounted(() => {
-    loadConfig();
-    window.addEventListener('config-changed', handleConfigChange);
-});
-
-onUnmounted(() => {
-    window.removeEventListener('config-changed', handleConfigChange);
+    settingStore.initialize();
 });
 </script>
 
@@ -64,7 +44,7 @@ onUnmounted(() => {
             <img src="/icons/32x32.png" class="app-logo" alt="logo" />
             <span class="app-title">{{t('common.app_name') }}</span>
             <span class="app-version">{{ version }}</span>
-            <SponsorAd v-if="showSponsorAd" ref="sponsorAdRef" />
+            <SponsorAd v-if="settingStore.config.showSponsorAd" ref="sponsorAdRef" />
         </div>
         <div class="titlebar-buttons">
             <button class="titlebar-btn minimize" @mousedown.stop @click="minimize" :title="t('common.minimize')">
