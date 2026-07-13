@@ -1,30 +1,28 @@
 import { ref } from 'vue';
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { Events } from '@wailsio/runtime';
 
-interface DragDropPayload {
-    paths: string[];
+interface FileDropDetails {
+    ElementID: string;
+    ClassList: string[];
+    X: number;
+    Y: number;
+}
+
+interface FileDropPayload {
+    files: string[];
+    details: FileDropDetails | null;
 }
 
 export function useDragDrop() {
     const droppedFilePaths = ref<string[]>([]);
-    const isDragOver = ref(false);
-    let unlisten: UnlistenFn | null = null;
+    let offFn: (() => void) | null = null;
 
     async function setupDragDropListener() {
-        unlisten = await listen<DragDropPayload>('tauri://drag-drop', (event) => {
-            const paths = event.payload.paths;
-            if (paths && paths.length > 0) {
-                droppedFilePaths.value = paths;
+        offFn = Events.On('files-dropped', (event: { data: FileDropPayload }) => {
+            const { files } = event.data;
+            if (files && files.length > 0) {
+                droppedFilePaths.value = files;
             }
-            isDragOver.value = false;
-        });
-
-        await listen('tauri://drag-enter', () => {
-            isDragOver.value = true;
-        });
-
-        await listen('tauri://drag-leave', () => {
-            isDragOver.value = false;
         });
     }
 
@@ -33,15 +31,14 @@ export function useDragDrop() {
     }
 
     function cleanup() {
-        if (unlisten) {
-            unlisten();
-            unlisten = null;
+        if (offFn) {
+            offFn();
+            offFn = null;
         }
     }
 
     return {
         droppedFilePaths,
-        isDragOver,
         setupDragDropListener,
         clearDroppedFile,
         cleanup

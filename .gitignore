@@ -30,6 +30,7 @@ build/
 # Claude Code
 CLAUDE.md
 .claude/
+.mcp.json
 
 # Editor directories and files
 .vscode/*

@@ -6,9 +6,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/wailsapp/wails/v3/pkg/application"
 	i "dex/backend/information"
+	e "dex/backend/events"
 	u "dex/backend/utils"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -39,7 +41,7 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "DeEarthX",
 		Description: "A demo of using raw HTML & CSS",
-		Services:    []application.Service{
+		Services: []application.Service{
 			//application.NewService(&GreetService{}),
 			application.NewService(&i.SponsorService{Cache: u.NewMemoryCache()}),
 		},
@@ -56,11 +58,12 @@ func main() {
 	// 'Mac' options tailor the window when running on macOS.
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title: "Window 1",
+	win := app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title: "DeEarthX",
 		// Window sized to the golden ratio (1000 / 618 ≈ 1.618).
-		Width:  1000,
-		Height: 618,
+		Width:          1000,
+		Height:         618,
+		EnableFileDrop: true,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
@@ -70,6 +73,9 @@ func main() {
 		BackgroundColour: application.NewRGB(6, 7, 15),
 		URL:              "/",
 	})
+
+	// Listen for file drop events and forward to frontend
+	e.RegisterFileDropHandler(app, win)
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.

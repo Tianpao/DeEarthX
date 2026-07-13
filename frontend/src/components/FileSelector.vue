@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { InboxOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
-import { open } from '@tauri-apps/plugin-dialog';
+import { Dialogs } from '@wailsio/runtime';
 import { computed } from 'vue';
 
 interface FileItem {
@@ -42,22 +42,26 @@ async function handleUploadClick() {
     if (props.disabled) return;
 
     try {
-        const selected = await open({
-            multiple: props.multiple,
-            filters: [
+        const selected = await Dialogs.OpenFile({
+            CanChooseFiles: true,
+            CanChooseDirectories: false,
+            AllowsMultipleSelection: props.multiple,
+            Filters: [
                 {
-                    name: 'Files',
-                    extensions: props.accept
+                    DisplayName: 'Files',
+                    Pattern: props.accept.map(ext => `*.${ext}`).join(';'),
                 }
             ]
         });
 
         if (selected) {
             const paths = Array.isArray(selected) ? selected : [selected];
-            if (props.multiple) {
-                emit('update:files', [...props.files, ...paths]);
-            } else {
-                emit('update:files', paths);
+            if (paths.length > 0 && paths[0] !== '') {
+                if (props.multiple) {
+                    emit('update:files', [...props.files, ...paths]);
+                } else {
+                    emit('update:files', paths);
+                }
             }
         }
     } catch (error) {
@@ -74,8 +78,10 @@ function handleRemove(index: number) {
     <div>
         <!-- 点击打开文件选择对话框 -->
         <div
+            data-file-drop-target
             @click="handleUploadClick"
             :class="[
+                'file-drop-zone',
                 'tw:flex tw:flex-col tw:items-center tw:justify-center',
                 'tw:border-2 tw:border-dashed tw:rounded-lg tw:cursor-pointer tw:transition-all',
                 disabled ? 'tw:border-slate-200 tw:bg-slate-50 tw:cursor-not-allowed' : 'tw:border-slate-300 tw:bg-white hover:tw:border-[#67eac3]'
@@ -106,3 +112,11 @@ function handleRemove(index: number) {
         </div>
     </div>
 </template>
+
+<style scoped>
+.file-drop-zone.file-drop-target-active {
+    border-color: #67eac3 !important;
+    background: rgba(103, 234, 195, 0.08) !important;
+    box-shadow: 0 0 20px rgba(103, 234, 195, 0.15);
+}
+</style>

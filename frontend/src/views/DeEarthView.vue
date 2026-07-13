@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { FileSearchOutlined, FolderOpenOutlined } from '@ant-design/icons-vue';
-import { open } from '@tauri-apps/plugin-dialog';
+import { Dialogs } from '@wailsio/runtime';
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import { useI18n } from 'vue-i18n';
@@ -37,13 +37,14 @@ onUnmounted(() => {
 
 async function selectFolder() {
     try {
-        const selected = await open({
-            directory: true,
-            multiple: false,
-            title: t('deearth.select_folder_title')
+        const selected = await Dialogs.OpenFile({
+            CanChooseDirectories: true,
+            CanChooseFiles: false,
+            AllowsMultipleSelection: false,
+            Title: t('deearth.select_folder_title')
         });
 
-        if (selected) {
+        if (selected && selected !== '') {
             store.setSelectedFolder(selected);
             message.success(t('deearth.select_folder_success', { path: selected }));
         }

@@ -14,7 +14,6 @@ provide("clearDroppedFile", clearDroppedFile);
 
 onMounted(async () => {
     await setupDragDropListener();
-    // 预加载设置（从本地存储快速加载）
     settingStore.initialize();
 });
 
