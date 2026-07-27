@@ -14,7 +14,8 @@ type XModloader interface {
 	Installer() error
 }
 
-func newModloader(ml string, mcv, mlv, path string) XModloader {
+// NewModloader returns the appropriate XModloader implementation for the given loader type.
+func NewModloader(ml string, mcv, mlv, path string) XModloader {
 	switch ml {
 	case "forge":
 		return NewForge(mcv, mlv, path)
@@ -37,7 +38,7 @@ func MLSetup(ml, mcv, mlv, path string, template ...string) error {
 
 	if tmpl != "" && tmpl != "0" {
 		// Apply template: copy template files to install directory
-		templatePath := filepath.Join(getAppDir(), "templates", tmpl)
+		templatePath := filepath.Join(GetAppDir(), "templates", tmpl)
 		dataPath := filepath.Join(templatePath, "data")
 
 		err := filepath.Walk(dataPath, func(srcPath string, info os.FileInfo, err error) error {
@@ -77,7 +78,7 @@ func MLSetup(ml, mcv, mlv, path string, template ...string) error {
 
 		// Step 2: Install mod loader
 		fmt.Println("Step 2: Installing Mod Loader")
-		loader := newModloader(ml, mcv, mlv, path)
+		loader := NewModloader(ml, mcv, mlv, path)
 		if err := loader.Setup(); err != nil {
 			return fmt.Errorf("mod loader setup failed: %w", err)
 		}
@@ -92,7 +93,7 @@ func MLSetup(ml, mcv, mlv, path string, template ...string) error {
 // DInstall performs a lightweight install: only downloads the installer jar
 // and writes batch/shell scripts for manual execution.
 func DInstall(ml, mcv, mlv, path string) error {
-	loader := newModloader(ml, mcv, mlv, path)
+	loader := NewModloader(ml, mcv, mlv, path)
 	if err := loader.Installer(); err != nil {
 		return fmt.Errorf("installer download failed: %w", err)
 	}
@@ -145,8 +146,8 @@ func cleanupInstallFiles(path string) {
 	}
 }
 
-// getAppDir returns the application data directory.
-func getAppDir() string {
+// GetAppDir returns the application data directory.
+func GetAppDir() string {
 	// Try XDG data home first
 	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
 		return filepath.Join(xdg, "DeEarthX")

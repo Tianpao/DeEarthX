@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { MinecraftVersion, LoaderVersion, ProgressStatus, ServerInstallInfo } from '@/types/progress';
-import axiosInstance from '@/utils/axios';
+import * as DownloadService from '&/dex/backend/download/downloadservice';
 
 function compareVersion(a: string, b: string): number {
   const pa = a.split('.').map(Number);
@@ -72,20 +72,17 @@ export const useDownloadStore = defineStore('download', () => {
   // 完成时间戳
   const taskCompletedAt = ref<number>(0);
 
-  // Socket 实例（全局保存，避免切换页面丢失）
-  let socketInstance: any = null;
-
   const canInstall = computed(() =>
     !!selectedMcVersion.value && !!selectedLoader.value && !!selectedLoaderVersion.value
   );
 
-  // Fetch methods
+  // Fetch methods — now using Wails bindings instead of HTTP
   async function fetchMcVersions() {
     loadingMcVersions.value = true;
     try {
-      const res = await axiosInstance.get('/download/minecraft-versions');
-      if (res.data?.versions) {
-        mcVersions.value = res.data.versions.filter(
+      const data = await DownloadService.FetchMcVersions();
+      if (data?.versions) {
+        mcVersions.value = data.versions.filter(
           (v: MinecraftVersion) => v.type === 'release'
         );
       }
@@ -95,8 +92,8 @@ export const useDownloadStore = defineStore('download', () => {
 
   async function fetchForgePromos() {
     try {
-      const res = await axiosInstance.get('/download/forge-promos');
-      if (res.data) forgePromos.value = res.data;
+      const data = await DownloadService.FetchForgePromos();
+      if (data) forgePromos.value = data as any;
     } catch { forgePromos.value = {}; }
   }
 
@@ -137,16 +134,15 @@ export const useDownloadStore = defineStore('download', () => {
     if (!selectedMcVersion.value || !selectedLoader.value) return;
     loadingLoaderVersions.value = true;
     try {
-      let url = '';
+      let data: any;
       switch (selectedLoader.value) {
-        case 'forge': url = `/download/forge-versions?mcver=${selectedMcVersion.value}`; break;
-        case 'neoforge': url = `/download/neoforge-versions?mcver=${selectedMcVersion.value}`; break;
-        case 'fabric': url = `/download/fabric-versions?mcver=${selectedMcVersion.value}`; break;
+        case 'forge': data = await DownloadService.FetchForgeVersions(selectedMcVersion.value); break;
+        case 'neoforge': data = await DownloadService.FetchNeoForgeVersions(selectedMcVersion.value); break;
+        case 'fabric': data = await DownloadService.FetchFabricVersions(selectedMcVersion.value); break;
         default: return;
       }
-      const res = await axiosInstance.get(url);
-      if (Array.isArray(res.data)) {
-        loaderVersions.value = res.data;
+      if (Array.isArray(data)) {
+        loaderVersions.value = data as LoaderVersion[];
         sortLoaderVersions(selectedLoader.value);
       }
     } catch { loaderVersions.value = []; }
@@ -244,18 +240,6 @@ export const useDownloadStore = defineStore('download', () => {
     }
   }
 
-  function setSocketInstance(socket: any) {
-    socketInstance = socket;
-  }
-
-  function getSocketInstance() {
-    return socketInstance;
-  }
-
-  function clearSocketInstance() {
-    socketInstance = null;
-  }
-
   return {
     // 状态
     mcVersions, selectedMcVersion, loadingMcVersions,
@@ -276,9 +260,6 @@ export const useDownloadStore = defineStore('download', () => {
     handleServerInstallComplete,
     handleServerInstallError,
     resetState,
-    checkAndRestoreState,
-    setSocketInstance,
-    getSocketInstance,
-    clearSocketInstance
+    checkAndRestoreState
   };
 });

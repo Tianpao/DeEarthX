@@ -5,9 +5,18 @@
 // @ts-ignore: Unused imports
 import type { Events } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as download$0 from "../../../../../dex/backend/download/models.js";
+
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "server_install_complete": download$0.ServerInstallCompleteEvent;
+            "server_install_error": download$0.ServerInstallErrorEvent;
+            "server_install_progress": download$0.ServerInstallProgressEvent;
+            "server_install_start": download$0.ServerInstallStartEvent;
+            "server_install_step": download$0.ServerInstallStepEvent;
             "time": string;
         }
     }

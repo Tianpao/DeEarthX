@@ -8,6 +8,7 @@ import (
 
 	i "dex/backend/information"
 	d "dex/backend/dearth"
+	dl "dex/backend/download"
 	e "dex/backend/events"
 	u "dex/backend/utils"
 
@@ -46,6 +47,7 @@ func main() {
 			application.NewService(i.NewSponsorService()),
 			application.NewService(d.NewGalaxy()),
 			application.NewService(u.NewConfigService()),
+			application.NewService(dl.NewDownloadService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -78,6 +80,9 @@ func main() {
 
 	// Listen for file drop events and forward to frontend
 	e.RegisterFileDropHandler(app, win)
+
+	// Inject the app instance into the download service for event emission
+	dl.SetApp(app)
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.
