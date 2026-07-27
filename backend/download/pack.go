@@ -2,6 +2,7 @@ package download
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -187,7 +188,7 @@ func (s *ModpackService) runPipeline(buffer []byte, filename, mode, instanceName
 		emitStep("过滤客户端 mod", 3)
 		if err := s.filterMods(installPath); err != nil {
 			// Filtering failures are non-fatal — log but continue
-			fmt.Printf("warning: mod filter failed: %v\n", err)
+			slog.Warn("mod filter failed", "error", err)
 			emitEvent("pack_filter_complete", PackFilterCompleteEvent{
 				FilteredCount: 0,
 				MovedCount:    0,
@@ -211,7 +212,7 @@ func (s *ModpackService) runPipeline(buffer []byte, filename, mode, instanceName
 	if mode == ModeClient {
 		if autoZip, _ := utils.GlobalConfig.GetConfigValue("autoZip").(bool); autoZip {
 			if err := CreateZipArchive(installPath, instanceName, utils.GetAppDir()); err != nil {
-				fmt.Printf("warning: failed to create zip archive: %v\n", err)
+				slog.Warn("failed to create zip archive", "error", err)
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package modloader
 
 import (
+	"log/slog"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -97,7 +98,7 @@ func (f *Fabric) Install() error {
 	javaCmd := getJavaCmd()
 	cmd := fmt.Sprintf("%s -jar fabric-installer.jar server -dir . -mcversion %s -loader %s", javaCmd, f.minecraft, f.loaderVersion)
 	if err := utils.ExecPromise(cmd, f.path); err != nil {
-		fmt.Printf("fabric install error: %v\n", err)
+		slog.Error("fabric install error", "error", err)
 	}
 	return nil
 }
@@ -142,7 +143,7 @@ func (f *Fabric) libraries() error {
 				verifiedCount++
 			}
 		}
-		fmt.Printf("Fabric library verification: %d/%d files present\n", verifiedCount, len(downloadItems))
+		slog.Info("Fabric library verification", "verified", verifiedCount, "total", len(downloadItems))
 	}
 
 	return nil

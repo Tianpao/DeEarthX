@@ -2,7 +2,7 @@ package strategies
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 
 	"dex/backend/dearth/types"
 	"dex/backend/platform"
@@ -42,7 +42,7 @@ func (hf *HashFilter) Filter(files []types.FileInfo) ([]string, error) {
 		SetBody(map[string]any{"hashes": hashes, "algorithm": "sha1"}).
 		Post(hf.urls.ModrinthURL + "/v2/version_files")
 	if err != nil {
-		fmt.Printf("Hash filter: Modrinth version_files API error: %v\n", err)
+		slog.Error("Hash filter: Modrinth version_files API error", "error", err)
 		return nil, nil
 	}
 
@@ -50,7 +50,7 @@ func (hf *HashFilter) Filter(files []types.FileInfo) ([]string, error) {
 		ProjectID string `json:"project_id"`
 	}
 	if err := json.Unmarshal(resp.Bytes(), &hashResponse); err != nil {
-		fmt.Printf("Hash filter: failed to parse response: %v\n", err)
+		slog.Error("Hash filter: failed to parse response", "error", err)
 		return nil, nil
 	}
 
@@ -71,7 +71,7 @@ func (hf *HashFilter) Filter(files []types.FileInfo) ([]string, error) {
 	projectsResp, err := hf.client.R().
 		Get(hf.urls.ModrinthURL + "/v2/projects?ids=" + string(idsJSON))
 	if err != nil {
-		fmt.Printf("Hash filter: Modrinth projects API error: %v\n", err)
+		slog.Error("Hash filter: Modrinth projects API error", "error", err)
 		return nil, nil
 	}
 
@@ -81,7 +81,7 @@ func (hf *HashFilter) Filter(files []types.FileInfo) ([]string, error) {
 		ServerSide string `json:"server_side"`
 	}
 	if err := json.Unmarshal(projectsResp.Bytes(), &projects); err != nil {
-		fmt.Printf("Hash filter: failed to parse projects response: %v\n", err)
+		slog.Error("Hash filter: failed to parse projects response", "error", err)
 		return nil, nil
 	}
 

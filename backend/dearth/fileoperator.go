@@ -1,7 +1,7 @@
 package dearth
 
 import (
-	"fmt"
+	"log/slog"
 	"io"
 	"os"
 	"path/filepath"
@@ -31,7 +31,7 @@ func (fo *FileOperator) MoveClientSideMods(clientMods []string) types.MoveResult
 	}
 
 	if err := os.MkdirAll(fo.movePath, 0o755); err != nil {
-		fmt.Printf("failed to create move directory %s: %v\n", fo.movePath, err)
+		slog.Error("failed to create move directory", "path", fo.movePath, "error", err)
 		result.Error = len(clientMods)
 		return result
 	}
@@ -47,12 +47,12 @@ func (fo *FileOperator) MoveClientSideMods(clientMods []string) types.MoveResult
 		}
 		targetPath := filepath.Join(fo.movePath, filepath.Base(absSource))
 		if err := copyFile(absSource, targetPath); err != nil {
-			fmt.Printf("failed to copy %s: %v\n", absSource, err)
+			slog.Error("failed to copy file", "source", absSource, "error", err)
 			result.Error++
 			continue
 		}
 		if err := os.Remove(absSource); err != nil {
-			fmt.Printf("failed to remove original %s: %v\n", absSource, err)
+			slog.Error("failed to remove original file", "source", absSource, "error", err)
 			result.Error++
 			continue
 		}

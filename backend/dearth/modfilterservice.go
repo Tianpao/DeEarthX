@@ -1,6 +1,7 @@
 package dearth
 
 import (
+	"log/slog"
 	"fmt"
 
 	"dex/backend/dearth/types"
@@ -26,14 +27,14 @@ func NewModFilterService(modsPath, movePath string, config types.FilterConfig) *
 // 2. Run filter strategies to identify client-side mods
 // 3. Move client-side mods to the rubbish directory
 func (mfs *ModFilterService) Filter() error {
-	fmt.Println("Starting mod filter workflow...")
+	slog.Info("Starting mod filter workflow")
 
 	files, err := mfs.extractor.ExtractFilesInfo()
 	if err != nil {
 		return fmt.Errorf("failed to extract file info: %w", err)
 	}
 	if len(files) == 0 {
-		fmt.Println("No jar files found, skipping filter")
+		slog.Info("No jar files found, skipping filter")
 		return nil
 	}
 
@@ -42,15 +43,14 @@ func (mfs *ModFilterService) Filter() error {
 		return fmt.Errorf("failed to identify client-side mods: %w", err)
 	}
 	if len(clientMods) == 0 {
-		fmt.Println("No client-side mods identified")
+		slog.Info("No client-side mods identified")
 		return nil
 	}
 
-	fmt.Printf("Identified %d client-side mods\n", len(clientMods))
+	slog.Info("Identified client-side mods", "count", len(clientMods))
 
 	result := mfs.operator.MoveClientSideMods(clientMods)
-	fmt.Printf("Mod filter complete: moved %d, skipped %d, errors %d\n",
-		result.Success, result.Skipped, result.Error)
+		slog.Info("Mod filter complete", "moved", result.Success, "skipped", result.Skipped, "errors", result.Error)
 
 	return nil
 }

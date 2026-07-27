@@ -2,7 +2,7 @@ package strategies
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"strings"
 
 	"dex/backend/dearth/types"
@@ -39,7 +39,7 @@ func isClientOnlyByMixin(mixins []types.MixinFile) bool {
 	for _, mixin := range mixins {
 		var raw map[string]any
 		if err := json.Unmarshal([]byte(mixin.Data), &raw); err != nil {
-			fmt.Printf("Mixin filter: failed to parse %s: %v\n", mixin.Name, err)
+			slog.Error("Mixin filter: failed to parse", "name", mixin.Name, "error", err)
 			continue
 		}
 		if arr, ok := raw["mixins"].([]any); ok && len(arr) > 0 {

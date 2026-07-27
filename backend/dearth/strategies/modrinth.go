@@ -2,7 +2,7 @@ package strategies
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 
 	"dex/backend/dearth/types"
 	"dex/backend/platform"
@@ -109,7 +109,7 @@ func (mf *ModrinthFilter) fetchProjectInfo(projectIDs []string) map[string]modri
 			SetHeader("Content-Type", "application/json").
 			Post(mf.urls.ModrinthURL + "/v2/projects?ids=" + idsParam)
 		if err != nil {
-			fmt.Printf("Modrinth filter: batch query error: %v\n", err)
+			slog.Error("Modrinth filter: batch query error", "error", err)
 			continue
 		}
 

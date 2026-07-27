@@ -2,7 +2,7 @@ package strategies
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"sync"
 
 	"dex/backend/dearth/types"
@@ -97,13 +97,13 @@ func (df *DexpubFilter) checkDexpub(files []types.FileInfo) (*types.DexpubCheckR
 		SetBody(map[string]any{"modids": modIDs}).
 		Post("mod/check")
 	if err != nil {
-		fmt.Printf("Dexpub API error: %v\n", err)
+		slog.Error("Dexpub API error", "error", err)
 		return &types.DexpubCheckResult{ServerMods: serverMods, ClientMods: clientMods}, nil
 	}
 
 	var modIDToIsClient map[string]bool
 	if err := json.Unmarshal(resp.Bytes(), &modIDToIsClient); err != nil {
-		fmt.Printf("Dexpub API response parse error: %v\n", err)
+		slog.Error("Dexpub API response parse error", "error", err)
 		return &types.DexpubCheckResult{ServerMods: serverMods, ClientMods: clientMods}, nil
 	}
 

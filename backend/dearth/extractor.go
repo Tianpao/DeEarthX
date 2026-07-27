@@ -6,7 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"io"
 	"os"
 	"path/filepath"
@@ -35,7 +35,7 @@ func (fe *FileExtractor) ExtractFilesInfo() ([]types.FileInfo, error) {
 		return nil, err
 	}
 
-	fmt.Printf("FileExtractor: found %d jar files\n", len(jarFiles))
+	slog.Info("FileExtractor: found jar files", "count", len(jarFiles))
 
 	files := make([]types.FileInfo, 0, len(jarFiles))
 	for _, jarFilename := range jarFiles {
@@ -43,7 +43,7 @@ func (fe *FileExtractor) ExtractFilesInfo() ([]types.FileInfo, error) {
 
 		fileData, err := os.ReadFile(fullPath)
 		if err != nil {
-			fmt.Printf("error reading %s: %v\n", fullPath, err)
+			slog.Error("error reading file", "file", fullPath, "error", err)
 			continue
 		}
 

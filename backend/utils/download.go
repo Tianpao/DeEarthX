@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -151,6 +152,11 @@ func (dc *DownloadClient) ChunkedDownloadWithOptions(opts DownloadOption) error 
 
 	// If file is smaller than chunk size, just use simple download
 	if fileSize <= chunkSize {
+		slog.Debug("chunked download skipped, using simple download",
+			"file", filepath.Base(filePath),
+			"size", fileSize,
+			"chunkSize", chunkSize,
+		)
 		return dc.Download(url, filePath, expectedHash)
 	}
 
@@ -164,8 +170,12 @@ func (dc *DownloadClient) ChunkedDownloadWithOptions(opts DownloadOption) error 
 		chunks = append(chunks, chunkRange{start: offset, end: end})
 	}
 
-	fmt.Printf("Chunked download: %s (%d bytes, %d chunks, concurrency=%d)\n",
-		filepath.Base(filePath), fileSize, len(chunks), concurrency)
+	slog.Info("chunked download started",
+		"file", filepath.Base(filePath),
+		"size", fileSize,
+		"chunks", len(chunks),
+		"concurrency", concurrency,
+	)
 
 	// Create temp file and pre-allocate
 	tmpPath := filePath + ".downloading"
@@ -301,12 +311,21 @@ func FastDownload(items []DownloadOption) error {
 	errCh := make(chan error, len(items))
 	sem := make(chan struct{}, DefaultFileConcurrency)
 
+	slog.Info("FastDownload starting",
+		"files", len(items),
+		"maxConcurrency", DefaultFileConcurrency,
+	)
+
 	for _, item := range items {
 		wg.Add(1)
 		go func(opt DownloadOption) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
+
+			slog.Debug("FastDownload: file started",
+				"file", filepath.Base(opt.FilePath),
+			)
 
 			var err error
 			if opt.UseChunked {
@@ -320,7 +339,15 @@ func FastDownload(items []DownloadOption) error {
 				}
 			}
 			if err != nil {
+				slog.Error("FastDownload: file failed",
+					"file", filepath.Base(opt.FilePath),
+					"error", err,
+				)
 				errCh <- err
+			} else {
+				slog.Info("FastDownload: file done",
+					"file", filepath.Base(opt.FilePath),
+				)
 			}
 		}(item)
 	}
@@ -358,12 +385,22 @@ func WFastDownload(items []DownloadOption, progressFn func(total, completed int,
 	errCh := make(chan error, len(items))
 	sem := make(chan struct{}, WFileConcurrency)
 
+	slog.Info("WFastDownload starting",
+		"files", total,
+		"maxConcurrency", WFileConcurrency,
+	)
+
 	for _, item := range items {
 		wg.Add(1)
 		go func(opt DownloadOption) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
+
+			slog.Debug("WFastDownload: file started",
+				"file", filepath.Base(opt.FilePath),
+				"active", len(sem),
+			)
 
 			// Default to chunked download for WFastDownload
 			useChunked := opt.UseChunked
@@ -387,14 +424,23 @@ func WFastDownload(items []DownloadOption, progressFn func(total, completed int,
 			}
 
 			if err != nil {
+				slog.Error("WFastDownload: file failed",
+					"file", filepath.Base(opt.FilePath),
+					"error", err,
+				)
 				errCh <- err
 			} else {
+				mu.Lock()
+				completed++
+				slog.Info("WFastDownload: file done",
+					"file", filepath.Base(opt.FilePath),
+					"completed", completed,
+					"total", total,
+				)
 				if progressFn != nil {
-					mu.Lock()
-					completed++
 					progressFn(total, completed, opt.FilePath)
-					mu.Unlock()
 				}
+				mu.Unlock()
 			}
 		}(item)
 	}

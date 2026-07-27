@@ -3,6 +3,7 @@ package strategies
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"dex/backend/dearth/types"
 	"dex/backend/platform"
@@ -101,7 +102,7 @@ func (mf *McmodFilter) queryCurseForgeFingerprint(fingerprints []uint32) map[uin
 		SetBody(map[string]any{"fingerprints": fingerprints}).
 		Post(mf.urls.CurseForgeURL + "/v1/fingerprints/" + fmt.Sprintf("%d", curseForgeGameID))
 	if err != nil {
-		fmt.Printf("Mcmod filter: CurseForge fingerprint API error: %v\n", err)
+		slog.Error("Mcmod filter: CurseForge fingerprint API error", "error", err)
 		return result
 	}
 
@@ -143,7 +144,7 @@ func (mf *McmodFilter) queryMcmodApi(projectIds []int) map[int]mcmodResult {
 		SetBody(map[string]any{"curseforge_ids": projectIds}).
 		Post("https://galaxy.tianpao.top/mcmod/query")
 	if err != nil {
-		fmt.Printf("Mcmod filter: Galaxy Square mcmod API error: %v\n", err)
+		slog.Error("Mcmod filter: Galaxy Square mcmod API error", "error", err)
 		return result
 	}
 

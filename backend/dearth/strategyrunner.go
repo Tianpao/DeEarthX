@@ -1,7 +1,7 @@
 package dearth
 
 import (
-	"fmt"
+	"log/slog"
 
 	"dex/backend/dearth/strategies"
 	"dex/backend/dearth/types"
@@ -16,12 +16,12 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 
 	// Priority 1: Galaxy Square (Dexpub)
 	if config.Dexpub {
-		fmt.Println("Running Galaxy Square (dexpub) filter...")
+		slog.Info("Running Galaxy Square (dexpub) filter")
 		dexpub := strategies.NewDexpubFilter()
 
 		dexpubMods, err := dexpub.Filter(files)
 		if err != nil {
-			fmt.Printf("Dexpub filter error: %v\n", err)
+			slog.Error("Dexpub filter error", "error", err)
 		} else {
 			serverMods, _ := dexpub.GetServerMods(files)
 			for _, mod := range dexpubMods {
@@ -46,10 +46,10 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 
 		if config.Hashes {
 			go func() {
-				fmt.Println("Running Hash filter...")
+				slog.Info("Running Hash filter")
 				mods, err := strategies.NewHashFilter().Filter(unprocessed)
 				if err != nil {
-					fmt.Printf("Hash filter error: %v\n", err)
+					slog.Error("Hash filter error", "error", err)
 					mods = nil
 				}
 				hashCh <- mods
@@ -60,10 +60,10 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 
 		if config.Modrinth {
 			go func() {
-				fmt.Println("Running Modrinth filter...")
+				slog.Info("Running Modrinth filter")
 				mods, err := strategies.NewModrinthFilter().Filter(unprocessed)
 				if err != nil {
-					fmt.Printf("Modrinth filter error: %v\n", err)
+					slog.Error("Modrinth filter error", "error", err)
 					mods = nil
 				}
 				modrinthCh <- mods
@@ -95,10 +95,10 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 
 	// Priority 3: Mcmod API
 	if config.Mcmod {
-		fmt.Println("Running Mcmod filter...")
+		slog.Info("Running Mcmod filter")
 		mcmodMods, err := strategies.NewMcmodFilter().Filter(filterUndecided(files, skipForMixin))
 		if err != nil {
-			fmt.Printf("Mcmod filter error: %v\n", err)
+			slog.Error("Mcmod filter error", "error", err)
 		} else {
 			for _, mod := range mcmodMods {
 				skipForMixin[mod] = true
@@ -109,10 +109,10 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 
 	// Priority 4: Mixin (lowest)
 	if config.Mixins {
-		fmt.Println("Running Mixin filter...")
+		slog.Info("Running Mixin filter")
 		mixinMods, err := strategies.NewMixinFilter().Filter(filterUndecided(files, skipForMixin))
 		if err != nil {
-			fmt.Printf("Mixin filter error: %v\n", err)
+			slog.Error("Mixin filter error", "error", err)
 		} else {
 			clientMods = append(clientMods, mixinMods...)
 		}

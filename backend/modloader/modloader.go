@@ -1,6 +1,7 @@
 package modloader
 
 import (
+	"log/slog"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -70,14 +71,14 @@ func MLSetup(ml, mcv, mlv, path string, template ...string) error {
 		}
 	} else {
 		// Step 1: Install Minecraft server
-		fmt.Println("Step 1: Installing Minecraft Server")
+		slog.Info("Step 1: Installing Minecraft Server")
 		minecraft := NewMinecraft(ml, mcv, mlv, path)
 		if err := minecraft.Setup(); err != nil {
 			return fmt.Errorf("minecraft server setup failed: %w", err)
 		}
 
 		// Step 2: Install mod loader
-		fmt.Println("Step 2: Installing Mod Loader")
+		slog.Info("Step 2: Installing Mod Loader")
 		loader := NewModloader(ml, mcv, mlv, path)
 		if err := loader.Setup(); err != nil {
 			return fmt.Errorf("mod loader setup failed: %w", err)

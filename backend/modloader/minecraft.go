@@ -3,6 +3,7 @@ package modloader
 import (
 	"archive/zip"
 	"fmt"
+	"log/slog"
 	"io"
 	"os"
 	"path/filepath"
@@ -154,7 +155,7 @@ func (m *Minecraft) forgeSetup() error {
 				return err
 			}
 			// For older versions, log but don't fail
-			fmt.Printf("warning: library download error for MC %s: %v\n", m.minecraft, err)
+			slog.Warn("library download error", "mcVersion", m.minecraft, "error", err)
 		}
 	}
 

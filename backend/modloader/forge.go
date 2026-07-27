@@ -1,6 +1,7 @@
 package modloader
 
 import (
+	"log/slog"
 	"archive/zip"
 	"fmt"
 	"net/url"
@@ -118,7 +119,7 @@ func (f *Forge) Installer() error {
 	if expectedHash != "" {
 		if err := downloadClient.ChunkedDownload(fullURL, filePath, expectedHash); err != nil {
 			// Hash verification failed, retry once
-			fmt.Println("Forge installer hash verification failed, deleting and retrying...")
+			slog.Warn("Forge installer hash verification failed, deleting and retrying")
 			os.Remove(filePath)
 
 			if err := downloadClient.ChunkedDownload(fullURL, filePath, expectedHash); err != nil {

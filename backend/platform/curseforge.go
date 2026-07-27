@@ -3,6 +3,7 @@ package platform
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 
@@ -139,7 +140,7 @@ func (cf *CurseForge) DownloadFile(manifest map[string]any, path string, progres
 	}
 
 	if len(downloadItems) == 0 {
-		fmt.Println("CurseForge: no downloadable files found")
+		slog.Info("CurseForge: no downloadable files found")
 		return nil
 	}
 

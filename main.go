@@ -2,8 +2,8 @@ package main
 
 import (
 	"embed"
-
-	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	i "dex/backend/information"
@@ -85,9 +85,12 @@ func main() {
 	// Inject the app instance into the download service for event emission
 	dl.SetApp(app)
 
+	// Initialize slog dual-output logger (console + file)
+	u.InitLogger()
+
 	// Load config from disk (persists to <appDir>/config.json)
 	if err := u.GlobalConfig.LoadConfigFromDisk(u.GetAppDir()); err != nil {
-		log.Printf("Warning: failed to load config from disk: %v", err)
+		slog.Warn("failed to load config from disk", "error", err)
 	}
 
 	// Create a goroutine that emits an event containing the current time every second.
@@ -105,6 +108,7 @@ func main() {
 
 	// If an error occurred while running the application, log it and exit.
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("application run failed", "error", err)
+		os.Exit(1)
 	}
 }
