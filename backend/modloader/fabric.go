@@ -85,7 +85,8 @@ func (f *Fabric) Installer() error {
 	}
 
 	filePath := filepath.Join(f.path, "fabric-installer.jar")
-	if err := utils.NewDownloadClient().Download(downloadURL, filePath); err != nil {
+	// Use chunked download for the installer jar
+	if err := utils.NewDownloadClient().ChunkedDownload(downloadURL, filePath); err != nil {
 		return fmt.Errorf("failed to download fabric installer: %w", err)
 	}
 

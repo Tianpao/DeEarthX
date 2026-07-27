@@ -2,7 +2,6 @@ package modloader
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"dex/backend/utils"
@@ -59,24 +58,15 @@ func (nf *NeoForge) Setup() error {
 func (nf *NeoForge) Installer() error {
 	bmclapi := utils.GlobalConfig.GetConfigValue("mirror.bmclapi")
 
-	var relURL string
+	var fullURL string
 	if bmclapi == true {
-		relURL = "neoforge/version/" + nf.loaderVersion + "/download/installer.jar"
+		fullURL = "https://bmclapi2.bangbang93.com/neoforge/version/" + nf.loaderVersion + "/download/installer.jar"
 	} else {
-		relURL = "net/neoforged/neoforge/" + nf.loaderVersion + "/neoforge-" + nf.loaderVersion + "-installer.jar"
-	}
-
-	resp, err := nf.client.R().Get(relURL)
-	if err != nil {
-		return fmt.Errorf("failed to download neoforge installer: %w", err)
-	}
-	if resp.StatusCode() >= 400 {
-		return fmt.Errorf("failed to download neoforge installer: HTTP %d", resp.StatusCode())
+		fullURL = "https://maven.neoforged.net/releases/net/neoforged/neoforge/" + nf.loaderVersion + "/neoforge-" + nf.loaderVersion + "-installer.jar"
 	}
 
 	filePath := filepath.Join(nf.path, fmt.Sprintf("forge-%s-%s-installer.jar", nf.minecraft, nf.loaderVersion))
-	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(filePath, resp.Bytes(), 0o644)
+
+	// Use chunked download for large installer jars
+	return utils.NewDownloadClient().ChunkedDownload(fullURL, filePath)
 }

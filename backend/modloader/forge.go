@@ -104,40 +104,30 @@ func (f *Forge) Installer() error {
 			f.minecraft, f.loaderVersion, f.minecraft, f.loaderVersion)
 	}
 
-	// Download the installer jar
-	resp, err := f.client.R().Get(relURL)
-	if err != nil {
-		return fmt.Errorf("failed to download forge installer: %w", err)
-	}
-	if resp.StatusCode() >= 400 {
-		return fmt.Errorf("failed to download forge installer: HTTP %d", resp.StatusCode())
-	}
+	// Build full URL for chunked download
+	baseURL := f.client.BaseURL()
+	fullURL := baseURL + relURL
 
 	filePath := filepath.Join(f.path, fmt.Sprintf("forge-%s-%s-installer.jar", f.minecraft, f.loaderVersion))
 	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filePath, resp.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("failed to write forge installer: %w", err)
-	}
 
-	// Verify SHA1 if hash was obtained
+	// Use chunked download for the installer jar
+	downloadClient := utils.NewDownloadClient()
 	if expectedHash != "" {
-		if !utils.VerifySHA1(filePath, expectedHash) {
+		if err := downloadClient.ChunkedDownload(fullURL, filePath, expectedHash); err != nil {
+			// Hash verification failed, retry once
 			fmt.Println("Forge installer hash verification failed, deleting and retrying...")
 			os.Remove(filePath)
 
-			resp2, err := f.client.R().Get(relURL)
-			if err != nil {
-				return fmt.Errorf("failed to re-download forge installer: %w", err)
+			if err := downloadClient.ChunkedDownload(fullURL, filePath, expectedHash); err != nil {
+				return fmt.Errorf("forge installer hash verification failed after retry: %w", err)
 			}
-			if err := os.WriteFile(filePath, resp2.Bytes(), 0o644); err != nil {
-				return fmt.Errorf("failed to write forge installer on retry: %w", err)
-			}
-
-			if !utils.VerifySHA1(filePath, expectedHash) {
-				return fmt.Errorf("forge installer hash verification failed after retry, file may be corrupted")
-			}
+		}
+	} else {
+		if err := downloadClient.ChunkedDownload(fullURL, filePath); err != nil {
+			return fmt.Errorf("failed to download forge installer: %w", err)
 		}
 	}
 

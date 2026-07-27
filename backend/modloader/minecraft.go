@@ -68,7 +68,7 @@ func (m *Minecraft) forgeSetup() error {
 	if utils.VersionCompare(m.minecraft, "1.18") >= 0 {
 		// MC >= 1.18: download server jar, extract embedded libraries
 		mcpath := filepath.Join(m.path, "libraries", "net", "minecraft", "server", m.minecraft, "server-"+m.minecraft+".jar")
-		if err := utils.NewDownloadClient().Download(
+		if err := utils.NewDownloadClient().ChunkedDownload(
 			"https://bmclapi2.bangbang93.com/version/"+m.minecraft+"/server",
 			mcpath,
 		); err != nil {
@@ -106,7 +106,7 @@ func (m *Minecraft) forgeSetup() error {
 		lowv := filepath.Join(m.path, "minecraft_server."+m.minecraft+".jar")
 
 		// Download server jar
-		if err := utils.NewDownloadClient().Download(
+		if err := utils.NewDownloadClient().ChunkedDownload(
 			"https://bmclapi2.bangbang93.com/version/"+m.minecraft+"/server",
 			lowv,
 		); err != nil {
@@ -163,7 +163,7 @@ func (m *Minecraft) forgeSetup() error {
 
 func (m *Minecraft) fabricSetup() error {
 	mcpath := filepath.Join(m.path, "server.jar")
-	return utils.NewDownloadClient().Download(
+	return utils.NewDownloadClient().ChunkedDownload(
 		"https://bmclapi2.bangbang93.com/version/"+m.minecraft+"/server",
 		mcpath,
 	)

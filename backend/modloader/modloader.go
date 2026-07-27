@@ -120,13 +120,14 @@ func DInstall(ml, mcv, mlv, path string) error {
 	return nil
 }
 
-// cleanupInstallFiles removes installer jars and log files after installation.
+// cleanupInstallFiles removes installer jars, log files, and residual temp download files after installation.
 func cleanupInstallFiles(path string) {
 	patterns := []string{
 		"forge-*-installer.jar",
 		"fabric-installer.jar",
 		"*.log",
 		"installer.log",
+		"*.downloading", // residual temp files from interrupted downloads
 	}
 
 	for _, pattern := range patterns {
@@ -134,6 +135,13 @@ func cleanupInstallFiles(path string) {
 		for _, match := range matches {
 			os.Remove(match)
 		}
+	}
+
+	// Also clean up .downloading files in the libraries/ subdirectory
+	libPatterns := filepath.Join(path, "libraries", "**", "*.downloading")
+	libMatches, _ := filepath.Glob(libPatterns)
+	for _, match := range libMatches {
+		os.Remove(match)
 	}
 }
 
