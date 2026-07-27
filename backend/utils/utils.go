@@ -9,17 +9,27 @@ import (
 	"strings"
 )
 
+var appDir string
+
+// SetAppDir sets the application data directory.
+// Called once at startup with the exe's directory.
+func SetAppDir(dir string) {
+	appDir = dir
+}
+
 // GetAppDir returns the application data directory.
-// Resolution order: XDG_DATA_HOME, APPDATA (Windows), ~/.local/share.
+// Defaults to the directory containing the executable.
 func GetAppDir() string {
-	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
-		return filepath.Join(xdg, "DeEarthX")
+	if appDir != "" {
+		return appDir
 	}
-	if appData := os.Getenv("APPDATA"); appData != "" {
-		return filepath.Join(appData, "DeEarthX")
+	exe, err := os.Executable()
+	if err != nil {
+		// Fallback to current working directory
+		wd, _ := os.Getwd()
+		return wd
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".local", "share", "DeEarthX")
+	return filepath.Dir(exe)
 }
 
 // ExecPromise runs a shell command in the given working directory and returns an error on failure.

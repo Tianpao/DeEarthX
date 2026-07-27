@@ -11,7 +11,7 @@ import (
 	"resty.dev/v3"
 )
 
-// CurseForgeAPIKey is the hardcoded CurseForge API key (same as the TS reference).
+// CurseForgeAPIKey is the CurseForge API key.
 const CurseForgeAPIKey = "$2a$10$ydk0TLDG/Gc6uPMdz7mad.iisj2TaMDytVcIW4gcVP231VKngLBKy"
 
 func NewCurseForge() *CurseForge {
