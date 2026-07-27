@@ -6,10 +6,14 @@ import (
 	"sync"
 )
 
+var GlobalConfig *ConfigService
+
 func NewConfigService() *ConfigService {
-	return &ConfigService{
+	cs := &ConfigService{
 		data: make(map[string]any),
 	}
+	GlobalConfig = cs
+	return cs
 }
 
 type ConfigService struct {
