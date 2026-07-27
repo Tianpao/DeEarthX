@@ -69,7 +69,7 @@ func (m *Minecraft) forgeSetup() error {
 	if utils.VersionCompare(m.minecraft, "1.18") >= 0 {
 		// MC >= 1.18: download server jar, extract embedded libraries
 		mcpath := filepath.Join(m.path, "libraries", "net", "minecraft", "server", m.minecraft, "server-"+m.minecraft+".jar")
-		if err := utils.NewDownloadClient().ChunkedDownload(
+		if err := utils.NewDownloadClient().Download(
 			"https://bmclapi2.bangbang93.com/version/"+m.minecraft+"/server",
 			mcpath,
 		); err != nil {
@@ -107,7 +107,7 @@ func (m *Minecraft) forgeSetup() error {
 		lowv := filepath.Join(m.path, "minecraft_server."+m.minecraft+".jar")
 
 		// Download server jar
-		if err := utils.NewDownloadClient().ChunkedDownload(
+		if err := utils.NewDownloadClient().Download(
 			"https://bmclapi2.bangbang93.com/version/"+m.minecraft+"/server",
 			lowv,
 		); err != nil {
@@ -145,11 +145,12 @@ func (m *Minecraft) forgeSetup() error {
 			}
 			downloadItems = append(downloadItems, utils.DownloadOption{
 				URL:      "https://bmclapi2.bangbang93.com/maven/" + libPath,
-				FilePath: filepath.Join(m.path, "libraries", libPath),
+				FilePath:   filepath.Join(m.path, "libraries", libPath),
+				UseChunked: false,
 			})
 		}
 
-		if err := utils.FastDownload(downloadItems); err != nil {
+		if err := utils.WFastDownload(downloadItems, nil); err != nil {
 			if utils.VersionCompare(m.minecraft, "1.12") == 1 {
 				// 1.12.x+ errors are real, propagate them
 				return err
@@ -164,7 +165,7 @@ func (m *Minecraft) forgeSetup() error {
 
 func (m *Minecraft) fabricSetup() error {
 	mcpath := filepath.Join(m.path, "server.jar")
-	return utils.NewDownloadClient().ChunkedDownload(
+	return utils.NewDownloadClient().Download(
 		"https://bmclapi2.bangbang93.com/version/"+m.minecraft+"/server",
 		mcpath,
 	)

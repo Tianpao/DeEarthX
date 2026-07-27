@@ -19,10 +19,11 @@ import (
 
 const (
 	DefaultChunkSize   int64 = 5 * 1024 * 1024 // 5 MB
-	DefaultConcurrency int   = 32
+	DefaultConcurrency int   = 16
 	DefaultFileConcurrency int = 16
-	WFileConcurrency        int = 64
+	WFileConcurrency        int = 16
 	MaxChunkRetries         int = 3
+	MaxFileRetries          int = 3
 )
 
 type DownloadOption struct {
@@ -38,7 +39,7 @@ func NewDownloadClient() *DownloadClient {
 	client := resty.New().
 		SetHeader("User-Agent", "DeEarthX").
 		SetRetryCount(3).
-		SetTimeout(60 * time.Second)
+		SetTimeout(120 * time.Second)
 	return &DownloadClient{
 		client: client,
 	}
@@ -223,7 +224,11 @@ func (dc *DownloadClient) ChunkedDownloadWithOptions(opts DownloadOption) error 
 
 	if len(errors) > 0 {
 		os.Remove(tmpPath)
-		return fmt.Errorf("chunked download failed with %d errors: %w", len(errors), errors[0])
+		slog.Warn("chunked download failed, falling back to simple download",
+			"file", filepath.Base(filePath),
+			"chunkErrors", len(errors),
+		)
+		return dc.Download(url, filePath, expectedHash)
 	}
 
 	// Verify SHA1 if provided
@@ -412,15 +417,38 @@ func WFastDownload(items []DownloadOption, progressFn func(total, completed int,
 			}
 
 			var err error
-			if useChunked {
-				err = client.ChunkedDownloadWithOptions(opt)
-			} else {
-				hash := opt.ExpectedHash
-				if hash != "" {
-					err = client.Download(opt.URL, opt.FilePath, hash)
-				} else {
-					err = client.Download(opt.URL, opt.FilePath)
+			for attempt := 0; attempt < MaxFileRetries; attempt++ {
+				if attempt > 0 {
+					backoff := time.Duration(1<<uint(attempt-1)) * time.Second
+					slog.Warn("WFastDownload: retrying file",
+						"file", filepath.Base(opt.FilePath),
+						"attempt", attempt+1,
+						"max", MaxFileRetries,
+						"backoff", backoff,
+					)
+					time.Sleep(backoff)
 				}
+
+				if useChunked {
+					err = client.ChunkedDownloadWithOptions(opt)
+				} else {
+					hash := opt.ExpectedHash
+					if hash != "" {
+						err = client.Download(opt.URL, opt.FilePath, hash)
+					} else {
+						err = client.Download(opt.URL, opt.FilePath)
+					}
+				}
+
+				if err == nil {
+					break
+				}
+				slog.Warn("WFastDownload: file attempt failed",
+					"file", filepath.Base(opt.FilePath),
+					"attempt", attempt+1,
+					"max", MaxFileRetries,
+					"error", err,
+				)
 			}
 
 			if err != nil {
