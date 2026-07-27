@@ -52,6 +52,91 @@ export interface NeoForgeVersionEntry {
 }
 
 /**
+ * PackCompleteEvent is emitted when modpack processing finishes successfully.
+ */
+export interface PackCompleteEvent {
+    "installPath": string;
+    "modpackName": string;
+
+    /**
+     * milliseconds
+     */
+    "duration": number;
+}
+
+/**
+ * PackDownloadProgressEvent is emitted during mod file downloads.
+ */
+export interface PackDownloadProgressEvent {
+    "total": number;
+    "completed": number;
+    "fileName": string;
+}
+
+/**
+ * PackErrorEvent is emitted when modpack processing fails.
+ */
+export interface PackErrorEvent {
+    "error": string;
+}
+
+/**
+ * PackFilterCompleteEvent is emitted when mod filtering finishes.
+ */
+export interface PackFilterCompleteEvent {
+    "filteredCount": number;
+    "movedCount": number;
+}
+
+/**
+ * PackFilterProgressEvent is emitted during mod filtering.
+ */
+export interface PackFilterProgressEvent {
+    "current": number;
+    "total": number;
+    "modName": string;
+}
+
+/**
+ * PackFilterStartEvent is emitted when mod filtering begins.
+ */
+export interface PackFilterStartEvent {
+    "totalMods": number;
+}
+
+/**
+ * PackProgressEvent is emitted to report progress within the current step.
+ */
+export interface PackProgressEvent {
+    "step": string;
+    "progress": number;
+}
+
+/**
+ * PackStartEvent is emitted when a modpack processing begins.
+ */
+export interface PackStartEvent {
+    "modpackName": string;
+    "minecraftVersion": string;
+    "loaderType": string;
+    "loaderVersion": string;
+
+    /**
+     * "server" or "client"
+     */
+    "mode": string;
+}
+
+/**
+ * PackStepEvent is emitted when the processing advances to a new major step.
+ */
+export interface PackStepEvent {
+    "step": string;
+    "stepIndex": number;
+    "totalSteps": number;
+}
+
+/**
  * ServerInstallCompleteEvent is emitted when the install finishes successfully.
  */
 export interface ServerInstallCompleteEvent {

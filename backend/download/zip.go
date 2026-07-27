@@ -3,6 +3,7 @@ package download
 import (
 	"archive/zip"
 	"bytes"
+	"compress/flate"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -210,4 +211,61 @@ func UnzipOverrides(zipData []byte, instanceName string, appDir string, progress
 	}
 
 	return nil
+}
+
+// CreateZipArchive creates a ZIP archive of the given instance directory.
+// The output file is placed at <appDir>/instance/<outputName>.zip with best compression.
+func CreateZipArchive(sourcePath string, outputName string, appDir string) error {
+	outputPath := filepath.Join(appDir, "instance", outputName+".zip")
+
+	outFile, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create archive file: %w", err)
+	}
+	defer outFile.Close()
+
+	w := zip.NewWriter(outFile)
+	// Use best compression
+	w.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) {
+		return flate.NewWriter(out, flate.BestCompression)
+	})
+	defer w.Close()
+
+	return filepath.Walk(sourcePath, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(sourcePath, filePath)
+		if err != nil {
+			return err
+		}
+
+		// Use forward slashes in the ZIP for cross-platform compatibility
+		relPath = strings.ReplaceAll(relPath, "\\", "/")
+
+		fh, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+		fh.Name = relPath
+		fh.Method = zip.Deflate
+
+		fw, err := w.CreateHeader(fh)
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = io.Copy(fw, f)
+		return err
+	})
 }

@@ -13,8 +13,27 @@ export function GetConfigValue(key: string): $CancellablePromise<any> {
     return $Call.ByID(890199209, key);
 }
 
+/**
+ * LoadConfig parses a JSON string into the in-memory config.
+ * This is the Wails-bound method called from the frontend.
+ */
 export function LoadConfig(configData: string): $CancellablePromise<void> {
     return $Call.ByID(3548414324, configData);
+}
+
+/**
+ * LoadConfigFromDisk reads config.json from the given directory.
+ * If the file doesn't exist, it initializes with defaults.
+ */
+export function LoadConfigFromDisk(dir: string): $CancellablePromise<void> {
+    return $Call.ByID(4029074417, dir);
+}
+
+/**
+ * SaveConfig writes the current in-memory config to disk.
+ */
+export function SaveConfig(): $CancellablePromise<void> {
+    return $Call.ByID(2259675165);
 }
 
 export function UpdateConfig(key: string, value: any): $CancellablePromise<void> {

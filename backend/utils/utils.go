@@ -2,9 +2,25 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 )
+
+// GetAppDir returns the application data directory.
+// Resolution order: XDG_DATA_HOME, APPDATA (Windows), ~/.local/share.
+func GetAppDir() string {
+	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
+		return filepath.Join(xdg, "DeEarthX")
+	}
+	if appData := os.Getenv("APPDATA"); appData != "" {
+		return filepath.Join(appData, "DeEarthX")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".local", "share", "DeEarthX")
+}
 
 // ExecPromise runs a shell command in the given working directory and returns an error on failure.
 func ExecPromise(command string, cwd ...string) error {
@@ -28,8 +44,9 @@ func ExecPromise(command string, cwd ...string) error {
 	return nil
 }
 
-// VersionCompare compares two version strings.
+// VersionCompare compares two dotted version strings.
 // Returns 1 if v1 > v2, -1 if v1 < v2, 0 if equal.
+// Non-numeric segments are treated as 0.
 func VersionCompare(v1, v2 string) int {
 	parts1 := strings.Split(v1, ".")
 	parts2 := strings.Split(v2, ".")
@@ -41,17 +58,17 @@ func VersionCompare(v1, v2 string) int {
 
 	for i := 0; i < maxLen; i++ {
 		var n1, n2 int
-
 		if i < len(parts1) {
-			fmt.Sscanf(parts1[i], "%d", &n1)
+			n1, _ = strconv.Atoi(parts1[i])
 		}
 		if i < len(parts2) {
-			fmt.Sscanf(parts2[i], "%d", &n2)
+			n2, _ = strconv.Atoi(parts2[i])
 		}
 
-		if n1 > n2 {
+		switch {
+		case n1 > n2:
 			return 1
-		} else if n1 < n2 {
+		case n1 < n2:
 			return -1
 		}
 	}

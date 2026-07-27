@@ -12,6 +12,15 @@ import type * as download$0 from "../../../../../dex/backend/download/models.js"
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "pack_complete": download$0.PackCompleteEvent;
+            "pack_download_progress": download$0.PackDownloadProgressEvent;
+            "pack_error": download$0.PackErrorEvent;
+            "pack_filter_complete": download$0.PackFilterCompleteEvent;
+            "pack_filter_progress": download$0.PackFilterProgressEvent;
+            "pack_filter_start": download$0.PackFilterStartEvent;
+            "pack_progress": download$0.PackProgressEvent;
+            "pack_start": download$0.PackStartEvent;
+            "pack_step": download$0.PackStepEvent;
             "server_install_complete": download$0.ServerInstallCompleteEvent;
             "server_install_error": download$0.ServerInstallErrorEvent;
             "server_install_progress": download$0.ServerInstallProgressEvent;

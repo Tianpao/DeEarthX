@@ -48,6 +48,7 @@ func main() {
 			application.NewService(d.NewGalaxy()),
 			application.NewService(u.NewConfigService()),
 			application.NewService(dl.NewDownloadService()),
+				application.NewService(dl.NewModpackService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -83,6 +84,11 @@ func main() {
 
 	// Inject the app instance into the download service for event emission
 	dl.SetApp(app)
+
+	// Load config from disk (persists to <appDir>/config.json)
+	if err := u.GlobalConfig.LoadConfigFromDisk(u.GetAppDir()); err != nil {
+		log.Printf("Warning: failed to load config from disk: %v", err)
+	}
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.

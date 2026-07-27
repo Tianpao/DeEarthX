@@ -1,9 +1,11 @@
-import { inject } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
+import { Events } from '@wailsio/runtime';
 import { useProgressStore } from '@/stores/progress';
 import { useErrorHandler } from '@/composables/useErrorHandler';
+import * as ModpackService from '&/dex/backend/download/modpackservice';
 
 export function useTaskProcessor() {
     const { t } = useI18n();
@@ -31,46 +33,16 @@ export function useTaskProcessor() {
         startButtonDisabled
     } = storeToRefs(store);
 
-    const killCoreProcess = inject<(() => void) | undefined>("killCoreProcess");
-    const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
-
     const { handleError } = useErrorHandler();
+
+    // Event listener cleanup functions
+    const cleanups: (() => void)[] = [];
 
     function resetState() {
         store.resetState();
-        if (clearDroppedFile) {
-            clearDroppedFile();
-        }
-        if (killCoreProcess && typeof killCoreProcess === 'function') {
-            killCoreProcess();
-        }
     }
 
-    async function runDeEarthXFromPath(filePath: string, socket: Socket) {
-        store.showSteps = true;
-
-        try {
-            const apiHost = import.meta.env.VITE_API_HOST || 'localhost';
-            const apiPort = import.meta.env.VITE_API_PORT || '37019';
-            let url = `http://${apiHost}:${apiPort}/start-path?mode=${store.selectedMode}`;
-
-            if (store.selectedMode === 'server' && store.selectedTemplate) {
-                url += `&template=${encodeURIComponent(store.selectedTemplate)}`;
-            }
-
-            store.startTime = Date.now();
-
-            const { default: axiosInstance } = await import('@/utils/axios');
-            await axiosInstance.post(url, { path: filePath });
-        } catch (error) {
-            console.error('请求失败:', error);
-            message.error(t('home.request_failed'));
-            resetState();
-            socket.disconnect();
-        }
-    }
-
-    function handleStartProcess() {
+    async function handleStartProcess() {
         const actualPath = store.getActualFilePath();
 
         if (!actualPath) {
@@ -80,93 +52,129 @@ export function useTaskProcessor() {
 
         store.startTask();
 
-        socket.on('connect', () => {
-            // 连接成功不弹提示，只有失败才弹
-            runDeEarthXFromPath(actualPath, socket);
-        });
+        try {
+            // Call the Wails binding directly — no HTTP, no Socket.IO
+            await ModpackService.ProcessModpackFromPath(actualPath, store.selectedMode);
+        } catch (error: any) {
+            console.error('Failed to start modpack processing:', error);
+            message.error(t('home.request_failed'));
+            resetState();
+        }
+    }
 
-        socket.on("finish", (timeSpent: number) => {
-            const time = Math.round(timeSpent / 1000);
-            store.incrementStep();
+    onMounted(() => {
+        store.checkAndRestoreState();
 
-            // 根据模式显示不同的完成消息
+        // --- Modpack processing events (replace Socket.IO listeners) ---
+
+        cleanups.push(Events.On('pack_start', (event: any) => {
+            const data = event.data;
+            store.handleServerInstallStart(data);
+        }));
+
+        cleanups.push(Events.On('pack_step', (event: any) => {
+            const data = event.data;
+            store.handleServerInstallStep(data);
+            // Map the orchestrator's step index to the UI's step indicator
+            // Steps: 1=parse, 2=extract+download, 3=filter, 4=install, 5=complete
+            if (data.stepIndex >= 1 && data.stepIndex <= 5) {
+                store.currentStep = data.stepIndex;
+            }
+        }));
+
+        cleanups.push(Events.On('pack_progress', (event: any) => {
+            const data = event.data;
+            if (data.step === '解压 overrides') {
+                store.updateUnzipProgress({ current: data.progress, total: 100 });
+            }
+        }));
+
+        cleanups.push(Events.On('pack_download_progress', (event: any) => {
+            const data = event.data;
+            store.updateDownloadProgress({ index: data.completed, total: data.total });
+        }));
+
+        cleanups.push(Events.On('pack_filter_start', (event: any) => {
+            store.handleFilterModsStart(event.data);
+        }));
+
+        cleanups.push(Events.On('pack_filter_progress', (event: any) => {
+            store.handleFilterModsProgress(event.data);
+        }));
+
+        cleanups.push(Events.On('pack_filter_complete', (event: any) => {
+            const data = event.data;
+            store.handleFilterModsComplete(data);
+            const timeSpent = Math.round((data.duration || 0) / 1000);
+            message.success(t('home.filter_mods_completed', {
+                filtered: data.filteredCount,
+                moved: data.movedCount
+            }) + ` ${t('home.server_install_duration')}: ${timeSpent}s`);
+        }));
+
+        cleanups.push(Events.On('pack_complete', (event: any) => {
+            const data = event.data;
+            store.handleServerInstallComplete(data);
+
+            const time = Math.round((data.duration || 0) / 1000);
             if (store.selectedMode === 'server') {
-                const info = store.serverInstallInfo;
-                if (info.installPath) {
-                    message.success(t('home.server_install_completed') + ` ${t('home.server_install_duration')}: ${time}s`);
-                } else {
-                    message.success(t('home.production_complete', { time }));
-                }
+                message.success(t('home.server_install_completed') + ` ${t('home.server_install_duration')}: ${time}s`);
             } else {
                 message.success(t('home.production_complete', { time }));
             }
 
-            //sendNotification({ title: t('common.app_name'), body: t('home.production_complete', { time }) });
-            socket.disconnect();
             store.completeTask();
-        });
+        }));
 
-        socket.on("unzip", (data: any) => {
-            store.updateUnzipProgress(data);
-        });
-
-        socket.on("downloading", (data: any) => {
-            store.updateDownloadProgress(data);
-        });
-
-        socket.on("changed", () => {
-            store.incrementStep();
-        });
-
-        socket.on("server_install_start", (data: any) => {
-            store.handleServerInstallStart(data);
-        });
-
-        socket.on("server_install_step", (data: any) => {
-            store.handleServerInstallStep(data);
-        });
-
-        socket.on("server_install_progress", (data: any) => {
-            store.handleServerInstallProgress(data);
-        });
-
-        socket.on("server_install_complete", (data: any) => {
-            store.handleServerInstallComplete(data);
-            // finish 事件会统一发送通知，这里不再重复发送
-        });
-
-        socket.on("server_install_error", (data: any) => {
-            store.handleServerInstallError(data);
-        });
-
-        socket.on("filter_mods_start", (data: any) => {
-            store.handleFilterModsStart(data);
-        });
-
-        socket.on("filter_mods_progress", (data: any) => {
-            store.handleFilterModsProgress(data);
-        });
-
-        socket.on("filter_mods_complete", (data: any) => {
-            store.handleFilterModsComplete(data);
-            const timeSpent = Math.round(data.duration / 1000);
-            message.success(t('home.filter_mods_completed', { filtered: data.filteredCount, moved: data.movedCount }) + ` ${t('home.server_install_duration')}: ${timeSpent}s`);
-        });
-
-        socket.on("filter_mods_error", (data: any) => {
-            store.handleFilterModsError(data);
-        });
-
-        socket.on("error", (error: any) => {
-            handleError(error);
+        cleanups.push(Events.On('pack_error', (event: any) => {
+            handleError(event.data?.error || 'Unknown error');
             resetState();
-            socket.disconnect();
-        });
+        }));
 
-        socket.on('disconnect', () => {
-            console.log('WebSocket连接关闭');
-        });
-    }
+        // --- Server install events (from download page, also need listeners here) ---
+
+        cleanups.push(Events.On('server_install_start', (event: any) => {
+            store.handleServerInstallStart(event.data);
+        }));
+
+        cleanups.push(Events.On('server_install_step', (event: any) => {
+            store.handleServerInstallStep(event.data);
+        }));
+
+        cleanups.push(Events.On('server_install_progress', (event: any) => {
+            store.handleServerInstallProgress(event.data);
+        }));
+
+        cleanups.push(Events.On('server_install_complete', (event: any) => {
+            store.handleServerInstallComplete(event.data);
+            store.completeTask();
+        }));
+
+        cleanups.push(Events.On('server_install_error', (event: any) => {
+            store.handleServerInstallError(event.data);
+        }));
+
+        cleanups.push(Events.On('filter_mods_start', (event: any) => {
+            store.handleFilterModsStart(event.data);
+        }));
+
+        cleanups.push(Events.On('filter_mods_progress', (event: any) => {
+            store.handleFilterModsProgress(event.data);
+        }));
+
+        cleanups.push(Events.On('filter_mods_complete', (event: any) => {
+            store.handleFilterModsComplete(event.data);
+        }));
+
+        cleanups.push(Events.On('filter_mods_error', (event: any) => {
+            store.handleFilterModsError(event.data);
+        }));
+    });
+
+    onUnmounted(() => {
+        cleanups.forEach(fn => fn());
+        cleanups.length = 0;
+    });
 
     return {
         // File upload

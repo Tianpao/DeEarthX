@@ -148,18 +148,7 @@ func cleanupInstallFiles(path string) {
 
 // GetAppDir returns the application data directory.
 func GetAppDir() string {
-	// Try XDG data home first
-	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
-		return filepath.Join(xdg, "DeEarthX")
-	}
-
-	// Fallback to platform-specific app data dir
-	if appData := os.Getenv("APPDATA"); appData != "" {
-		return filepath.Join(appData, "DeEarthX")
-	}
-
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".local", "share", "DeEarthX")
+	return utils.GetAppDir()
 }
 
 // getJavaCmd returns the Java command path from config, or "java" as default.
