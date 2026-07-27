@@ -117,17 +117,17 @@ func (f *Forge) Installer() error {
 	// Use chunked download for the installer jar
 	downloadClient := utils.NewDownloadClient()
 	if expectedHash != "" {
-		if err := downloadClient.ChunkedDownload(fullURL, filePath, expectedHash); err != nil {
+		if err := downloadClient.Download(fullURL, filePath, expectedHash); err != nil {
 			// Hash verification failed, retry once
 			slog.Warn("Forge installer hash verification failed, deleting and retrying")
 			os.Remove(filePath)
 
-			if err := downloadClient.ChunkedDownload(fullURL, filePath, expectedHash); err != nil {
+			if err := downloadClient.Download(fullURL, filePath, expectedHash); err != nil {
 				return fmt.Errorf("forge installer hash verification failed after retry: %w", err)
 			}
 		}
 	} else {
-		if err := downloadClient.ChunkedDownload(fullURL, filePath); err != nil {
+		if err := downloadClient.Download(fullURL, filePath); err != nil {
 			return fmt.Errorf("failed to download forge installer: %w", err)
 		}
 	}
@@ -180,7 +180,8 @@ func (f *Forge) Library() error {
 					libPath := lib.Downloads.Artifact.Path
 					downloadItems = append(downloadItems, utils.DownloadOption{
 						URL:      "https://bmclapi2.bangbang93.com/maven/" + libPath,
-						FilePath: filepath.Join(f.path, "libraries", libPath),
+						FilePath:   filepath.Join(f.path, "libraries", libPath),
+					UseChunked: false,
 					})
 				}
 			}
@@ -211,7 +212,8 @@ func (f *Forge) Library() error {
 							if parsedURL != nil {
 								downloadItems = append(downloadItems, utils.DownloadOption{
 									URL:      "https://bmclapi2.bangbang93.com/" + strings.TrimPrefix(parsedURL.Path, "/"),
-									FilePath: filepath.Join(f.path, "libraries", mojPath),
+									FilePath:   filepath.Join(f.path, "libraries", mojPath),
+								UseChunked: false,
 								})
 							}
 						}
@@ -223,7 +225,8 @@ func (f *Forge) Library() error {
 					mappingPath := MTP(strings.Replace(profile.Data.MAPPINGS.Server, ":mappings@txt", "@zip", 1))
 					downloadItems = append(downloadItems, utils.DownloadOption{
 						URL:      "https://bmclapi2.bangbang93.com/maven/" + mappingPath,
-						FilePath: filepath.Join(f.path, "libraries", mappingPath),
+						FilePath:   filepath.Join(f.path, "libraries", mappingPath),
+					UseChunked: false,
 					})
 				}
 			}
@@ -233,7 +236,7 @@ func (f *Forge) Library() error {
 	// Deduplicate download items
 	downloadItems = dedupDownloadItems(downloadItems)
 
-	return utils.FastDownload(downloadItems)
+	return utils.WFastDownload(downloadItems, nil)
 }
 
 func (f *Forge) Install() error {

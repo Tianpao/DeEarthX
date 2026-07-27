@@ -68,5 +68,5 @@ func (nf *NeoForge) Installer() error {
 	filePath := filepath.Join(nf.path, fmt.Sprintf("forge-%s-%s-installer.jar", nf.minecraft, nf.loaderVersion))
 
 	// Use chunked download for large installer jars
-	return utils.NewDownloadClient().ChunkedDownload(fullURL, filePath)
+	return utils.NewDownloadClient().Download(fullURL, filePath)
 }

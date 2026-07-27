@@ -87,7 +87,7 @@ func (f *Fabric) Installer() error {
 
 	filePath := filepath.Join(f.path, "fabric-installer.jar")
 	// Use chunked download for the installer jar
-	if err := utils.NewDownloadClient().ChunkedDownload(downloadURL, filePath); err != nil {
+	if err := utils.NewDownloadClient().Download(downloadURL, filePath); err != nil {
 		return fmt.Errorf("failed to download fabric installer: %w", err)
 	}
 
@@ -126,11 +126,12 @@ func (f *Fabric) libraries() error {
 		libPath := MTP(lib.Name)
 		downloadItems = append(downloadItems, utils.DownloadOption{
 			URL:      "https://bmclapi2.bangbang93.com/maven/" + libPath,
-			FilePath: filepath.Join(f.path, "libraries", libPath),
+			FilePath:   filepath.Join(f.path, "libraries", libPath),
+			UseChunked: false,
 		})
 	}
 
-	if err := utils.FastDownload(downloadItems); err != nil {
+	if err := utils.WFastDownload(downloadItems, nil); err != nil {
 		return err
 	}
 
