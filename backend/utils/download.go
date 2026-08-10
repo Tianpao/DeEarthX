@@ -18,12 +18,12 @@ import (
 )
 
 const (
-	DefaultChunkSize   int64 = 5 * 1024 * 1024 // 5 MB
-	DefaultConcurrency int   = 16
-	DefaultFileConcurrency int = 16
-	WFileConcurrency        int = 16
-	MaxChunkRetries         int = 3
-	MaxFileRetries          int = 3
+	DefaultChunkSize       int64 = 5 * 1024 * 1024 // 5 MB (fallback only; dynamic sizing is the default)
+	DefaultConcurrency     int   = 16              // per-file chunk concurrency
+	DefaultFileConcurrency int   = 16
+	WFileConcurrency       int   = 16 // file-level concurrency
+	MaxChunkRetries        int   = 3
+	MaxFileRetries         int   = 3
 )
 
 type DownloadOption struct {
@@ -36,7 +36,14 @@ type DownloadOption struct {
 }
 
 func NewDownloadClient() *DownloadClient {
-	client := resty.New().
+	// Do NOT reuse a single connection: resty's default transport enables HTTP/2
+	// keep-alive, so all concurrent chunk/file downloads to the same host get
+	// multiplexed onto ONE connection and serialize behind it. Disabling keep-alives
+	// makes every parallel request open its own fresh connection, so chunked and
+	// multi-file downloads actually run over parallel TCP connections.
+	client := resty.NewWithTransportSettings(&resty.TransportSettings{
+		DisableKeepAlives: true,
+	}).
 		SetHeader("User-Agent", "DeEarthX").
 		SetRetryCount(3).
 		SetTimeout(120 * time.Second)
@@ -70,11 +77,25 @@ func (dc *DownloadClient) Download(url, filePath string, expectedHash ...string)
 	if resp.StatusCode() >= 400 {
 		return fmt.Errorf("download failed for %s: HTTP %d", url, resp.StatusCode())
 	}
+	if resp.Body == nil {
+		return fmt.Errorf("download failed for %s: empty response body", url)
+	}
+	defer resp.Body.Close()
 
-	data := resp.Bytes()
-	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
+	// Stream the body straight to disk instead of buffering the whole file in memory
+	// (resp.Bytes() would hold e.g. a 77MB file in RAM all at once).
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		return fmt.Errorf("failed to create file %s: %w", tmpPath, err)
+	}
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		f.Close()
 		os.Remove(tmpPath) // clean up partial file on write failure
 		return fmt.Errorf("failed to write file %s: %w", tmpPath, err)
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to close file %s: %w", tmpPath, err)
 	}
 
 	// Verify SHA1 if provided
@@ -120,19 +141,29 @@ func (dc *DownloadClient) ChunkedDownloadWithOptions(opts DownloadOption) error 
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
-	// HEAD request to check server support
+	// Resolve redirects first with a HEAD (no Range). Some CDNs return 404 for Range
+	// requests on the redirecting host but DO support them on the final host — e.g.
+	// edge.forgecdn.net 404s on Range but redirects to mediafilez.forgecdn.net, which
+	// serves byte ranges. So we must use the resolved final URL for the range GETs.
 	headResp, err := dc.client.R().Head(url)
 	if err != nil {
 		// HEAD failed, fall back to simple download
 		return dc.Download(url, filePath, expectedHash)
 	}
+	if headResp.StatusCode() >= 400 {
+		return dc.Download(url, filePath, expectedHash)
+	}
+	// Re-point url at the final host after redirects (the one that actually serves ranges).
+	if rr := headResp.RawResponse; rr != nil && rr.Request != nil && rr.Request.URL != nil {
+		url = rr.Request.URL.String()
+	}
 
-	// Check Accept-Ranges header
 	acceptRanges := headResp.Header().Get("Accept-Ranges")
 	contentLengthStr := headResp.Header().Get("Content-Length")
-
 	if acceptRanges != "bytes" || contentLengthStr == "" {
-		// Server doesn't support Range requests, fall back
+		slog.Debug("chunked download skipped, server does not support Range",
+			"file", filepath.Base(filePath),
+		)
 		return dc.Download(url, filePath, expectedHash)
 	}
 
@@ -141,24 +172,34 @@ func (dc *DownloadClient) ChunkedDownloadWithOptions(opts DownloadOption) error 
 		return dc.Download(url, filePath, expectedHash)
 	}
 
-	// Determine chunk size and concurrency
-	chunkSize := opts.ChunkSize
-	if chunkSize <= 0 {
-		chunkSize = DefaultChunkSize
-	}
+	// Determine chunk concurrency
 	concurrency := opts.Concurrency
 	if concurrency <= 0 {
 		concurrency = DefaultConcurrency
 	}
 
-	// If file is smaller than chunk size, just use simple download
-	if fileSize <= chunkSize {
-		slog.Debug("chunked download skipped, using simple download",
-			"file", filepath.Base(filePath),
-			"size", fileSize,
-			"chunkSize", chunkSize,
-		)
-		return dc.Download(url, filePath, expectedHash)
+	// Determine chunk size: an explicit opts.ChunkSize wins; otherwise use dynamic
+	// chunk sizing so most mods (which are < 5MB) still get per-file parallelism.
+	chunkSize := opts.ChunkSize
+	if chunkSize > 0 {
+		if fileSize <= chunkSize {
+			slog.Debug("chunked download skipped, using simple download",
+				"file", filepath.Base(filePath),
+				"size", fileSize,
+				"chunkSize", chunkSize,
+			)
+			return dc.Download(url, filePath, expectedHash)
+		}
+	} else {
+		n := chunkCount(fileSize)
+		if n <= 1 {
+			slog.Debug("chunked download skipped, file too small",
+				"file", filepath.Base(filePath),
+				"size", fileSize,
+			)
+			return dc.Download(url, filePath, expectedHash)
+		}
+		chunkSize = fileSize / int64(n)
 	}
 
 	// Calculate chunks
@@ -252,6 +293,23 @@ func (dc *DownloadClient) ChunkedDownloadWithOptions(opts DownloadOption) error 
 type chunkRange struct {
 	start int64
 	end   int64
+}
+
+// chunkCount returns the desired number of parallel chunks for a file of the given
+// size. Files under 256KB stay single-connection to avoid request overhead on tiny
+// files; everything else is split into 4-16 chunks so most mods get true two-layer
+// parallelism (many files in parallel, and each file's chunks in parallel).
+func chunkCount(size int64) int {
+	switch {
+	case size < 256*1024:
+		return 1
+	case size < 4*1024*1024:
+		return 4
+	case size < 16*1024*1024:
+		return 8
+	default:
+		return 16
+	}
 }
 
 // downloadChunk downloads a single chunk with retries and 429 backoff.
@@ -407,11 +465,10 @@ func WFastDownload(items []DownloadOption, progressFn func(total, completed int,
 				"active", len(sem),
 			)
 
-			// Default to chunked download for WFastDownload
+			// Default to chunked download for WFastDownload.
+			// Keep ChunkSize at 0 so each file uses dynamic chunk sizing in
+			// ChunkedDownloadWithOptions; only Concurrency gets a default.
 			useChunked := opt.UseChunked
-			if useChunked && opt.ChunkSize == 0 {
-				opt.ChunkSize = DefaultChunkSize
-			}
 			if useChunked && opt.Concurrency == 0 {
 				opt.Concurrency = DefaultConcurrency
 			}
