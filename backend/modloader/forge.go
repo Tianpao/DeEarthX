@@ -106,8 +106,9 @@ func (f *Forge) Installer() error {
 	}
 
 	// Build full URL for chunked download
-	baseURL := f.client.BaseURL()
-	fullURL := baseURL + relURL
+	// Note: resty's SetBaseURL trims the trailing slash, so join with an explicit "/"
+	baseURL := strings.TrimSuffix(f.client.BaseURL(), "/")
+	fullURL := baseURL + "/" + relURL
 
 	filePath := filepath.Join(f.path, fmt.Sprintf("forge-%s-%s-installer.jar", f.minecraft, f.loaderVersion))
 	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
