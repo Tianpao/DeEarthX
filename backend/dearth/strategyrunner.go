@@ -93,10 +93,20 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 		}
 	}
 
+	// Priorities 3 & 4 both resolve CurseForge fingerprints, so do it once and
+	// share the result. This is the slow, timeout-prone call.
+	var cfFingerprints map[uint32]strategies.FingerprintMatch
+	if config.CurseForge || config.Mcmod {
+		slog.Info("Resolving CurseForge fingerprints")
+		cfFingerprints = strategies.ResolveFingerprints(allFingerprints(files))
+	}
+
 	// Priority 3: CurseForge fingerprints gameVersions
 	if config.CurseForge {
 		slog.Info("Running CurseForge filter")
-		curseMods, err := strategies.NewCurseForgeFilter().Filter(filterUndecided(files, skipForMixin))
+		cf := strategies.NewCurseForgeFilter()
+		cf.SetSharedFingerprints(cfFingerprints)
+		curseMods, err := cf.Filter(filterUndecided(files, skipForMixin))
 		if err != nil {
 			slog.Error("CurseForge filter error", "error", err)
 		} else {
@@ -110,7 +120,9 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 	// Priority 4: Mcmod API
 	if config.Mcmod {
 		slog.Info("Running Mcmod filter")
-		mcmodMods, err := strategies.NewMcmodFilter().Filter(filterUndecided(files, skipForMixin))
+		mf := strategies.NewMcmodFilter()
+		mf.SetSharedFingerprints(cfFingerprints)
+		mcmodMods, err := mf.Filter(filterUndecided(files, skipForMixin))
 		if err != nil {
 			slog.Error("Mcmod filter error", "error", err)
 		} else {
@@ -133,6 +145,16 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 	}
 
 	return deduplicate(clientMods), nil
+}
+
+func allFingerprints(files []types.FileInfo) []uint32 {
+	var fps []uint32
+	for _, f := range files {
+		if f.Murmur2 != 0 {
+			fps = append(fps, f.Murmur2)
+		}
+	}
+	return fps
 }
 
 func filterUndecided(files []types.FileInfo, decided map[string]bool) []types.FileInfo {

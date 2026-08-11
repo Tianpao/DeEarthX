@@ -2,41 +2,40 @@ package strategies
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
+	"time"
 
 	"dex/backend/dearth/types"
-	"dex/backend/platform"
 
 	"resty.dev/v3"
 )
 
-const curseForgeGameID = 432
-
-// McmodFilter checks mods by resolving CurseForge fingerprints and querying the Galaxy Square mcmod API.
+// McmodFilter checks mods by resolving CurseForge fingerprints into project IDs,
+// then querying the Galaxy Square mcmod API for side compatibility info.
 type McmodFilter struct {
-	urls         platform.MirrorUrls
-	client       *resty.Client
 	galaxyClient *resty.Client
+	// fingerprints optionally holds a fingerprint map resolved once by the runner
+	// and shared with the CurseForge filter, so the slow API is hit only once.
+	fingerprints map[uint32]FingerprintMatch
 }
 
 func NewMcmodFilter() *McmodFilter {
 	return &McmodFilter{
-		urls: platform.GetMirrorUrls(),
-		client: resty.New().
-			SetHeader("User-Agent", "DeEarthX").
-			SetHeader("x-api-key", platform.CurseForgeAPIKey).
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Accept", "application/json").
-			SetTimeout(15),
 		galaxyClient: resty.New().
 			SetHeader("User-Agent", "DeEarthX").
 			SetHeader("Content-Type", "application/json").
-			SetTimeout(15),
+			SetTimeout(60 * time.Second),
 	}
 }
 
 func (mf *McmodFilter) Name() string { return "McmodFilter" }
+
+// SetSharedFingerprints supplies a pre-resolved fingerprint map so the filter
+// skips the CurseForge network call. The map must cover a superset of the files
+// passed to Filter.
+func (mf *McmodFilter) SetSharedFingerprints(m map[uint32]FingerprintMatch) {
+	mf.fingerprints = m
+}
 
 func (mf *McmodFilter) Filter(files []types.FileInfo) ([]string, error) {
 	projectIdMap := mf.resolveProjectIds(files)
@@ -82,51 +81,21 @@ func (mf *McmodFilter) resolveProjectIds(files []types.FileInfo) map[string]int 
 		return projectIdMap
 	}
 
-	cfMap := mf.queryCurseForgeFingerprint(fingerprints)
-	for fp, projectId := range cfMap {
-		if filename, ok := fingerprintMap[fp]; ok {
-			projectIdMap[filename] = projectId
+	matches := mf.fingerprints
+	if matches == nil {
+		slog.Info("McmodFilter: resolving fingerprints")
+		matches = ResolveFingerprints(fingerprints)
+	}
+
+	for fp, match := range matches {
+		if match.ModID != 0 {
+			if filename, ok := fingerprintMap[fp]; ok {
+				projectIdMap[filename] = match.ModID
+			}
 		}
 	}
 
 	return projectIdMap
-}
-
-func (mf *McmodFilter) queryCurseForgeFingerprint(fingerprints []uint32) map[uint32]int {
-	result := make(map[uint32]int)
-	if len(fingerprints) == 0 {
-		return result
-	}
-
-	resp, err := mf.client.R().
-		SetBody(map[string]any{"fingerprints": fingerprints}).
-		Post(mf.urls.CurseForgeURL + "/v1/fingerprints/" + fmt.Sprintf("%d", curseForgeGameID))
-	if err != nil {
-		slog.Error("Mcmod filter: CurseForge fingerprint API error", "error", err)
-		return result
-	}
-
-	var response struct {
-		Data struct {
-			ExactMatches []struct {
-				File struct {
-					FileFingerprint uint32 `json:"fileFingerprint"`
-					ModID           int    `json:"modId"`
-				} `json:"file"`
-			} `json:"exactMatches"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(resp.Bytes(), &response); err != nil {
-		return result
-	}
-
-	for _, match := range response.Data.ExactMatches {
-		if match.File.FileFingerprint != 0 && match.File.ModID != 0 {
-			result[match.File.FileFingerprint] = match.File.ModID
-		}
-	}
-
-	return result
 }
 
 type mcmodResult struct {

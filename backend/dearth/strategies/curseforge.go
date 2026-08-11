@@ -1,37 +1,31 @@
 package strategies
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
 
 	"dex/backend/dearth/types"
-	"dex/backend/platform"
-
-	"resty.dev/v3"
 )
 
 // CurseForgeFilter checks mods by reading the gameVersions of the latest file
 // from CurseForge's fingerprints API. A mod whose latest file is marked Client
 // but not Server is considered a client-only mod.
 type CurseForgeFilter struct {
-	urls   platform.MirrorUrls
-	client *resty.Client
+	// fingerprints optionally holds a fingerprint map resolved once by the runner
+	// and shared with the Mcmod filter, so the slow API is hit only once.
+	fingerprints map[uint32]FingerprintMatch
 }
 
 func NewCurseForgeFilter() *CurseForgeFilter {
-	return &CurseForgeFilter{
-		urls: platform.GetMirrorUrls(),
-		client: resty.New().
-			SetHeader("User-Agent", "DeEarthX").
-			SetHeader("x-api-key", platform.CurseForgeAPIKey).
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Accept", "application/json").
-			SetTimeout(15),
-	}
+	return &CurseForgeFilter{}
 }
 
 func (cf *CurseForgeFilter) Name() string { return "CurseForgeFilter" }
+
+// SetSharedFingerprints supplies a pre-resolved fingerprint map so the filter
+// skips the network call. The map must cover a superset of the files passed to Filter.
+func (cf *CurseForgeFilter) SetSharedFingerprints(m map[uint32]FingerprintMatch) {
+	cf.fingerprints = m
+}
 
 func (cf *CurseForgeFilter) Filter(files []types.FileInfo) ([]string, error) {
 	fingerprintMap := make(map[uint32]string)
@@ -47,39 +41,16 @@ func (cf *CurseForgeFilter) Filter(files []types.FileInfo) ([]string, error) {
 		return nil, nil
 	}
 
-	resp, err := cf.client.R().
-		SetBody(map[string]any{"fingerprints": fingerprints}).
-		Post(cf.urls.CurseForgeURL + "/v1/fingerprints/" + fmt.Sprintf("%d", curseForgeGameID))
-	if err != nil {
-		slog.Error("CurseForge filter: fingerprint API error", "error", err)
-		return nil, nil
-	}
-
-	var response struct {
-		Data struct {
-			ExactMatches []struct {
-				File struct {
-					FileFingerprint uint32 `json:"fileFingerprint"`
-				} `json:"file"`
-				LatestFiles []struct {
-					GameVersions []string `json:"gameVersions"`
-				} `json:"latestFiles"`
-			} `json:"exactMatches"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(resp.Bytes(), &response); err != nil {
-		slog.Error("CurseForge filter: failed to parse response", "error", err)
-		return nil, nil
+	matches := cf.fingerprints
+	if matches == nil {
+		slog.Info("CurseForgeFilter: resolving fingerprints")
+		matches = ResolveFingerprints(fingerprints)
 	}
 
 	var clientMods []string
-	for _, match := range response.Data.ExactMatches {
-		if len(match.LatestFiles) == 0 {
-			continue
-		}
-		versions := match.LatestFiles[0].GameVersions
-		if hasClientOnly(versions) {
-			if filename, ok := fingerprintMap[match.File.FileFingerprint]; ok {
+	for fp, match := range matches {
+		if hasClientOnly(match.GameVersions) {
+			if filename, ok := fingerprintMap[fp]; ok {
 				clientMods = append(clientMods, filename)
 			}
 		}
