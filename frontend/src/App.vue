@@ -7,42 +7,34 @@ import { useSettingStore } from '@/stores';
 import TitleBar from '@/components/TitleBar.vue';
 
 /**
- * 页面进入动画 —— 3D 轮播：新页面从左侧"扇面"底部旋转翻到最前面
- * 从 -70% 平移 + rotateY 50° + 缩小，翻转为居中、正对、完整大小
+ * 页面进入动画 —— 渐显放大：新页面从小尺寸淡入并放大到正常
  */
 const pageEnter = (el: Element, done: () => void) => {
     gsap.fromTo(
         el,
-        { rotateY: 50, x: '-70%', scale: 0.7, opacity: 0.15, zIndex: 2 },
+        { scale: 0.9, opacity: 0 },
         {
-            rotateY: 0,
-            x: '0%',
             scale: 1,
             opacity: 1,
-            zIndex: 2,
-            duration: 0.65,
-            ease: 'power3.out',
+            duration: 0.4,
+            ease: 'power2.out',
             onComplete: done,
         }
     );
 };
 
 /**
- * 页面离开动画 —— 3D 轮播：旧页面从最前面旋转退到右侧"扇面"底部
- * 从居中正对，翻转为 +70% 平移 + rotateY -50° + 缩小并淡出
+ * 页面离开动画 —— 缩小消失：旧页面缩小并淡出
  */
 const pageLeave = (el: Element, done: () => void) => {
     gsap.fromTo(
         el,
-        { rotateY: 0, x: '0%', scale: 1, opacity: 1, zIndex: 1 },
+        { scale: 1, opacity: 1 },
         {
-            rotateY: -50,
-            x: '70%',
-            scale: 0.7,
+            scale: 0.85,
             opacity: 0,
-            zIndex: 1,
-            duration: 0.65,
-            ease: 'power3.inOut',
+            duration: 0.25,
+            ease: 'power2.in',
             onComplete: done,
         }
     );
@@ -100,22 +92,19 @@ const theme = ref({
                     @click="handleMenuClick"
                 />
 
-                <!-- 内容区域 - 带 3D 轮播过渡动画
-                 外层 overflow:hidden 负责裁切，perspective 放在内层扁平包装盒上，
-                 这样 3D 投影逃脱 overflow 裁切的问题就不会波及侧边栏 -->
+                <!-- 内容区域 - 带缩放过渡动画 -->
                 <div class="tw:flex-1 tw:overflow-hidden tw:relative tw:bg-gradient-to-br tw:from-slate-50 tw:via-blue-50 tw:to-indigo-50">
-                    <div class="tw:w-full tw:h-full" style="perspective: 1400px;">
-                        <router-view v-slot="{ Component }">
-                            <transition
-                                :css="false"
-                                appear
-                                @enter="pageEnter"
-                                @leave="pageLeave"
-                            >
-                                <component :is="Component" :key="route.path" class="tw:w-full tw:h-full tw:absolute tw:top-0 tw:left-0 tw:backface-visibility:visible" />
-                            </transition>
-                        </router-view>
-                    </div>
+                    <router-view v-slot="{ Component }">
+                        <transition
+                            :css="false"
+                            mode="out-in"
+                            appear
+                            @enter="pageEnter"
+                            @leave="pageLeave"
+                        >
+                            <component :is="Component" :key="route.path" class="tw:w-full tw:h-full tw:absolute tw:top-0 tw:left-0" />
+                        </transition>
+                    </router-view>
                 </div>
             </div>
         </div>
