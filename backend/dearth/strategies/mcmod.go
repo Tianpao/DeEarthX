@@ -38,9 +38,25 @@ func (mf *McmodFilter) SetSharedFingerprints(m map[uint32]FingerprintMatch) {
 }
 
 func (mf *McmodFilter) Filter(files []types.FileInfo) ([]string, error) {
+	verdicts := mf.Verdicts(files)
+	var clientMods []string
+	for f, v := range verdicts {
+		if v == types.VerdictClient {
+			clientMods = append(clientMods, f)
+		}
+	}
+	return clientMods, nil
+}
+
+// Verdicts returns, per file, how the Mcmod API classifies it: VerdictClient
+// for client-only, VerdictServer for known dual/server-capable, or absent when
+// the mod has no CurseForge-identifiable project or the API has no entry.
+func (mf *McmodFilter) Verdicts(files []types.FileInfo) map[string]types.SideVerdict {
+	result := make(map[string]types.SideVerdict)
+
 	projectIdMap := mf.resolveProjectIds(files)
 	if len(projectIdMap) == 0 {
-		return nil, nil
+		return result
 	}
 
 	uniqueProjectIds := make(map[int]bool)
@@ -54,15 +70,19 @@ func (mf *McmodFilter) Filter(files []types.FileInfo) ([]string, error) {
 
 	mcmodResults := mf.queryMcmodApi(idList)
 
-	var clientMods []string
 	for filename, projectId := range projectIdMap {
-		result, ok := mcmodResults[projectId]
-		if ok && result.ClientSide == "required" && result.ServerSide == "unsupported" {
-			clientMods = append(clientMods, filename)
+		resultInfo, ok := mcmodResults[projectId]
+		if !ok {
+			continue // unknown
+		}
+		if resultInfo.ClientSide == "required" && resultInfo.ServerSide == "unsupported" {
+			result[filename] = types.VerdictClient
+		} else {
+			result[filename] = types.VerdictServer
 		}
 	}
 
-	return clientMods, nil
+	return result
 }
 
 func (mf *McmodFilter) resolveProjectIds(files []types.FileInfo) map[string]int {

@@ -28,6 +28,22 @@ func (cf *CurseForgeFilter) SetSharedFingerprints(m map[uint32]FingerprintMatch)
 }
 
 func (cf *CurseForgeFilter) Filter(files []types.FileInfo) ([]string, error) {
+	verdicts := cf.Verdicts(files)
+	var clientMods []string
+	for f, v := range verdicts {
+		if v == types.VerdictClient {
+			clientMods = append(clientMods, f)
+		}
+	}
+	return clientMods, nil
+}
+
+// Verdicts returns, per file, how CurseForge (by fingerprint) classifies it:
+// VerdictClient for client-only per gameVersions, VerdictServer for known
+// dual/server-capable, or absent when the fingerprint has no match.
+func (cf *CurseForgeFilter) Verdicts(files []types.FileInfo) map[string]types.SideVerdict {
+	result := make(map[string]types.SideVerdict)
+
 	fingerprintMap := make(map[uint32]string)
 	var fingerprints []uint32
 	for _, file := range files {
@@ -38,7 +54,7 @@ func (cf *CurseForgeFilter) Filter(files []types.FileInfo) ([]string, error) {
 	}
 
 	if len(fingerprints) == 0 {
-		return nil, nil
+		return result
 	}
 
 	matches := cf.fingerprints
@@ -47,16 +63,19 @@ func (cf *CurseForgeFilter) Filter(files []types.FileInfo) ([]string, error) {
 		matches = ResolveFingerprints(fingerprints)
 	}
 
-	var clientMods []string
 	for fp, match := range matches {
+		filename, ok := fingerprintMap[fp]
+		if !ok {
+			continue
+		}
 		if hasClientOnly(match.GameVersions) {
-			if filename, ok := fingerprintMap[fp]; ok {
-				clientMods = append(clientMods, filename)
-			}
+			result[filename] = types.VerdictClient
+		} else {
+			result[filename] = types.VerdictServer
 		}
 	}
 
-	return clientMods, nil
+	return result
 }
 
 // hasClientOnly reports whether the gameVersions list marks a mod as client-only,

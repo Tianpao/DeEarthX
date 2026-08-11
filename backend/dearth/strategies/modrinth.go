@@ -27,6 +27,23 @@ func NewModrinthFilter() *ModrinthFilter {
 func (mf *ModrinthFilter) Name() string { return "ModrinthFilter" }
 
 func (mf *ModrinthFilter) Filter(files []types.FileInfo) ([]string, error) {
+	verdicts := mf.Verdicts(files)
+	var clientMods []string
+	for f, v := range verdicts {
+		if v == types.VerdictClient {
+			clientMods = append(clientMods, f)
+		}
+	}
+	return clientMods, nil
+}
+
+// Verdicts returns, per file, how Modrinth (resolved by embedded project IDs)
+// classifies it: VerdictClient for client-only, VerdictServer for known
+// dual/server-capable, or absent when the mod has no embedded Modrinth ID or
+// the project is unknown.
+func (mf *ModrinthFilter) Verdicts(files []types.FileInfo) map[string]types.SideVerdict {
+	result := make(map[string]types.SideVerdict)
+
 	type fileProject struct {
 		filename  string
 		projectID string
@@ -41,7 +58,7 @@ func (mf *ModrinthFilter) Filter(files []types.FileInfo) ([]string, error) {
 	}
 
 	if len(fileProjects) == 0 {
-		return nil, nil
+		return result
 	}
 
 	seen := make(map[string]bool)
@@ -55,15 +72,19 @@ func (mf *ModrinthFilter) Filter(files []types.FileInfo) ([]string, error) {
 
 	projectMap := mf.fetchProjectInfo(uniqueIDs)
 
-	var clientMods []string
 	for _, fp := range fileProjects {
 		project, ok := projectMap[fp.projectID]
-		if ok && isClientMod(project) {
-			clientMods = append(clientMods, fp.filename)
+		if !ok {
+			continue // unknown
+		}
+		if isClientMod(project) {
+			result[fp.filename] = types.VerdictClient
+		} else {
+			result[fp.filename] = types.VerdictServer
 		}
 	}
 
-	return clientMods, nil
+	return result
 }
 
 func (mf *ModrinthFilter) extractProjectID(infos []types.InfoFile) string {

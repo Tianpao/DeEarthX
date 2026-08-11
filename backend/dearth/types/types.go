@@ -39,6 +39,16 @@ type FilterConfig struct {
 	CurseForge bool `json:"curseforge"`
 }
 
+// SideVerdict is a source's classification of a mod's side compatibility.
+// VerdictUnknown means the source has no data on the mod at all.
+type SideVerdict int
+
+const (
+	VerdictUnknown SideVerdict = iota // source has no data on this mod
+	VerdictClient                     // source says client-only
+	VerdictServer                     // source says dual / server-capable
+)
+
 // FilterStrategy is the interface that all filter strategies must implement.
 type FilterStrategy interface {
 	Name() string
