@@ -319,9 +319,7 @@ func sanitizeInstanceName(filename string) string {
 	if clean == "" {
 		clean = "modpack"
 	}
-	// Append a short timestamp suffix to avoid collisions
-	ts := fmt.Sprintf("%d", time.Now().UnixMilli())[6:10]
-	return fmt.Sprintf("%s-%s", clean, ts)
+	return clean
 }
 
 // boolConfig reads a boolean config value with a default fallback.
