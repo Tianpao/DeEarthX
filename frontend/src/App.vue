@@ -1,9 +1,52 @@
 <script lang="ts" setup>
 import { ref, provide, onMounted, onUnmounted } from 'vue';
+import { gsap } from 'gsap';
 import { useMenu } from '@/composables/useMenu';
 import { useDragDrop } from '@/composables/useDragDrop';
 import { useSettingStore } from '@/stores';
 import TitleBar from '@/components/TitleBar.vue';
+
+/**
+ * 页面进入动画 —— 3D 轮播：新页面从左侧"扇面"底部旋转翻到最前面
+ * 从 -70% 平移 + rotateY 50° + 缩小，翻转为居中、正对、完整大小
+ */
+const pageEnter = (el: Element, done: () => void) => {
+    gsap.fromTo(
+        el,
+        { rotateY: 50, x: '-70%', scale: 0.7, opacity: 0.15, zIndex: 2 },
+        {
+            rotateY: 0,
+            x: '0%',
+            scale: 1,
+            opacity: 1,
+            zIndex: 2,
+            duration: 0.65,
+            ease: 'power3.out',
+            onComplete: done,
+        }
+    );
+};
+
+/**
+ * 页面离开动画 —— 3D 轮播：旧页面从最前面旋转退到右侧"扇面"底部
+ * 从居中正对，翻转为 +70% 平移 + rotateY -50° + 缩小并淡出
+ */
+const pageLeave = (el: Element, done: () => void) => {
+    gsap.fromTo(
+        el,
+        { rotateY: 0, x: '0%', scale: 1, opacity: 1, zIndex: 1 },
+        {
+            rotateY: -50,
+            x: '70%',
+            scale: 0.7,
+            opacity: 0,
+            zIndex: 1,
+            duration: 0.65,
+            ease: 'power3.inOut',
+            onComplete: done,
+        }
+    );
+};
 
 const { selectedKeys, menuItems, handleMenuClick, route } = useMenu();
 const { droppedFilePaths, clearDroppedFile, setupDragDropListener, cleanup: cleanupDragDrop } = useDragDrop();
@@ -57,17 +100,22 @@ const theme = ref({
                     @click="handleMenuClick"
                 />
 
-                <!-- 内容区域 - 带过渡动画 -->
+                <!-- 内容区域 - 带 3D 轮播过渡动画
+                 外层 overflow:hidden 负责裁切，perspective 放在内层扁平包装盒上，
+                 这样 3D 投影逃脱 overflow 裁切的问题就不会波及侧边栏 -->
                 <div class="tw:flex-1 tw:overflow-hidden tw:relative tw:bg-gradient-to-br tw:from-slate-50 tw:via-blue-50 tw:to-indigo-50">
-                    <router-view v-slot="{ Component }">
-                        <transition
-                            name="fade-slide"
-                            mode="out-in"
-                            appear
-                        >
-                            <component :is="Component" :key="route.path" class="tw:w-full tw:h-full tw:absolute tw:top-0 tw:left-0" />
-                        </transition>
-                    </router-view>
+                    <div class="tw:w-full tw:h-full" style="perspective: 1400px;">
+                        <router-view v-slot="{ Component }">
+                            <transition
+                                :css="false"
+                                appear
+                                @enter="pageEnter"
+                                @leave="pageLeave"
+                            >
+                                <component :is="Component" :key="route.path" class="tw:w-full tw:h-full tw:absolute tw:top-0 tw:left-0 tw:backface-visibility:visible" />
+                            </transition>
+                        </router-view>
+                    </div>
                 </div>
             </div>
         </div>
@@ -93,37 +141,6 @@ img {
     -webkit-user-drag: none;
     -moz-user-drag: none;
     -ms-user-drag: none;
-}
-
-/* 页面切换过渡动画 - 淡入淡出 + 滑动 */
-.fade-slide-enter-active {
-    animation: fadeSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.fade-slide-leave-active {
-    animation: fadeSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes fadeSlideIn {
-    0% {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes fadeSlideOut {
-    0% {
-        opacity: 0;
-        transform: translateX(0);
-    }
-    100% {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
 }
 
 /* 菜单项悬停效果优化 */
