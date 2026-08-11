@@ -272,7 +272,7 @@
     "select_folder_failed": "选择文件夹失败",
     "bundle_info": "整合包信息",
     "bundle_name_placeholder": "请输入整合包名字",
-    "bundle_name_hint": "客户端模组将保存到 .rubbish/{name} 目录",
+    "bundle_name_hint": "客户端模组将保存到 .clientmod/{name} 目录",
     "please_select_folder": "请先选择 mods 文件夹",
     "please_enter_name": "请输入整合包名字",
     "start_check": "开始检查",

@@ -272,7 +272,7 @@
     "select_folder_failed": "Failed to select folder",
     "bundle_info": "Modpack Info",
     "bundle_name_placeholder": "Please enter modpack name",
-    "bundle_name_hint": "Client mods will be saved to .rubbish/{name} directory",
+    "bundle_name_hint": "Client mods will be saved to .clientmod/{name} directory",
     "please_select_folder": "Please select a mods folder first",
     "please_enter_name": "Please enter modpack name",
     "start_check": "Start Check",

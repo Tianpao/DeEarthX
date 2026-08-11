@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -34,19 +33,12 @@ func GetAppDir() string {
 
 // ExecPromise runs a shell command in the given working directory and returns an error on failure.
 func ExecPromise(command string, cwd ...string) error {
-	var cmd *exec.Cmd
-	// Use cmd.exe on Windows for bat files, sh otherwise
-	if strings.HasSuffix(command, ".bat") || strings.Contains(command, ".bat ") {
-		cmd = exec.Command("cmd", "/C", command)
-	} else {
-		cmd = exec.Command("sh", "-c", command)
+	dir := ""
+	if len(cwd) > 0 {
+		dir = cwd[0]
 	}
 
-	if len(cwd) > 0 && cwd[0] != "" {
-		cmd.Dir = cwd[0]
-	}
-
-	output, err := cmd.CombinedOutput()
+	output, err := runShellCommand(command, dir)
 	if err != nil {
 		return fmt.Errorf("command failed: %s\noutput: %s\nerror: %w", command, string(output), err)
 	}

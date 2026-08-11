@@ -267,7 +267,7 @@
     "select_folder_failed": "選擇資料夾失敗",
     "bundle_info": "整合包資訊",
     "bundle_name_placeholder": "請輸入整合包名稱",
-    "bundle_name_hint": "客戶端模組將儲存到 .rubbish/{name} 目錄",
+    "bundle_name_hint": "客戶端模組將儲存到 .clientmod/{name} 目錄",
     "please_select_folder": "請先選擇 mods 資料夾",
     "please_enter_name": "請輸入整合包名稱",
     "start_check": "開始檢查",

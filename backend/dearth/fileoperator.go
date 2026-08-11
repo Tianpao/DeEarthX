@@ -22,7 +22,7 @@ func NewFileOperator(movePath string) *FileOperator {
 	return &FileOperator{movePath: movePath}
 }
 
-// MoveClientSideMods moves client-side mod files to the rubbish directory.
+// MoveClientSideMods moves client-side mod files to the .clientmod directory.
 // Uses copy+delete to handle cross-device moves.
 func (fo *FileOperator) MoveClientSideMods(clientMods []string) types.MoveResult {
 	result := types.MoveResult{}

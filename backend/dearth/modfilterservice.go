@@ -25,7 +25,7 @@ func NewModFilterService(modsPath, movePath string, config types.FilterConfig) *
 // Filter runs the full mod filtering workflow:
 // 1. Extract file info from all jars
 // 2. Run filter strategies to identify client-side mods
-// 3. Move client-side mods to the rubbish directory
+// 3. Move client-side mods to the .clientmod directory
 func (mfs *ModFilterService) Filter() error {
 	slog.Info("Starting mod filter workflow")
 
