@@ -317,11 +317,10 @@ export const useProgressStore = defineStore('progress', () => {
     async function loadTemplates() {
         loadingTemplates.value = true;
         try {
-            const { default: axiosInstance } = await import('@/utils/axios');
-            const response = await axiosInstance.get('/templates');
-            const result = response.data;
-            if (result.status === 200 && result.data) {
-                templates.value = result.data;
+            const { GetTemplates } = await import('&/dex/backend/template/templateservice');
+            const result = await GetTemplates();
+            if (result) {
+                templates.value = result;
             }
         } catch (error) {
             console.error('加载模板列表失败:', error);

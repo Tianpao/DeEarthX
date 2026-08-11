@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
-import axiosInstance from '@/utils/axios';
+import { GetTemplates } from '&/dex/backend/template/templateservice';
 import type { Template } from '@/types/progress';
 
 export function useTemplateSelection() {
@@ -14,12 +14,9 @@ export function useTemplateSelection() {
     async function loadTemplates() {
         loadingTemplates.value = true;
         try {
-            const response = await axiosInstance.get('/templates');
-
-            const result = response.data;
-
-            if (result.status === 200 && result.data) {
-                templates.value = result.data;
+            const result = await GetTemplates();
+            if (result) {
+                templates.value = result;
             } else {
                 message.error(t('home.template_load_failed'));
             }

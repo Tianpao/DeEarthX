@@ -10,6 +10,7 @@ import (
 	d "dex/backend/dearth"
 	dl "dex/backend/download"
 	e "dex/backend/events"
+	tmpl "dex/backend/template"
 	u "dex/backend/utils"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -49,6 +50,7 @@ func main() {
 			application.NewService(u.NewConfigService()),
 			application.NewService(dl.NewDownloadService()),
 				application.NewService(dl.NewModpackService()),
+				application.NewService(tmpl.NewTemplateService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

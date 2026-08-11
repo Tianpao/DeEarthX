@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { PlusOutlined, DeleteOutlined, FolderOutlined, ExclamationCircleOutlined, EditOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import axiosInstance from '@/utils/axios';
+import { GetTemplates, CreateTemplate, UpdateTemplate, DeleteTemplate, OpenTemplateFolder } from '&/dex/backend/template/templateservice';
 
 const { t } = useI18n();
 
@@ -37,11 +37,9 @@ const newTemplate = ref({
 async function loadTemplates() {
     loading.value = true;
     try {
-        const response = await axiosInstance.get('/templates');
-        const result = response.data;
-
-        if (result.status === 200 && result.data) {
-            templates.value = result.data;
+        const result = await GetTemplates();
+        if (result) {
+            templates.value = result;
         } else {
             message.error(t('home.template_load_failed'));
         }
@@ -70,16 +68,15 @@ async function createTemplate() {
     }
 
     try {
-        const response = await axiosInstance.post('/templates', newTemplate.value);
-        const result = response.data;
-
-        if (result.status === 200) {
-            message.success(t('template.create_success'));
-            showCreateModal.value = false;
-            await loadTemplates();
-        } else {
-            message.error(result.message || t('template.create_failed'));
-        }
+        await CreateTemplate(
+            newTemplate.value.name,
+            newTemplate.value.version,
+            newTemplate.value.description,
+            newTemplate.value.author
+        );
+        message.success(t('template.create_success'));
+        showCreateModal.value = false;
+        await loadTemplates();
     } catch (error) {
         console.error('创建模板失败:', error);
         message.error(t('template.create_failed'));
@@ -95,16 +92,10 @@ async function confirmDelete() {
     if (!deletingTemplate.value) return;
 
     try {
-        const response = await axiosInstance.delete(`/templates/${deletingTemplate.value.id}`);
-        const result = response.data;
-
-        if (result.status === 200) {
-            message.success(t('template.delete_success'));
-            showDeleteModal.value = false;
-            await loadTemplates();
-        } else {
-            message.error(result.message || t('template.delete_failed'));
-        }
+        await DeleteTemplate(deletingTemplate.value.id);
+        message.success(t('template.delete_success'));
+        showDeleteModal.value = false;
+        await loadTemplates();
     } catch (error) {
         console.error('删除模板失败:', error);
         message.error(t('template.delete_failed'));
@@ -113,12 +104,7 @@ async function confirmDelete() {
 
 async function openTemplateFolder(template: Template) {
     try {
-        const response = await axiosInstance.get(`/templates/${template.id}/path`);
-        const result = response.data;
-
-        if (result.status !== 200) {
-            message.error(result.message || t('template.open_folder_failed'));
-        }
+        await OpenTemplateFolder(template.id);
     } catch (error) {
         console.error('打开文件夹失败:', error);
         message.error(t('template.open_folder_failed'));
@@ -143,16 +129,16 @@ async function updateTemplate() {
     }
 
     try {
-        const response = await axiosInstance.put(`/templates/${editingTemplate.value.id}`, newTemplate.value);
-        const result = response.data;
-
-        if (result.status === 200) {
-            message.success(t('template.update_success'));
-            showEditModal.value = false;
-            await loadTemplates();
-        } else {
-            message.error(result.message || t('template.update_failed'));
-        }
+        await UpdateTemplate(
+            editingTemplate.value.id,
+            newTemplate.value.name,
+            newTemplate.value.version,
+            newTemplate.value.description,
+            newTemplate.value.author
+        );
+        message.success(t('template.update_success'));
+        showEditModal.value = false;
+        await loadTemplates();
     } catch (error) {
         console.error('更新模板失败:', error);
         message.error(t('template.update_failed'));
