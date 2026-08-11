@@ -172,6 +172,8 @@
     "filter_modrinth_desc": "Check mod client/server compatibility through Modrinth API",
     "filter_mcmod_name": "MCMOD Filter",
     "filter_mcmod_desc": "Check mod client/server compatibility through MCMOD database",
+    "filter_curseforge_name": "CurseForge Filter",
+    "filter_curseforge_desc": "Check mod client/server compatibility through CurseForge fingerprints gameVersions",
     "filter_mixins_name": "Mixin Filter",
     "filter_mixins_desc": "Filter Client Mixin related files",
     "mirror_mcimirror_name": "MCIM Mirror",

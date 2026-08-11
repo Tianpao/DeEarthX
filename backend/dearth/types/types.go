@@ -30,11 +30,12 @@ type FileInfo struct {
 
 // FilterConfig controls which filter strategies are enabled.
 type FilterConfig struct {
-	Hashes   bool `json:"hashes"`
-	Dexpub   bool `json:"dexpub"`
-	Mixins   bool `json:"mixins"`
-	Modrinth bool `json:"modrinth"`
-	Mcmod    bool `json:"mcmod"`
+	Hashes     bool `json:"hashes"`
+	Dexpub     bool `json:"dexpub"`
+	Mixins     bool `json:"mixins"`
+	Modrinth   bool `json:"modrinth"`
+	Mcmod      bool `json:"mcmod"`
+	CurseForge bool `json:"curseforge"`
 }
 
 // FilterStrategy is the interface that all filter strategies must implement.

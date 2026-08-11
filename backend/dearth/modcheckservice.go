@@ -43,11 +43,12 @@ func (s *ModCheckService) CheckMods(folderPath string) ([]ModCheckResult, error)
 	}
 
 	config := types.FilterConfig{
-		Hashes:   boolConfig("filter.hashes", true),
-		Dexpub:   boolConfig("filter.dexpub", true),
-		Mixins:   boolConfig("filter.mixins", false),
-		Modrinth: boolConfig("filter.modrinth", true),
-		Mcmod:    boolConfig("filter.mcmod", true),
+		Hashes:     boolConfig("filter.hashes", true),
+		Dexpub:     boolConfig("filter.dexpub", true),
+		Mixins:     boolConfig("filter.mixins", false),
+		Modrinth:   boolConfig("filter.modrinth", true),
+		Mcmod:      boolConfig("filter.mcmod", true),
+		CurseForge: boolConfig("filter.curseforge", true),
 	}
 
 	clientMods, err := RunFilterStrategies(files, config)

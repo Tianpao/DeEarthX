@@ -8,7 +8,7 @@ import (
 )
 
 // RunFilterStrategies runs filter strategies in priority order to identify client-side mods.
-// Priority: Dexpub (highest) -> Hash + Modrinth (parallel) -> Mcmod -> Mixin (lowest)
+// Priority: Dexpub (highest) -> Hash + Modrinth (parallel) -> CurseForge -> Mcmod -> Mixin (lowest)
 func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]string, error) {
 	var clientMods []string
 	gsDecided := make(map[string]bool)
@@ -93,7 +93,21 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 		}
 	}
 
-	// Priority 3: Mcmod API
+	// Priority 3: CurseForge fingerprints gameVersions
+	if config.CurseForge {
+		slog.Info("Running CurseForge filter")
+		curseMods, err := strategies.NewCurseForgeFilter().Filter(filterUndecided(files, skipForMixin))
+		if err != nil {
+			slog.Error("CurseForge filter error", "error", err)
+		} else {
+			for _, mod := range curseMods {
+				skipForMixin[mod] = true
+			}
+			clientMods = append(clientMods, curseMods...)
+		}
+	}
+
+	// Priority 4: Mcmod API
 	if config.Mcmod {
 		slog.Info("Running Mcmod filter")
 		mcmodMods, err := strategies.NewMcmodFilter().Filter(filterUndecided(files, skipForMixin))
@@ -107,7 +121,7 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 		}
 	}
 
-	// Priority 4: Mixin (lowest)
+	// Priority 5: Mixin (lowest)
 	if config.Mixins {
 		slog.Info("Running Mixin filter")
 		mixinMods, err := strategies.NewMixinFilter().Filter(filterUndecided(files, skipForMixin))

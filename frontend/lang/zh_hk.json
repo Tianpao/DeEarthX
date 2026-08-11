@@ -170,6 +170,8 @@
     "filter_modrinth_desc": "透過 Modrinth API 檢查模組的客戶端/伺服器相容性",
     "filter_mcmod_name": "MCMOD 過濾",
     "filter_mcmod_desc": "透過 MCMOD 資料庫檢查模組的客戶端/伺服器相容性",
+    "filter_curseforge_name": "CurseForge 過濾",
+    "filter_curseforge_desc": "透過 CurseForge fingerprints 的 gameVersions 檢查模組客戶端/伺服器相容性",
     "filter_mixins_name": "Mixin 過濾",
     "filter_mixins_desc": "過濾 Client Mixin 相關檔案",
     "mirror_mcimirror_name": "MCIM 鏡像來源",

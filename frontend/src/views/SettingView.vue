@@ -100,6 +100,13 @@ const settings = computed<SettingCategory[]>(() => {
           defaultValue: false
         },
         {
+          key: 'curseforge',
+          name: t('setting.filter_curseforge_name'),
+          description: t('setting.filter_curseforge_desc'),
+          path: 'filter.curseforge',
+          defaultValue: false
+        },
+        {
           key: 'mixins',
           name: t('setting.filter_mixins_name'),
           description: t('setting.filter_mixins_desc'),

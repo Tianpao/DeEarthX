@@ -237,11 +237,12 @@ func (s *ModpackService) filterMods(installPath string) error {
 
 	// Build filter config from app config
 	filterConfig := types.FilterConfig{
-		Hashes:   boolConfig("filter.hashes", true),
-		Dexpub:   boolConfig("filter.dexpub", true),
-		Mixins:   boolConfig("filter.mixins", false),
-		Modrinth: boolConfig("filter.modrinth", true),
-		Mcmod:    boolConfig("filter.mcmod", true),
+		Hashes:     boolConfig("filter.hashes", true),
+		Dexpub:     boolConfig("filter.dexpub", true),
+		Mixins:     boolConfig("filter.mixins", false),
+		Modrinth:   boolConfig("filter.modrinth", true),
+		Mcmod:      boolConfig("filter.mcmod", true),
+		CurseForge: boolConfig("filter.curseforge", true),
 	}
 
 	mfs := dearth.NewModFilterService(modsPath, movePath, filterConfig)

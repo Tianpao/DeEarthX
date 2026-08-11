@@ -172,6 +172,8 @@
     "filter_modrinth_desc": "通过 Modrinth API 检查模组的客户端/服务端兼容性",
     "filter_mcmod_name": "MCMOD 过滤",
     "filter_mcmod_desc": "通过 MCMOD 数据库检查模组的客户端/服务端兼容性",
+    "filter_curseforge_name": "CurseForge 过滤",
+    "filter_curseforge_desc": "通过 CurseForge fingerprints 的 gameVersions 检查模组客户端/服务端兼容性",
     "filter_mixins_name": "Mixin 过滤",
     "filter_mixins_desc": "过滤 Client Mixin 相关文件",
     "mirror_mcimirror_name": "MCIM 镜像源",
