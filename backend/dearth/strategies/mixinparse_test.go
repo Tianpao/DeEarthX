@@ -239,6 +239,34 @@ func TestIsClientOnlyByMixin(t *testing.T) {
 			{Name: "com/x/ClientMixin.class", Bytes: clientRefClass()},
 		},
 	}
+	// refmap-only client: bytecode is clean, but the refmap maps the mixin to a
+	// client-only target class.
+	refmapOnlyClient := types.MixinFile{
+		Name:   "mod.mixins.json",
+		Data:   `{"package":"com.x","client":["ClientMixin"]}`,
+		Refmap: []byte(`{"mappings":{"com/x/ClientMixin":{"m":"Lnet/minecraft/client/Minecraft;m_1_()V"}}}`),
+		Classes: []types.MixinClass{
+			{Name: "com/x/ClientMixin.class", Bytes: buildClass(newCP())},
+		},
+	}
+	// dual-side via refmap: one mixin targets a client class, one a common class.
+	refmapDual := types.MixinFile{
+		Name: "mod.mixins.json",
+		Data: `{"package":"com.x","mixins":["ServerMixin"],"client":["ClientMixin"]}`,
+		Refmap: []byte(`{"mappings":{"com/x/ServerMixin":{"m":"Lnet/minecraft/world/entity/LivingEntity;m_1_()V"},"com/x/ClientMixin":{"m":"Lnet/minecraft/client/Minecraft;m_1_()V"}}}`),
+		Classes: []types.MixinClass{
+			{Name: "com/x/ServerMixin.class", Bytes: buildClass(newCP())},
+			{Name: "com/x/ClientMixin.class", Bytes: buildClass(newCP())},
+		},
+	}
+	// refmap absent: bytecode-only fallback still catches a client ref.
+	refmapAbsent := types.MixinFile{
+		Name: "mod.mixins.json",
+		Data: `{"package":"com.x","client":["ClientMixin"]}`,
+		Classes: []types.MixinClass{
+			{Name: "com/x/ClientMixin.class", Bytes: clientRefClass()},
+		},
+	}
 
 	tests := []struct {
 		name  string
@@ -251,12 +279,59 @@ func TestIsClientOnlyByMixin(t *testing.T) {
 		{"dual-side kept", dual, false},
 		{"plugin-filtered skipped", pluginFiltered, false},
 		{"optional mixin skipped", optional, false},
+		{"client caught by refmap only", refmapOnlyClient, true},
+		{"dual-side kept by refmap", refmapDual, false},
+		{"refmap absent falls back to bytecode", refmapAbsent, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := isClientOnlyByMixin([]types.MixinFile{tt.mixin}); got != tt.want {
 				t.Errorf("isClientOnlyByMixin = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRefmapClientSet(t *testing.T) {
+	tests := []struct {
+		name   string
+		refmap []byte
+		want   map[string]bool
+	}{
+		{"nil", nil, nil},
+		{"empty", []byte{}, nil},
+		{"garbage", []byte("not json"), nil},
+		{
+			"client target",
+			[]byte(`{"mappings":{"a/B":{"m":"Lnet/minecraft/client/Minecraft;m_1_()V"}}}`),
+			map[string]bool{"a/B": true},
+		},
+		{
+			"common target",
+			[]byte(`{"mappings":{"a/B":{"m":"Lnet/minecraft/world/entity/LivingEntity;m_1_()V"}}}`),
+			nil,
+		},
+		{
+			"non-class ref ignored",
+			[]byte(`{"mappings":{"a/B":{"m":"methodName"}}}`),
+			nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := refmapClientSet(tt.refmap)
+			if tt.want == nil {
+				if got != nil {
+					t.Errorf("refmapClientSet = %v, want nil", got)
+				}
+				return
+			}
+			for k := range tt.want {
+				if !got[k] {
+					t.Errorf("refmapClientSet missing %q", k)
+				}
 			}
 		})
 	}

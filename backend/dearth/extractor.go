@@ -86,6 +86,7 @@ type mixinConfig struct {
 	Environment string   `json:"environment"`
 	Plugin      string   `json:"plugin"`
 	Required    *bool    `json:"required"`
+	Refmap      string   `json:"refmap"`
 }
 
 // extractMixins extracts mixin configuration JSON files from a jar, along with
@@ -114,14 +115,37 @@ func extractMixins(fileData []byte) []types.MixinFile {
 			if err != nil {
 				continue
 			}
+			var cfg mixinConfig
+			if json.Unmarshal(data, &cfg) != nil {
+				continue
+			}
 			mixins = append(mixins, types.MixinFile{
 				Name:    f.Name,
 				Data:    string(data),
-				Classes: resolveMixinClasses(f.Name, data, entryByName),
+				Refmap:  readRefmap(cfg.Refmap, entryByName),
+				Classes: resolveMixinClasses(&cfg, entryByName),
 			})
 		}
 	}
 	return mixins
+}
+
+// readRefmap reads the optional refmap JSON named by a mixin config's "refmap"
+// field from the jar. Returns nil if absent — the mixin judgement then falls
+// back to bytecode-only signals.
+func readRefmap(refmapName string, entryByName map[string]*zip.File) []byte {
+	if refmapName == "" {
+		return nil
+	}
+	entry, ok := entryByName[refmapName]
+	if !ok || entry.FileInfo().IsDir() {
+		return nil
+	}
+	b, err := readZipEntry(entry)
+	if err != nil {
+		return nil
+	}
+	return b
 }
 
 // maxMixinClassesPerConfig caps how many mixin classes are read per config,
@@ -130,12 +154,7 @@ const maxMixinClassesPerConfig = 64
 
 // resolveMixinClasses reads the bytecode of the mixin classes named in a config
 // (mixins/server/client arrays, resolved against the config's package prefix).
-func resolveMixinClasses(cfgName string, cfgData []byte, entryByName map[string]*zip.File) []types.MixinClass {
-	var cfg mixinConfig
-	if err := json.Unmarshal(cfgData, &cfg); err != nil {
-		return nil
-	}
-
+func resolveMixinClasses(cfg *mixinConfig, entryByName map[string]*zip.File) []types.MixinClass {
 	prefix := ""
 	if cfg.Package != "" {
 		prefix = strings.ReplaceAll(cfg.Package, ".", "/") + "/"

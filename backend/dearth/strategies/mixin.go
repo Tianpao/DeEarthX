@@ -73,6 +73,12 @@ func isClientOnlyByMixin(mixins []types.MixinFile) bool {
 			continue
 		}
 
+		// Optional refmap: maps each mixin class to the Minecraft class it targets,
+		// which is a more reliable client/side signal than bytecode constant-pool
+		// scanning (refmap names the target even when the mixin body only references
+		// it via annotation strings). Absent refmap -> fall back to bytecode only.
+		refmapClient := refmapClientSet(mixin.Refmap)
+
 		for _, cls := range mixin.Classes {
 			info := parsed[cls.Name]
 			if info == nil {
@@ -90,8 +96,9 @@ func isClientOnlyByMixin(mixins []types.MixinFile) bool {
 			if info.pseudo {
 				continue
 			}
-			if info.referencesClient || info.classEnvClient {
-				// Bytecode proves this mixin touches client code (or is declared client-only).
+			if info.referencesClient || info.classEnvClient || refmapClient[trimClassSuffix(cls.Name)] {
+				// Bytecode proves this mixin touches client code, or the refmap says
+				// its target is a client-only class.
 				clientEvidence = true
 			} else {
 				// A clean common/server mixin -> the mod is dual-side or core; keep it.
@@ -101,4 +108,52 @@ func isClientOnlyByMixin(mixins []types.MixinFile) bool {
 	}
 
 	return clientEvidence && !serverSafe
+}
+
+// refmapClientSet parses a mixin refmap and returns the set of mixin class
+// internal names whose mapped targets include a client-only Minecraft class.
+// Returns nil on an absent/empty refmap or a parse failure.
+func refmapClientSet(refmap []byte) map[string]bool {
+	if len(refmap) == 0 {
+		return nil
+	}
+	var rm struct {
+		Mappings map[string]map[string]string `json:"mappings"`
+	}
+	if err := json.Unmarshal(refmap, &rm); err != nil {
+		return nil
+	}
+	var client map[string]bool
+	for mixinCls, targets := range rm.Mappings {
+		for _, desc := range targets {
+			owner := refmapOwner(desc)
+			if owner != "" && isClientOwner(owner) {
+				if client == nil {
+					client = make(map[string]bool)
+				}
+				client[mixinCls] = true
+				break
+			}
+		}
+	}
+	return client
+}
+
+// refmapOwner extracts the target class owner from a refmap descriptor like
+// "Lnet/minecraft/client/Minecraft;m_91277_()V". Returns "" on non-class refs.
+func refmapOwner(desc string) string {
+	if len(desc) < 2 || desc[0] != 'L' {
+		return ""
+	}
+	owner := desc[1:]
+	if semi := strings.IndexByte(owner, ';'); semi >= 0 {
+		owner = owner[:semi]
+	}
+	return owner
+}
+
+// trimClassSuffix strips the ".class" suffix from a mixin class internal name so
+// it can be matched against a refmap key (which omits the suffix).
+func trimClassSuffix(name string) string {
+	return strings.TrimSuffix(name, ".class")
 }

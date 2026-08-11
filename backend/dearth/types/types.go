@@ -10,6 +10,7 @@ type MixinClass struct {
 type MixinFile struct {
 	Name    string       `json:"name"`
 	Data    string       `json:"data"`
+	Refmap  []byte       `json:"-"` // optional refmap JSON (from the config's "refmap" field)
 	Classes []MixinClass `json:"-"`
 }
 
