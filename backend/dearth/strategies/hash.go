@@ -3,6 +3,7 @@ package strategies
 import (
 	"encoding/json"
 	"log/slog"
+	"net/url"
 
 	"dex/backend/dearth/types"
 	"dex/backend/platform"
@@ -68,8 +69,9 @@ func (hf *HashFilter) Filter(files []types.FileInfo) ([]string, error) {
 	}
 
 	idsJSON, _ := json.Marshal(projectIDs)
+	params := url.Values{"ids": {string(idsJSON)}}
 	projectsResp, err := hf.client.R().
-		Get(hf.urls.ModrinthURL + "/v2/projects?ids=" + string(idsJSON))
+		Get(hf.urls.ModrinthURL + "/v2/projects?" + params.Encode())
 	if err != nil {
 		slog.Error("Hash filter: Modrinth projects API error", "error", err)
 		return nil, nil

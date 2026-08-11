@@ -2,13 +2,17 @@ package strategies
 
 import (
 	"encoding/json"
-	"log/slog"
 	"strings"
 
 	"dex/backend/dearth/types"
 )
 
-// MixinFilter analyzes mixin configuration to identify client-only mods. No API calls.
+// maxMixinClassesPerJar caps how many mixin classes are bytecode-parsed per jar,
+// guarding against pathological mods and keeping the scan cheap.
+const maxMixinClassesPerJar = 128
+
+// MixinFilter analyzes mixin configuration and mixin class bytecode to identify
+// client-only mods. No network calls, pure static analysis.
 type MixinFilter struct{}
 
 func NewMixinFilter() *MixinFilter { return &MixinFilter{} }
@@ -30,28 +34,71 @@ func (mf *MixinFilter) Filter(files []types.FileInfo) ([]string, error) {
 	return clientMods, nil
 }
 
-// isClientOnlyByMixin: has client mixins AND no common/server mixins -> client-only.
+// mixinConfigWanted is the subset of a mixin config JSON we read for cheap-tier
+// decisions (before touching any bytecode).
+type mixinConfigWanted struct {
+	Environment string `json:"environment"`
+	Plugin      string `json:"plugin"`
+	Required    *bool  `json:"required"`
+}
+
+// isClientOnlyByMixin reports whether the mixin evidence marks a jar as a
+// client-only mod: it has client mixins whose bytecode (or config) proves they
+// touch client code, and no clean server/common mixin that would make it dual-side.
+// Safety exemptions mirror Arclight: plugin-filtered, optional, and @Pseudo
+// mixins are not treated as evidence.
 func isClientOnlyByMixin(mixins []types.MixinFile) bool {
-	hasCommon := false
-	hasServer := false
-	hasClient := false
+	clientEvidence := false
+	serverSafe := false
+	parsed := make(map[string]*mixinClassInfo)
+	budget := maxMixinClassesPerJar
 
 	for _, mixin := range mixins {
-		var raw map[string]any
-		if err := json.Unmarshal([]byte(mixin.Data), &raw); err != nil {
-			slog.Error("Mixin filter: failed to parse", "name", mixin.Name, "error", err)
+		var cfg mixinConfigWanted
+		if err := json.Unmarshal([]byte(mixin.Data), &cfg); err != nil {
 			continue
 		}
-		if arr, ok := raw["mixins"].([]any); ok && len(arr) > 0 {
-			hasCommon = true
+		// IMixinConfigPlugin can filter mixins at runtime by side; static analysis
+		// cannot tell whether the mixin will apply, so skip the whole config.
+		if cfg.Plugin != "" {
+			continue
 		}
-		if arr, ok := raw["server"].([]any); ok && len(arr) > 0 {
-			hasServer = true
+		// required=false: a failed apply is only a warning, not a crash.
+		if cfg.Required != nil && !*cfg.Required {
+			continue
 		}
-		if arr, ok := raw["client"].([]any); ok && len(arr) > 0 {
-			hasClient = true
+		// Config declares itself client-only: strong signal, no bytecode needed.
+		if strings.EqualFold(cfg.Environment, "CLIENT") {
+			clientEvidence = true
+			continue
+		}
+
+		for _, cls := range mixin.Classes {
+			info := parsed[cls.Name]
+			if info == nil {
+				if budget <= 0 {
+					break
+				}
+				budget--
+				info = parseMixinClass(cls.Bytes)
+				parsed[cls.Name] = info
+			}
+			if info == nil {
+				continue // unparseable -> treat as no evidence
+			}
+			// @Pseudo mixins target classes that may not exist; conservative skip.
+			if info.pseudo {
+				continue
+			}
+			if info.referencesClient || info.classEnvClient {
+				// Bytecode proves this mixin touches client code (or is declared client-only).
+				clientEvidence = true
+			} else {
+				// A clean common/server mixin -> the mod is dual-side or core; keep it.
+				serverSafe = true
+			}
 		}
 	}
 
-	return hasClient && !hasCommon && !hasServer
+	return clientEvidence && !serverSafe
 }

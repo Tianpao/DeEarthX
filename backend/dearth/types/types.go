@@ -1,9 +1,16 @@
 package types
 
+// MixinClass represents the bytecode of a mixin class referenced by a mixin config.
+type MixinClass struct {
+	Name  string `json:"name"`
+	Bytes []byte `json:"-"`
+}
+
 // MixinFile represents a mixin configuration file extracted from a jar.
 type MixinFile struct {
-	Name string `json:"name"`
-	Data string `json:"data"`
+	Name    string       `json:"name"`
+	Data    string       `json:"data"`
+	Classes []MixinClass `json:"-"`
 }
 
 // InfoFile represents a mod metadata file extracted from a jar.

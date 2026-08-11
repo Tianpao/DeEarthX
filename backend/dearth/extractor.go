@@ -77,13 +77,34 @@ func (fe *FileExtractor) getJarFiles() ([]string, error) {
 	return jars, nil
 }
 
-// extractMixins extracts mixin configuration JSON files from a jar.
+// mixinConfig mirrors the fields of a SpongePowered mixin config JSON we care about.
+type mixinConfig struct {
+	Package     string   `json:"package"`
+	Mixins      []string `json:"mixins"`
+	Server      []string `json:"server"`
+	Client      []string `json:"client"`
+	Environment string   `json:"environment"`
+	Plugin      string   `json:"plugin"`
+	Required    *bool    `json:"required"`
+}
+
+// extractMixins extracts mixin configuration JSON files from a jar, along with
+// the bytecode of every mixin class referenced by each config. Only the classes
+// named in the config are read (bounded by maxMixinClasses), so the scan stays
+// cheap even for large jars.
 func extractMixins(fileData []byte) []types.MixinFile {
 	var mixins []types.MixinFile
 	r, err := zip.NewReader(bytes.NewReader(fileData), int64(len(fileData)))
 	if err != nil {
 		return mixins
 	}
+
+	// Index entries by name for O(1) class lookup.
+	entryByName := make(map[string]*zip.File, len(r.File))
+	for _, f := range r.File {
+		entryByName[f.Name] = f
+	}
+
 	for _, f := range r.File {
 		name := strings.ToLower(f.Name)
 		if (strings.HasPrefix(name, "mixins.") || strings.HasPrefix(name, "mixin.") ||
@@ -93,10 +114,67 @@ func extractMixins(fileData []byte) []types.MixinFile {
 			if err != nil {
 				continue
 			}
-			mixins = append(mixins, types.MixinFile{Name: f.Name, Data: string(data)})
+			mixins = append(mixins, types.MixinFile{
+				Name:    f.Name,
+				Data:    string(data),
+				Classes: resolveMixinClasses(f.Name, data, entryByName),
+			})
 		}
 	}
 	return mixins
+}
+
+// maxMixinClassesPerConfig caps how many mixin classes are read per config,
+// guarding against pathological configs that point at a huge class set.
+const maxMixinClassesPerConfig = 64
+
+// resolveMixinClasses reads the bytecode of the mixin classes named in a config
+// (mixins/server/client arrays, resolved against the config's package prefix).
+func resolveMixinClasses(cfgName string, cfgData []byte, entryByName map[string]*zip.File) []types.MixinClass {
+	var cfg mixinConfig
+	if err := json.Unmarshal(cfgData, &cfg); err != nil {
+		return nil
+	}
+
+	prefix := ""
+	if cfg.Package != "" {
+		prefix = strings.ReplaceAll(cfg.Package, ".", "/") + "/"
+	}
+
+	// Track seen internal names so the same class referenced by multiple arrays
+	// is only read once.
+	var classes []types.MixinClass
+	seen := make(map[string]bool)
+	addClass := func(cls string) {
+		if cls == "" || len(classes) >= maxMixinClassesPerConfig {
+			return
+		}
+		internal := prefix + strings.ReplaceAll(cls, ".", "/") + ".class"
+		if seen[internal] {
+			return
+		}
+		seen[internal] = true
+		entry, ok := entryByName[internal]
+		if !ok || entry.FileInfo().IsDir() {
+			return
+		}
+		b, err := readZipEntry(entry)
+		if err != nil {
+			return
+		}
+		classes = append(classes, types.MixinClass{Name: internal, Bytes: b})
+	}
+
+	for _, cls := range cfg.Mixins {
+		addClass(cls)
+	}
+	for _, cls := range cfg.Server {
+		addClass(cls)
+	}
+	for _, cls := range cfg.Client {
+		addClass(cls)
+	}
+	return classes
 }
 
 // extractModInfo extracts mod metadata files from a jar.

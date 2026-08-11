@@ -3,6 +3,7 @@ package strategies
 import (
 	"encoding/json"
 	"log/slog"
+	"net/url"
 
 	"dex/backend/dearth/types"
 	"dex/backend/platform"
@@ -97,17 +98,12 @@ func (mf *ModrinthFilter) fetchProjectInfo(projectIDs []string) map[string]modri
 		}
 		batch := projectIDs[i:end]
 
-		idsParam := ""
-		for j, id := range batch {
-			if j > 0 {
-				idsParam += ","
-			}
-			idsParam += id
-		}
+		idsJSON, _ := json.Marshal(batch)
+		params := url.Values{"ids": {string(idsJSON)}}
 
 		resp, err := mf.client.R().
 			SetHeader("Content-Type", "application/json").
-			Post(mf.urls.ModrinthURL + "/v2/projects?ids=" + idsParam)
+			Post(mf.urls.ModrinthURL + "/v2/projects?" + params.Encode())
 		if err != nil {
 			slog.Error("Modrinth filter: batch query error", "error", err)
 			continue
