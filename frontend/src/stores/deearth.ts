@@ -15,7 +15,6 @@ export interface ModCheckResult {
 export const useDeearthStore = defineStore('deearth', () => {
     // 文件夹选择
     const selectedFolder = ref<string>('');
-    const bundleName = ref<string>('');
 
     // 检查状态
     const checking = ref(false);
@@ -40,10 +39,6 @@ export const useDeearthStore = defineStore('deearth', () => {
     // Actions
     function setSelectedFolder(folder: string) {
         selectedFolder.value = folder;
-    }
-
-    function setBundleName(name: string) {
-        bundleName.value = name;
     }
 
     function startCheck() {
@@ -86,7 +81,6 @@ export const useDeearthStore = defineStore('deearth', () => {
             autoResetTimerId = null;
         }
         selectedFolder.value = '';
-        bundleName.value = '';
         checking.value = false;
         showResults.value = false;
         showProgress.value = false;
@@ -106,7 +100,6 @@ export const useDeearthStore = defineStore('deearth', () => {
     return {
         // 状态
         selectedFolder,
-        bundleName,
         checking,
         showResults,
         showProgress,
@@ -114,7 +107,6 @@ export const useDeearthStore = defineStore('deearth', () => {
         results,
         // 方法
         setSelectedFolder,
-        setBundleName,
         startCheck,
         updateProgress,
         completeCheck,

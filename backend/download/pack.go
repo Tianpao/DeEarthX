@@ -230,10 +230,10 @@ func (s *ModpackService) runPipeline(buffer []byte, filename, mode, instanceName
 }
 
 // filterMods runs the dearth ModFilterService against the mods/ directory
-// in the install path, moving client-side mods to a .clientmod subdirectory.
+// in the install path, moving client-side mods to the mods/.clientmod subdirectory.
 func (s *ModpackService) filterMods(installPath string) error {
 	modsPath := filepath.Join(installPath, "mods")
-	movePath := filepath.Join(installPath, ".clientmod")
+	movePath := filepath.Join(modsPath, ".clientmod")
 
 	// Build filter config from app config
 	filterConfig := types.FilterConfig{

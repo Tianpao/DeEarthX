@@ -3,18 +3,16 @@ import { onMounted, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { FileSearchOutlined, FolderOpenOutlined } from '@ant-design/icons-vue';
 import { Dialogs } from '@wailsio/runtime';
-import { io } from 'socket.io-client';
-import type { Socket } from 'socket.io-client';
+import { CheckMods } from '&/dex/backend/dearth/modcheckservice';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
-import { useDeearthStore } from '@/stores/deearth';
+import { useDeearthStore, type ModCheckResult } from '@/stores/deearth';
 
 const { t } = useI18n();
 const store = useDeearthStore();
 
 const {
     selectedFolder,
-    bundleName,
     checking,
     results,
     showResults,
@@ -22,17 +20,8 @@ const {
     showProgress
 } = storeToRefs(store);
 
-let socket: Socket | null = null;
-
 onMounted(() => {
     store.checkAndRestoreState();
-});
-
-onUnmounted(() => {
-    if (socket) {
-        socket.disconnect();
-        socket = null;
-    }
 });
 
 async function selectFolder() {
@@ -60,75 +49,18 @@ async function handleCheck() {
         return;
     }
 
-    if (!bundleName.value.trim()) {
-        message.warning(t('deearth.please_enter_name'));
-        return;
-    }
-
-    if (socket) {
-        socket.disconnect();
-        socket = null;
-    }
-
     store.startCheck();
 
-    const wsHost = import.meta.env.VITE_WS_HOST || 'localhost';
-    const wsPort = import.meta.env.VITE_WS_PORT || '37019';
-    socket = io(`${wsHost}:${wsPort}/`, {
-        autoConnect: false,
-        reconnection: false,
-        transports: ['websocket', 'polling']
-    });
-
-    socket.on('connect', () => {
-        console.log('Socket.IO 已连接');
-        socket!.emit('modcheck:start', {
-            folderPath: selectedFolder.value,
-            bundleName: bundleName.value.trim()
-        });
-    });
-
-    socket.on('modcheck_start', (data: any) => {
-        console.log('开始检查:', data);
-        showProgress.value = true;
-        store.updateProgress({
-            current: 0,
-            total: data.totalMods || 0,
-            modName: ''
-        });
-    });
-
-    socket.on('modcheck_progress', (data: any) => {
-        store.updateProgress({
-            current: data.current,
-            total: data.total,
-            modName: data.modName
-        });
-    });
-
-    socket.on('modcheck_complete', (data: any) => {
-        message.success(t('deearth.check_complete', { total: data.results.length, filtered: data.filteredCount }));
-        store.completeCheck(data);
-        socket?.disconnect();
-    });
-
-    socket.on('modcheck_error', (data: any) => {
-        message.error(t('deearth.check_failed', { error: data.error }));
+    try {
+        const result = (await CheckMods(selectedFolder.value)) as unknown as ModCheckResult[];
+        const filteredCount = result.filter(r => r.clientSide === 'required' || r.clientSide === 'optional').length;
+        message.success(t('deearth.check_complete', { total: result.length, filtered: filteredCount }));
+        store.completeCheck({ results: result, filteredCount, movedCount: filteredCount });
+    } catch (error: any) {
+        console.error('模组检查失败:', error);
+        message.error(t('deearth.check_failed', { error: error?.message || t('deearth.connect_error') }));
         store.errorCheck();
-        socket?.disconnect();
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Socket.IO 连接关闭');
-    });
-
-    socket.on('connect_error', (error: any) => {
-        console.error('Socket.IO 连接错误:', error);
-        message.error(t('deearth.connect_error'));
-        store.errorCheck();
-    });
-
-    socket.connect();
+    }
 }
 </script>
 
@@ -141,36 +73,21 @@ async function handleCheck() {
             </div>
 
             <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
-                <div class="tw:grid tw:gap-4 lg:tw:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
-                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.select_mods_folder') }}</div>
-                        <a-button
-                            type="default"
-                            size="large"
-                            block
-                            @click="selectFolder"
-                        >
-                            <template #icon>
-                                <FolderOpenOutlined />
-                            </template>
-                            {{ t('deearth.select_mods_folder') }}
-                        </a-button>
-                        <div v-if="selectedFolder" class="tw:mt-3 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-white tw:p-3 tw:text-sm tw:text-slate-600">
-                            <span class="tw:font-medium">{{ t('deearth.selected') }}:</span> {{ selectedFolder }}
-                        </div>
-                    </div>
-
-                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
-                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.bundle_info') }}</div>
-                        <a-input
-                            v-model:value="bundleName"
-                            :placeholder="t('deearth.bundle_name_placeholder')"
-                            size="large"
-                            allow-clear
-                        />
-                        <div class="tw:mt-2 tw:text-xs tw:text-slate-400">
-                            {{ t('deearth.bundle_name_hint', { name: bundleName || t('deearth.bundle_name_placeholder') }) }}
-                        </div>
+                <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
+                    <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.select_mods_folder') }}</div>
+                    <a-button
+                        type="default"
+                        size="large"
+                        block
+                        @click="selectFolder"
+                    >
+                        <template #icon>
+                            <FolderOpenOutlined />
+                        </template>
+                        {{ t('deearth.select_mods_folder') }}
+                    </a-button>
+                    <div v-if="selectedFolder" class="tw:mt-3 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-white tw:p-3 tw:text-sm tw:text-slate-600">
+                        <span class="tw:font-medium">{{ t('deearth.selected') }}:</span> {{ selectedFolder }}
                     </div>
                 </div>
 
@@ -180,7 +97,7 @@ async function handleCheck() {
                         size="large"
                         :loading="checking"
                         @click="handleCheck"
-                        :disabled="checking || !selectedFolder || !bundleName.trim()"
+                        :disabled="checking || !selectedFolder"
                     >
                         <template #icon>
                             <FileSearchOutlined />

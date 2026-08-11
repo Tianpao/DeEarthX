@@ -47,6 +47,7 @@ func main() {
 		Services: []application.Service{
 			application.NewService(i.NewSponsorService()),
 			application.NewService(d.NewGalaxy()),
+				application.NewService(d.NewModCheckService()),
 			application.NewService(u.NewConfigService()),
 			application.NewService(dl.NewDownloadService()),
 				application.NewService(dl.NewModpackService()),
