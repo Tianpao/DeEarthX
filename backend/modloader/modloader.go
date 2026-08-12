@@ -1,9 +1,9 @@
 package modloader
 
 import (
-	"log/slog"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -100,9 +100,10 @@ func DInstall(ml, mcv, mlv, path string) error {
 	}
 
 	var cmd string
-	if ml == "forge" || ml == "neoforge" {
+	switch ml {
+	case "forge", "neoforge":
 		cmd = fmt.Sprintf("java -jar forge-%s-%s-installer.jar --installServer", mcv, mlv)
-	} else if ml == "fabric" || ml == "fabric-loader" {
+	case "fabric", "fabric-loader":
 		// Write run scripts for Fabric
 		runBat := "@echo off\njava -jar fabric-server-launch.jar\n"
 		runSh := "#!/bin/bash\njava -jar fabric-server-launch.jar\n"
