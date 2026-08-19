@@ -181,7 +181,6 @@ func defaultConfig() map[string]any {
 			"mcmod":    true,
 		},
 		"oaf":           true,
-		"autoZip":       false,
 		"showSponsorAd": true,
 	}
 }

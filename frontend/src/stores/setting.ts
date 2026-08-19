@@ -16,7 +16,6 @@ export interface AppConfig {
     mcmod: boolean;
   };
   oaf: boolean;
-  autoZip: boolean;
   showSponsorAd: boolean;
   javaPath?: string;
 }
@@ -27,7 +26,6 @@ const DEFAULT_CONFIG: AppConfig = {
   mirror: { bmclapi: true, mcimirror: 'partial' },
   filter: { hashes: true, dexpub: true, mixins: false, modrinth: true, mcmod: true },
   oaf: true,
-  autoZip: false,
   showSponsorAd: true,
   javaPath: undefined
 };

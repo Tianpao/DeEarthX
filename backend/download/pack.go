@@ -31,7 +31,6 @@ func NewModpackService() *ModpackService {
 // Processing mode constants.
 const (
 	ModeServer = "server"
-	ModeClient = "client"
 )
 
 // Total steps in the pipeline (reported via pack_step events).
@@ -207,15 +206,6 @@ func (s *ModpackService) runPipeline(buffer []byte, filename, mode, instanceName
 	emitStep("完成", 5)
 
 	duration := time.Since(startTime).Milliseconds()
-
-	// Client mode with autoZip enabled: archive the instance
-	if mode == ModeClient {
-		if autoZip, _ := utils.GlobalConfig.GetConfigValue("autoZip").(bool); autoZip {
-			if err := CreateZipArchive(installPath, instanceName, utils.GetAppDir()); err != nil {
-				slog.Warn("failed to create zip archive", "error", err)
-			}
-		}
-	}
 
 	// Open-after-finish (oaf): reveal the instance folder
 	if oaf, _ := utils.GlobalConfig.GetConfigValue("oaf").(bool); oaf {

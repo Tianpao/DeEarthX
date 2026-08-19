@@ -158,13 +158,6 @@ const settings = computed<SettingCategory[]>(() => {
           defaultValue: false
         },
         {
-          key: 'autoZip',
-          name: t('setting.system_autozip_name'),
-          description: t('setting.system_autozip_desc'),
-          path: 'autoZip',
-          defaultValue: false
-        },
-        {
           key: 'showSponsorAd',
           name: t('setting.system_sponsor_ad_name'),
           description: t('setting.system_sponsor_ad_desc'),
