@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { inject, watch, onMounted, computed } from 'vue';
+import { inject, watch, onMounted, computed, ref } from 'vue';
 import { message } from 'ant-design-vue';
+import { LoadingOutlined, SettingOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { formatFileSize, formatTime } from '@/utils/format';
 import { useTaskProcessor } from '@/composables/useTaskProcessor';
@@ -64,6 +65,49 @@ function handleFileRemove() {
     clearDroppedFilePath();
     uploadDisabled.value = false;
 }
+
+// --- 右下角服务端制作进度圆球按钮 ---
+// 弹层是否展开（点击圆球切换）
+const progressPanelOpen = ref(false);
+
+// 是否有局报错（任一阶段失败）
+const isErrorTask = computed(() =>
+    uploadProgress.value.status === 'exception' || unzipProgress.value.status === 'exception' ||
+    downloadProgress.value.status === 'exception' || serverInstallProgress.value.status === 'exception' ||
+    filterModsProgress.value.status === 'exception'
+);
+
+// 任务是否已完成（服务端安装成功即视为整体完成）
+const isDoneTask = computed(() => store.serverInstallProgress.status === 'success');
+
+// 圆环状态：error -> 红，done -> 绿，否则按进行中（蓝）
+const ringStatus = computed(() => {
+    if (isErrorTask.value) return 'exception';
+    if (isDoneTask.value) return 'success';
+    return 'active';
+});
+
+// 步骤条只显示「序号 + 标题」，细节在右侧卡片展示，去掉描述以收窄
+// 注意：store 里的 stepItems 是 Pinia 解包后的普通数组，不是 ref
+const slimSteps = computed(() => stepItems.map((s: any) => ({ ...s, description: undefined })));
+
+// 综合总进度：按 5 个步骤分段（parse/extract/filter/install/complete），
+// 再用当前正在进行的阶段百分比在段内细分
+const overallPercent = computed(() => {
+    if (isDoneTask.value) return 100;
+    if (isErrorTask.value) {
+        const err = [uploadProgress, unzipProgress, downloadProgress, serverInstallProgress, filterModsProgress]
+            .find(p => p.value.status === 'exception');
+        return err ? err.value.percent : 0;
+    }
+    const stage = Math.max(1, Math.min(5, store.currentStep));
+    const base = ((stage - 1) / 5) * 100;
+    const actives = [
+        uploadProgress, unzipProgress, downloadProgress, serverInstallProgress, filterModsProgress
+    ];
+    const current = actives.find(p => p.value.display)?.value.percent ?? 0;
+    return Math.min(100, Math.floor(base + current / 5));
+});
 
 // 监听拖放，无效文件时提示
 watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.value : [], (paths) => {
@@ -129,13 +173,22 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
                 </a-button>
             </div>
         </div>
-        <div v-if="showSteps"
-            class="tw:fixed tw:bottom-2 tw:left-1/2 tw:-translate-x-1/2 tw:w-[65%] tw:h-20 tw:flex tw:justify-center tw:items-center tw:text-sm tw:bg-white tw:rounded-xl tw:shadow-lg tw:px-4 tw:ml-10">
-            <a-steps :current="currentStep" :items="stepItems" size="small" />
-        </div>
-        <div v-if="showSteps" ref="logContainer"
-            class="tw:absolute tw:right-2 tw:bottom-32 tw:h-80 tw:w-64 tw:rounded-xl tw:overflow-y-auto">
-            <a-card :title="t('home.progress_title')" :bordered="true" class="tw:h-full">
+        <a-popover
+            v-if="showSteps"
+            v-model:open="progressPanelOpen"
+            trigger="click"
+            placement="topRight"
+            :overlay-inner-style="{ maxHeight: '70vh', overflowY: 'auto', maxWidth: '680px' }"
+        >
+            <template #content>
+                <div class="tw:w-[520px] tw:pb-1">
+                    <div class="tw:flex tw:items-center tw:justify-between tw:mb-3">
+                        <span class="tw:text-sm tw:font-semibold">{{ t('home.progress_title') }}</span>
+                        <a-tag color="blue" class="tw:mr-0">{{ Math.round(overallPercent) }}%</a-tag>
+                    </div>
+                    <div class="tw:grid tw:grid-cols-[128px_1fr] tw:gap-5">
+                        <a-steps :current="currentStep" :items="slimSteps" direction="vertical" size="small" class="progress-steps tw:w-full" />
+                        <div class="tw:min-w-0">
                 <div v-if="uploadProgress.display" class="tw:mb-4">
                     <h1 class="tw:text-sm">{{ t('home.upload_progress') }}</h1>
                     <a-progress :percent="uploadProgress.percent" :status="uploadProgress.status" size="small" />
@@ -192,8 +245,28 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
                         {{ t('home.filter_mods_error') }}: {{ filterModsInfo.error }}
                     </div>
                 </div>
-            </a-card>
-        </div>
+                    </div>
+                    </div>
+                </div>
+            </template>
+            <a-tooltip placement="left" :title="t('home.progress_title')" :open-delay="0.3">
+                <button
+                class="tw:fixed tw:bottom-6 tw:right-6 tw:z-50 tw:h-14 tw:w-14 tw:rounded-full tw:bg-white tw:shadow-xl tw:flex tw:items-center tw:justify-center tw:cursor-pointer hover:tw:scale-105 tw:transition-transform active:tw:scale-95"
+                :aria-label="t('home.progress_title')"
+            >
+                <a-progress type="circle" :size="50" :percent="overallPercent" :status="ringStatus" :show-info="false">
+                    <template #format>
+                        <span class="tw:text-xl">
+                            <CloseOutlined v-if="isErrorTask" class="tw:text-red-600" />
+                            <CheckOutlined v-else-if="isDoneTask" class="tw:text-green-600" />
+                            <LoadingOutlined v-else-if="store.isProcessing" spin class="tw:text-blue-500" />
+                            <SettingOutlined v-else class="tw:text-blue-500" />
+                        </span>
+                    </template>
+                </a-progress>
+            </button>
+            </a-tooltip>
+        </a-popover>
 
         <a-modal v-model:open="showTemplateModal" :title="t('home.template_select_title')" :footer="null" width="700px">
             <a-spin :spinning="loadingTemplates">
@@ -245,3 +318,26 @@ watch(() => droppedFilePaths && 'value' in droppedFilePaths ? droppedFilePaths.v
     </div>
 
 </template>
+
+<style scoped>
+/* 竖向 Steps 的内容列会按标题/描述文字自动撑宽，突破外层容器宽度。
+   slimSteps 已去掉描述，这里兜底：内容列限宽让标题单行显示，同时压缩每步间距降低整体高度。 */
+.progress-steps :deep(.ant-steps-item-container) {
+    min-width: 0;
+}
+.progress-steps :deep(.ant-steps-item) {
+    min-height: auto;
+    padding-bottom: 4px;
+}
+.progress-steps :deep(.ant-steps-item-content) {
+    min-width: 0;
+    width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.progress-steps :deep(.ant-steps-item-title) {
+    white-space: nowrap;
+    line-height: 1.2;
+}
+</style>
