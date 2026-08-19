@@ -3,10 +3,10 @@ package dearth
 import (
 	"archive/zip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"resty.dev/v3"
 )
@@ -45,10 +45,13 @@ func (g *Galaxy) SubmitModIDs(modType string, modIDs []string) error {
 	}
 
 	resp, err := g.client.R().
-		SetBody(map[string]string{"modid": strings.Join(modIDs, ",")}).
+		SetBody(map[string]interface{}{"modid": modIDs}).
 		Post("mod/submit/" + modType)
-	if err != nil || resp.StatusCode() >= 400 {
+	if err != nil {
 		return err
+	}
+	if resp.StatusCode() >= 400 {
+		return fmt.Errorf("galaxy submit failed (status %d): %s", resp.StatusCode(), resp.String())
 	}
 
 	return nil
