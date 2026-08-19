@@ -43,15 +43,15 @@ func GetMirrorUrls() MirrorUrls {
 		return MirrorUrls{
 			ModrinthURL:    "https://mod.mcimirror.top/modrinth",
 			CurseForgeURL:  "https://mod.mcimirror.top/curseforge",
-			ModrinthDurl:   "https://mod.mcimirror.top",
-			CurseForgeDurl: "https://mod.mcimirror.top",
+			ModrinthDurl:   "https://mod.tianpao.top",
+			CurseForgeDurl: "https://mod.tianpao.top",
 		}
 	case "partial":
 		// 仅 Modrinth 下载使用 MCIM，API 使用官方
 		return MirrorUrls{
 			ModrinthURL:    "https://api.modrinth.com",
 			CurseForgeURL:  "https://api.curseforge.com",
-			ModrinthDurl:   "https://mod.mcimirror.top",
+			ModrinthDurl:   "https://mod.tianpao.top",
 			CurseForgeDurl: "https://edge.forgecdn.net",
 		}
 	default:
@@ -129,5 +129,5 @@ func getStringFromMap(m map[string]any, keys ...string) string {
 
 // IsMCIMirrorURL checks if a URL points to the MCIM mirror.
 func IsMCIMirrorURL(url string) bool {
-	return strings.Contains(url, "mod.mcimirror.top")
+	return strings.Contains(url, "mod.tianpao.top")
 }
