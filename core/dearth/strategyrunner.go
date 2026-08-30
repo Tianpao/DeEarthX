@@ -5,9 +5,6 @@ import (
 	"deearthx/core/util"
 )
 
-// ProgressCallback is called during filter progress
-type ProgressCallback func(total int, current int, name string)
-
 // RunFilterStrategies executes filter strategies with priority
 func RunFilterStrategies(files []FileInfo, config FilterConfig, progress ProgressCallback) ([]string, error) {
 	// Convert dearth.FileInfo to strategies.FileInfo
@@ -167,6 +164,8 @@ func RunFilterStrategies(files []FileInfo, config FilterConfig, progress Progres
 			result = append(result, mod)
 		}
 	}
+
+	result = ExcludeRequiredDependencies(result, files)
 
 	util.Logger.Info("Identified client-side mods", "count", len(result))
 	return result, nil

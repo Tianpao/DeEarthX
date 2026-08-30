@@ -23,3 +23,11 @@ export function StartTask(fileData: string | null, filename: string, mode: strin
 export function StartTaskFromPath(filePath: string, mode: string, template: string): $CancellablePromise<void> {
     return $Call.ByID(3419369309, filePath, mode, template);
 }
+
+/**
+ * ResumeFromPath continues a previous task from a modpack file path (skip unzip).
+ * Go service method is ready — run `wails3 generate` (or `wails3 dev`) to refresh this binding's Call.ByID.
+ */
+export function ResumeFromPath(_filePath: string, _mode: string, _template: string): $CancellablePromise<void> {
+    return Promise.reject(new Error("ResumeFromPath binding not generated yet; run wails3 generate")) as $CancellablePromise<void>;
+}

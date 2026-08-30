@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import type { StepsProps } from 'ant-design-vue';
 import type { SelectProps } from 'ant-design-vue/es/vc-select';
 import type { ProgressStatus, ServerInstallInfo, FilterModsInfo, Template } from '@/types/progress';
-import { TemplateService } from '@/bindings/deearthx/core/services';
+import { TemplateService, JavaService } from '@/bindings/deearthx/core/services';
 import i18n from '@/utils/i18n';
 
 // 获取 i18n 的 t 函数
@@ -26,8 +26,8 @@ export const useProgressStore = defineStore('progress', () => {
     const startButtonDisabled = ref(false);
 
     // 模式选择
-    const javaAvailable = ref(true);
-    const selectedMode = ref<string>('server');
+    const javaAvailable = ref(false);
+    const selectedMode = ref<string>('upload');
 
     // 模板选择
     const showTemplateModal = ref(false);
@@ -314,6 +314,26 @@ export const useProgressStore = defineStore('progress', () => {
         selectedMode.value = value;
     }
 
+    async function checkJavaAvailability() {
+        try {
+            const result = await JavaService.CheckJava('');
+            javaAvailable.value = !!result?.exists;
+        } catch {
+            javaAvailable.value = false;
+        }
+
+        if (!javaAvailable.value) {
+            if (selectedMode.value === 'server') {
+                selectedMode.value = 'upload';
+            }
+        } else if (selectedMode.value !== 'server' && selectedMode.value !== 'upload') {
+            selectedMode.value = 'server';
+        } else if (javaAvailable.value && selectedMode.value === 'upload') {
+            // Prefer server mode when Java is available and user hasn't started a task
+            selectedMode.value = 'server';
+        }
+    }
+
     // 模板选择方法
     async function loadTemplates() {
         loadingTemplates.value = true;
@@ -394,6 +414,7 @@ export const useProgressStore = defineStore('progress', () => {
         handleFilterModsComplete,
         handleFilterModsError,
         handleModeSelect,
+        checkJavaAvailability,
         loadTemplates,
         openTemplateModal,
         selectTemplate

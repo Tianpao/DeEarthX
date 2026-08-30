@@ -3,7 +3,7 @@ import { ref, provide, onMounted, onUnmounted } from 'vue';
 import { useBackend } from '@/composables/useBackend';
 import { useMenu } from '@/composables/useMenu';
 import { useDragDrop } from '@/composables/useDragDrop';
-import { useSettingStore } from '@/stores';
+import { useSettingStore, useProgressStore } from '@/stores';
 import TitleBar from '@/components/TitleBar.vue';
 
 const { createKillCoreProcessHandler } = useBackend();
@@ -19,6 +19,9 @@ onMounted(async () => {
     await setupDragDropListener();
     // 预加载设置（从本地存储快速加载）
     settingStore.initialize();
+    // 检测 Java，决定开服模式是否可用
+    const progressStore = useProgressStore();
+    await progressStore.checkJavaAvailability();
 });
 
 onUnmounted(() => {

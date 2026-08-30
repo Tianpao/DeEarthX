@@ -1,4 +1,4 @@
-# Logs
+﻿# Logs
 logs
 *.log
 npm-debug.log*
@@ -51,4 +51,4 @@ front/wailsjs/
 
 # Deprecated
 backend/
-template/
+/template/

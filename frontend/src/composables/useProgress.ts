@@ -2,7 +2,7 @@ import { ref, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import type { StepsProps } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
-import { sendNotification } from '@tauri-apps/plugin-notification';
+import { sendNotification } from '@/utils/notify';
 import type { ProgressStatus, ServerInstallInfo, FilterModsInfo } from '@/types/progress';
 
 export function useProgress() {

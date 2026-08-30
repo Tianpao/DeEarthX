@@ -96,7 +96,7 @@ func (d *Dex) ProcessModpack(buffer []byte, filename string, isServerMode bool, 
 		"loaderVersion", modpackInfo.LoaderVersion)
 
 	// Run parallel tasks (unzip + download)
-	err = d.parallelTasks(zipProcessor, mpname, plat, info, unpath)
+	err = d.parallelTasks(zipProcessor, plat, info, unpath)
 	if err != nil {
 		return err
 	}
@@ -122,6 +122,74 @@ func (d *Dex) ProcessModpack(buffer []byte, filename string, isServerMode bool, 
 	d.completeTask(startTime, unpath, mpname, isServerMode)
 
 	util.Logger.Info("Task complete", "duration", duration)
+	return nil
+}
+
+// ResumeFromPath continues a previous task: skip unzip, re-download missing mods, then filter + install.
+func (d *Dex) ResumeFromPath(filePath string, isServerMode bool, template string) error {
+	startTime := time.Now()
+	util.Logger.Info("Resuming modpack from path", "path", filePath)
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	filename := filepath.Base(filePath)
+	processedBuffer, err := d.extractMrpackFromZip(data, filename)
+	if err != nil {
+		return err
+	}
+
+	zipProcessor, err := d.processZipEntries(processedBuffer)
+	if err != nil {
+		return err
+	}
+
+	contain, info, err := zipProcessor.GetInfo()
+	if err != nil {
+		d.emitter.EmitError("该整合包似乎不是有效的整合包。")
+		return err
+	}
+
+	plat := platform.WhatPlatform(contain)
+	platHandler := platform.Platform(plat)
+	if platHandler == nil {
+		return fmt.Errorf("unknown platform: %s", plat)
+	}
+
+	modpackInfo, err := platHandler.GetInfo(info)
+	if err != nil {
+		return err
+	}
+
+	mpname := d.getModpackName(info)
+	unpath := filepath.Join(util.GetAppDir(), "instance", mpname)
+	if !util.IsDir(unpath) {
+		return fmt.Errorf("实例目录不存在: %s", unpath)
+	}
+
+	util.Logger.Info("Resuming from breakpoint", "instance", unpath, "platform", plat)
+
+	progress := func(total, current int, name string) {
+		d.emitter.EmitDownload(total, current, name)
+	}
+	if err := platHandler.DownloadFiles(info, unpath, progress); err != nil {
+		return err
+	}
+	d.emitter.EmitChanged()
+
+	if err := d.filterMods(unpath, mpname, modpackInfo.Minecraft); err != nil {
+		return err
+	}
+	d.emitter.EmitChanged()
+
+	if err := d.installModLoader(modpackInfo, unpath, isServerMode, template); err != nil {
+		return err
+	}
+
+	d.completeTask(startTime, unpath, mpname, isServerMode)
+	util.Logger.Info("Resume complete", "duration", time.Since(startTime).Milliseconds())
 	return nil
 }
 
@@ -234,13 +302,13 @@ func filepathTrimPrefix(path, prefix string) string {
 	return path
 }
 
-func (d *Dex) parallelTasks(zipProcessor *ZipProcessor, mpname, plat string, info map[string]interface{}, unpath string) error {
+func (d *Dex) parallelTasks(zipProcessor *ZipProcessor, plat string, info map[string]interface{}, unpath string) error {
 	// Run unzip and download in parallel using goroutines
 	done := make(chan error, 2)
 
-	// Unzip task
+	// Unzip task — must use full instance path (same as download)
 	go func() {
-		done <- zipProcessor.Unzip(mpname)
+		done <- zipProcessor.Unzip(unpath)
 	}()
 
 	// Download task
@@ -292,6 +360,12 @@ func (d *Dex) filterMods(unpath, mpname, mcVersion string) error {
 	}
 
 	mfs := dearth.NewModFilterService(modsPath, movePath, filterConfig, progress)
+	mfs.OnStart = func(totalMods int) {
+		d.emitter.EmitFilterModsStart(totalMods)
+	}
+	mfs.OnComplete = func(clientMods, success int, durationMs int64) {
+		d.emitter.EmitFilterModsComplete(clientMods, success, durationMs)
+	}
 	return mfs.Filter()
 }
 
@@ -301,6 +375,19 @@ func (d *Dex) installModLoader(modpackInfo *platform.ModpackInfo, unpath string,
 	}
 
 	if isServerMode {
+		if isModLoaderAlreadyInstalled(unpath, modpackInfo) {
+			util.Logger.Info("Server core already installed, skipping mod loader setup", "path", unpath)
+			d.emitter.EmitChanged()
+			return nil
+		}
+
+		d.emitter.EmitServerInstallStart(
+			"Server Installation",
+			modpackInfo.Minecraft,
+			modpackInfo.Loader,
+			modpackInfo.LoaderVersion,
+		)
+
 		return modloader.MLSetup(
 			modpackInfo.Loader,
 			modpackInfo.Minecraft,
@@ -319,6 +406,19 @@ func (d *Dex) installModLoader(modpackInfo *platform.ModpackInfo, unpath string,
 	)
 }
 
+func isModLoaderAlreadyInstalled(unpath string, info *platform.ModpackInfo) bool {
+	runBat := filepath.Join(unpath, "run.bat")
+	if !util.FileExists(runBat) {
+		return false
+	}
+
+	neoArgs := filepath.Join(unpath, "libraries", "net", "neoforged", "neoforge", info.LoaderVersion, "win_args.txt")
+	forgeArgs := filepath.Join(unpath, "libraries", "net", "minecraftforge", "forge",
+		info.Minecraft+"-"+info.LoaderVersion, "win_args.txt")
+
+	return util.FileExists(neoArgs) || util.FileExists(forgeArgs)
+}
+
 func (d *Dex) completeTask(startTime time.Time, unpath, mpname string, isServerMode bool) {
 	cfg := config.GetConfig()
 	duration := time.Since(startTime).Milliseconds()
@@ -332,8 +432,11 @@ func (d *Dex) completeTask(startTime time.Time, unpath, mpname string, isServerM
 	// Auto-zip if enabled
 	if !isServerMode && cfg.AutoZip {
 		outputPath := filepath.Join(util.GetAppDir(), "instance", mpname+".zip")
-		// CreateZipArchive would go here
-		util.Logger.Info("Created zip archive", "path", outputPath)
+		if err := ziputil.CreateZip(unpath, outputPath); err != nil {
+			util.Logger.Error("Failed to create zip archive", "path", outputPath, "error", err.Error())
+		} else {
+			util.Logger.Info("Created zip archive", "path", outputPath)
+		}
 	}
 
 	// Open after finish if enabled
@@ -346,10 +449,10 @@ func (d *Dex) completeTask(startTime time.Time, unpath, mpname string, isServerM
 
 func (d *Dex) getModpackName(info map[string]interface{}) string {
 	if name, ok := info["name"].(string); ok && name != "" {
-		return name
+		return util.SanitizePathName(name)
 	}
 	if versionID, ok := info["versionId"].(string); ok && versionID != "" {
-		return versionID
+		return util.SanitizePathName(versionID)
 	}
 	return "unknown-modpack"
 }

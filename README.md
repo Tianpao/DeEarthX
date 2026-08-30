@@ -2,7 +2,7 @@
 
 <br/>
 
-<img src="front/public/dex.png" height="80" width="80" alt="DeEarthX Logo"/>
+<img src="frontend/public/dex.png" height="80" width="80" alt="DeEarthX Logo"/>
 
 # DeEarthX V3
 
@@ -21,12 +21,12 @@
 <br/>
 
 <a href="https://qm.qq.com/q/7WI7AIL0Vq">
-  <img src="front/public/QQ.png" height="16" width="16" alt="QQ"/>
+  <img src="frontend/public/QQ.png" height="16" width="16" alt="QQ"/>
   加入Q群
 </a>
 &nbsp;&nbsp;·&nbsp;&nbsp;
 <a href="https://www.bilibili.com/video/BV1CZffB9ErD/?share_source=copy_web&vd_source=93ac910240591935807ae1d3f37c9b79">
-  <img src="front/public/bilibili.svg" height="16" width="16" alt="Bilibili"/>
+  <img src="frontend/public/bilibili.svg" height="16" width="16" alt="Bilibili"/>
   宣传片
 </a>
 
@@ -120,11 +120,11 @@ DeEarthX V3 是一个 **Windows 桌面应用**，帮你快速把客户端整合�
 
 ```
   ┌─────────────┐     ┌──────────────┐     ┌─────────────────────────────────────┐
-  │  拖入 .zip  │────>│   前端       │────>│  后端处理管线 (Dex.Main)            │
+  │  拖入 .zip  │────>│   前端       │────>│  Go 处理管线 (Dex.ProcessModpack)   │
   │  或 .mrpack │     │  (Vue 3)     │     │                                     │
   └─────────────┘     └──────┬───────┘     │  1. 解压整合包                      │
-                             │ Socket.IO   │  2. 识别平台 (CF/MR)                │
-                             │             │  3. 并行：解压 + 下载模组            │
+                             │ Wails RPC   │  2. 识别平台 (CF/MR)                │
+                             │ + Events    │  3. 并行：解压 + 下载模组            │
                              │             │  4. 运行模组过滤策略                 │
                              │             │  5. 安装模组加载器                   │
                              │<────────────│  6. 完成！（打包 / 打开文件夹）      │
@@ -138,35 +138,33 @@ DeEarthX V3 是一个 **Windows 桌面应用**，帮你快速把客户端整合�
 
 <table>
 <tr>
-<th>后端</th>
+<th>后端 / 壳</th>
 <th>前端</th>
-<th>打包</th>
+<th>构建</th>
 </tr>
 <tr>
 <td>
 
-- TypeScript
-- Node.js (SEA → `core.exe`)
-- Express
-- Socket.IO
-- yauzl（zip 处理）
-- p-map（并发控制）
+- Go
+- Wails v3（桌面壳 + RPC/Events）
+- 业务包：`core/dex`、`platform`、`modloader`、`dearth`、`download` 等
 
 </td>
 <td>
 
 - Vue 3 (Composition API)
 - TypeScript
-- Tauri 2
 - Ant Design Vue
 - Tailwind CSS
 - Vue I18n
+- Pinia
 
 </td>
 <td>
 
-- Rollup（CJS 打包）
-- Node.js SEA（单文件可执行）
+- Task / Taskfile
+- `wails3 dev` / `wails3 build`
+- Vite（前端）
 
 </td>
 </tr>
@@ -197,25 +195,27 @@ DeEarthX V3 是一个 **Windows 桌面应用**，帮你快速把客户端整合�
 
 ## 开发
 
+前置：Go 1.22+、Node.js / pnpm、[Wails v3 CLI](https://v3.wails.io/)、[Task](https://taskfile.dev/)（可选）。
+
 ```bash
-# 安装所有依赖
-pnpm install
+# 前端依赖
+cd frontend && pnpm install && cd ..
 
-# 类型检查
-cd backend && pnpm exec tsc --noEmit && cd ../front && pnpm exec vue-tsc --noEmit
+# 开发模式（Wails + Vite）
+wails3 dev
+# 或
+task dev
 
-# 后端开发模式
-cd backend && pnpm run test
+# 仅编译 Go 核心包
+go build ./core/...
 
-# 前端开发服务器（端口 9888）
-cd front && pnpm run dev
-
-# Tauri 开发（Vite + Tauri 窗口）
-cd front && pnpm run tauri-dev
-
-# 完整生产构建
-pnpm run build
+# 生产构建 / 打包
+wails3 build
+task build
+task package
 ```
+
+默认 Vite 开发端口：`9245`（可用环境变量 `WAILS_VITE_PORT` 覆盖）。
 
 ---
 
@@ -224,12 +224,12 @@ pnpm run build
 <table>
 <tr>
 <td align="center" width="50%">
-  <img src="front/public/tianpao.jpg" width="80" height="80" style="border-radius:50%" alt="Tianpao"/><br/>
+  <img src="frontend/public/tianpao.jpg" width="80" height="80" style="border-radius:50%" alt="Tianpao"/><br/>
   <b>Tianpao</b><br/>
   <sub>核心开发</sub>
 </td>
 <td align="center" width="50%">
-  <img src="front/public/xcc.jpg" width="80" height="80" style="border-radius:50%" alt="XCC"/><br/>
+  <img src="frontend/public/xcc.jpg" width="80" height="80" style="border-radius:50%" alt="XCC"/><br/>
   <b>XCC</b><br/>
   <sub>功能优化</sub>
 </td>

@@ -6,12 +6,17 @@ import (
 	"deearthx/core/util"
 )
 
+// ProgressCallback is called during filter progress (current, total, name)
+type ProgressCallback func(current int, total int, name string)
+
 // ModFilterService orchestrates mod filtering
 type ModFilterService struct {
 	extractor  *FileExtractor
 	operator   *FileOperator
 	config     FilterConfig
 	progress   ProgressCallback
+	OnStart    func(totalMods int)
+	OnComplete func(clientMods, success int, durationMs int64)
 }
 
 // NewModFilterService creates a new ModFilterService
@@ -29,29 +34,34 @@ func (mfs *ModFilterService) Filter() error {
 	util.Logger.Info("Starting mod filtering pipeline")
 	startTime := time.Now()
 
-	// Extract file information
 	files, err := mfs.extractor.ExtractFilesInfo()
 	if err != nil {
 		return err
+	}
+
+	if mfs.OnStart != nil {
+		mfs.OnStart(len(files))
 	}
 
 	if mfs.progress != nil {
 		mfs.progress(0, len(files), "Extracting file info")
 	}
 
-	// Run filter strategies
 	clientMods, err := RunFilterStrategies(files, mfs.config, mfs.progress)
 	if err != nil {
 		return err
 	}
 
-	// Move client mods
 	result, err := mfs.operator.MoveClientSideMods(clientMods)
 	if err != nil {
 		return err
 	}
 
 	duration := time.Since(startTime)
+
+	if mfs.OnComplete != nil {
+		mfs.OnComplete(len(clientMods), result.Success, duration.Milliseconds())
+	}
 
 	util.Logger.Info("Mod filtering complete",
 		"clientMods", len(clientMods),

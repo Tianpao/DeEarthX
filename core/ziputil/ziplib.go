@@ -3,7 +3,10 @@ package ziputil
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 )
 
 // ZipEntry represents a single entry in a zip file
@@ -115,9 +118,52 @@ func ExtractFilePrefix(buffer []byte, prefix string) ([]ZipEntry, error) {
 
 // CreateZip creates a zip archive from a directory
 func CreateZip(sourceDir string, outputPath string) error {
-	// Implementation will use archive/zip to create
-	// This is a placeholder for the full implementation
-	return nil
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	outFile, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create zip file: %w", err)
+	}
+	defer outFile.Close()
+
+	zipWriter := zip.NewWriter(outFile)
+	defer zipWriter.Close()
+
+	return filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == sourceDir {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(sourceDir, path)
+		if err != nil {
+			return err
+		}
+		relPath = filepath.ToSlash(relPath)
+
+		if info.IsDir() {
+			_, err := zipWriter.Create(relPath + "/")
+			return err
+		}
+
+		writer, err := zipWriter.Create(relPath)
+		if err != nil {
+			return err
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		_, err = io.Copy(writer, file)
+		return err
+	})
 }
 
 // HasFile checks if a file exists in the zip

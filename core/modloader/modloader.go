@@ -1,6 +1,9 @@
 package modloader
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"deearthx/core/config"
 	"deearthx/core/util"
 )
@@ -31,12 +34,24 @@ func Modloader(ml, mcv, mlv, path string) XModloader {
 
 // MLSetup performs modpack server setup
 func MLSetup(ml, mcv, mlv, path string, template string, progress ProgressCallback) error {
-	totalSteps := 2
+	util.Logger.Info("Starting server installation: " + ml + " " + mcv + "-" + mlv)
+
+	// Template mode: only copy template data (matches TS mlsetup behavior)
 	if template != "" && template != "0" {
-		totalSteps = 3
+		if progress != nil {
+			progress("Applying Template: "+template, 1, 1)
+		}
+		util.Logger.Info("[MLSetup] Apply template only", "template", template)
+		if err := ApplyTemplate(template, path); err != nil {
+			util.Logger.Error("[MLSetup] Apply template FAILED", "error", err.Error())
+			return err
+		}
+		util.CleanupInstallFiles(path)
+		util.Logger.Info("Server installation complete (template)")
+		return nil
 	}
 
-	util.Logger.Info("Starting server installation: " + ml + " " + mcv + "-" + mlv)
+	totalSteps := 2
 
 	// Step 1: Install Minecraft server
 	if progress != nil {
@@ -53,28 +68,18 @@ func MLSetup(ml, mcv, mlv, path string, template string, progress ProgressCallba
 	util.Logger.Info("[MLSetup] Step 1 complete")
 
 	// Step 2: Install mod loader
-	if template == "" || template == "0" {
-		if progress != nil {
-			progress("Installing "+ml+" Loader", 2, totalSteps)
-		}
-
-		util.Logger.Info("[MLSetup] Step 2: Loader setup", "loader", ml)
-		loader := Modloader(ml, mcv, mlv, path)
-		err = loader.Setup(progress)
-		if err != nil {
-			util.Logger.Error("[MLSetup] Loader setup FAILED", "error", err.Error())
-			return err
-		}
-		util.Logger.Info("[MLSetup] Step 2 complete")
+	if progress != nil {
+		progress("Installing "+ml+" Loader", 2, totalSteps)
 	}
 
-	// Step 3: Apply template if specified
-	if template != "" && template != "0" {
-		if progress != nil {
-			progress("Applying Template: "+template, 3, totalSteps)
-		}
-		// Template application will be handled separately
+	util.Logger.Info("[MLSetup] Step 2: Loader setup", "loader", ml)
+	loader := Modloader(ml, mcv, mlv, path)
+	err = loader.Setup(progress)
+	if err != nil {
+		util.Logger.Error("[MLSetup] Loader setup FAILED", "error", err.Error())
+		return err
 	}
+	util.Logger.Info("[MLSetup] Step 2 complete")
 
 	// Cleanup installer files
 	util.CleanupInstallFiles(path)
@@ -102,6 +107,13 @@ func generateInstallScripts(ml, mcv, mlv, path string) error {
 	case "forge", "neoforge":
 		cmd = "java -jar forge-" + mcv + "-" + mlv + "-installer.jar --installServer"
 	case "fabric", "fabric-loader":
+		// Upload mode: provide launch scripts for fabric-server-launch.jar (matches TS dinstall)
+		if err := util.WriteFile(filepath.Join(path, "run.bat"), "@echo off\njava -jar fabric-server-launch.jar\n"); err != nil {
+			return err
+		}
+		if err := util.WriteFile(filepath.Join(path, "run.sh"), "#!/bin/bash\njava -jar fabric-server-launch.jar\n"); err != nil {
+			return err
+		}
 		cmd = "java -jar fabric-installer.jar server -dir . -mcversion " + mcv + " -loader " + mlv + " -downloadMinecraft"
 	}
 
@@ -109,10 +121,10 @@ func generateInstallScripts(ml, mcv, mlv, path string) error {
 		batContent := "@echo off\n" + cmd + "\necho Install Successfully,Enter Some Key to Exit!\npause\n"
 		shContent := "#!/bin/bash\n" + cmd + "\n"
 
-		if err := util.WriteFile(path+"/install.bat", batContent); err != nil {
+		if err := util.WriteFile(filepath.Join(path, "install.bat"), batContent); err != nil {
 			return err
 		}
-		if err := util.WriteFile(path+"/install.sh", shContent); err != nil {
+		if err := util.WriteFile(filepath.Join(path, "install.sh"), shContent); err != nil {
 			return err
 		}
 	}
@@ -123,8 +135,9 @@ func generateInstallScripts(ml, mcv, mlv, path string) error {
 // ApplyTemplate applies a server template to the instance
 func ApplyTemplate(templateID, instancePath string) error {
 	cfg := config.GetConfig()
-	templatePath := cfg.GetTemplatePath(templateID)
-	dataPath := templatePath + "/data"
-
+	dataPath := filepath.Join(cfg.GetTemplatePath(templateID), "data")
+	if !util.IsDir(dataPath) {
+		return fmt.Errorf("template data directory not found: %s", dataPath)
+	}
 	return util.CopyDirectory(dataPath, instancePath)
 }

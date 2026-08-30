@@ -18,7 +18,8 @@ type MixinFile struct {
 }
 
 // ExtractModInfo extracts mod metadata files from a JAR
-// Looks for mods.toml (Forge/NeoForge) and fabric.mod.json
+// Looks for mods.toml (Forge/NeoForge) and fabric.mod.json.
+// Forge TOML is converted to JSON so downstream filters can JSON-parse it (matches TS jar-parser).
 func ExtractModInfo(jarData []byte) []InfoFile {
 	entries, err := ReadZip(jarData)
 	if err != nil {
@@ -34,11 +35,9 @@ func ExtractModInfo(jarData []byte) []InfoFile {
 		name := entry.Name
 		if strings.HasSuffix(name, "neoforge.mods.toml") ||
 			strings.HasSuffix(name, "mods.toml") {
-			// Parse TOML - for now, just store raw data
-			// Go doesn't have a built-in TOML parser, so we store as string
 			infos = append(infos, InfoFile{
 				Name: name,
-				Data: string(entry.Data),
+				Data: modsTomlToJSON(string(entry.Data)),
 			})
 		} else if strings.HasSuffix(name, "fabric.mod.json") {
 			infos = append(infos, InfoFile{
@@ -49,6 +48,88 @@ func ExtractModInfo(jarData []byte) []InfoFile {
 	}
 
 	return infos
+}
+
+// modsTomlToJSON converts Forge/NeoForge mods.toml into JSON with mods + dependencies.
+func modsTomlToJSON(tomlData string) string {
+	result := map[string]interface{}{
+		"mods":         []map[string]string{},
+		"dependencies": map[string][]map[string]string{},
+	}
+
+	mods := []map[string]string{}
+	deps := map[string][]map[string]string{}
+
+	lines := strings.Split(tomlData, "\n")
+	var current map[string]string
+	var currentDepOwner string
+	inMods := false
+	inDeps := false
+
+	flushMod := func() {
+		if inMods && current != nil && current["modId"] != "" {
+			mods = append(mods, current)
+		}
+		if inDeps && current != nil && currentDepOwner != "" && current["modId"] != "" {
+			deps[currentDepOwner] = append(deps[currentDepOwner], current)
+		}
+		current = nil
+	}
+
+	for _, raw := range lines {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		if strings.HasPrefix(line, "[[mods]]") {
+			flushMod()
+			inMods = true
+			inDeps = false
+			currentDepOwner = ""
+			current = map[string]string{}
+			continue
+		}
+
+		if strings.HasPrefix(line, "[[dependencies.") && strings.HasSuffix(line, "]]") {
+			flushMod()
+			inMods = false
+			inDeps = true
+			owner := strings.TrimSuffix(strings.TrimPrefix(line, "[[dependencies."), "]]")
+			currentDepOwner = strings.Trim(owner, "\"")
+			current = map[string]string{}
+			continue
+		}
+
+		// New section header ends current table
+		if strings.HasPrefix(line, "[") {
+			flushMod()
+			inMods = false
+			inDeps = false
+			currentDepOwner = ""
+			current = nil
+			continue
+		}
+
+		if current == nil || !strings.Contains(line, "=") {
+			continue
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		value = strings.Trim(value, "\"'")
+		current[key] = value
+	}
+	flushMod()
+
+	result["mods"] = mods
+	result["dependencies"] = deps
+	data, err := json.Marshal(result)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
 }
 
 // ExtractMixins extracts mixin configuration files from a JAR

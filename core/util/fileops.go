@@ -4,7 +4,21 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
+
+var invalidPathChars = regexp.MustCompile(`[<>:"/\\|?*]`)
+
+// SanitizePathName turns a modpack name into a safe folder name (Windows-safe).
+func SanitizePathName(name string) string {
+	cleaned := invalidPathChars.ReplaceAllString(name, "_")
+	cleaned = strings.TrimRight(cleaned, " .")
+	if cleaned == "" {
+		return "modpack"
+	}
+	return cleaned
+}
 
 // WriteFile writes content to a file, creating directories if needed
 func WriteFile(path, content string) error {

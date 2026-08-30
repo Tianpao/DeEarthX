@@ -76,6 +76,26 @@ func (s *DexService) StartTaskFromPath(ctx context.Context, filePath, mode, temp
 	return nil
 }
 
+// ResumeFromPath continues a previous task from a modpack file path (skip unzip).
+func (s *DexService) ResumeFromPath(ctx context.Context, filePath, mode, template string) error {
+	isServerMode := mode == "server"
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				s.events.EmitError("Panic during resume")
+			}
+		}()
+
+		err := s.dex.ResumeFromPath(filePath, isServerMode, template)
+		if err != nil {
+			s.events.EmitError(err.Error())
+		}
+	}()
+
+	return nil
+}
+
 // AppEventEmitter emits events via Wails
 type AppEventEmitter struct{}
 
