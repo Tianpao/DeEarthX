@@ -46,7 +46,7 @@ func (f *Forge) Setup(progress ProgressCallback) error {
 	cfg := config.GetConfig()
 	if cfg.Mirror.BMCLAPI && java.VersionCompare(f.minecraft, "1.10") > 0 {
 		if err := f.downloadLibraries(); err != nil {
-			util.Logger.Warn("Failed to download libraries: " + err.Error())
+			util.Logger.Warn("下载依赖库失败: " + err.Error())
 		}
 	}
 
@@ -85,11 +85,11 @@ func (f *Forge) Install() error {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		util.Logger.Error("Forge install failed: " + string(output))
+		util.Logger.Error("Forge 安装失败: " + string(output))
 		return fmt.Errorf("forge install failed: %w", err)
 	}
 
-	util.Logger.Info("Forge installation complete")
+	util.Logger.Info("Forge 安装完成")
 	return nil
 }
 
@@ -141,14 +141,14 @@ func (f *Forge) downloadInstaller() error {
 		URL:          url,
 		FilePath:     filePath,
 		ExpectedHash: expectedHash,
-		UseChunked:   true,
+		UseChunked:   false,
 	}, nil)
 
 	if err != nil {
 		return err
 	}
 
-	util.Logger.Info("Forge installer downloaded")
+	util.Logger.Info("Forge 安装器已下载")
 	return nil
 }
 

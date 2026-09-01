@@ -3,11 +3,13 @@ package download
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"resty.dev/v3"
@@ -35,10 +37,10 @@ func NewDownloadClient() *DownloadClient {
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 16,
 	})
-	client.SetTimeout(60 * time.Second)
+	client.SetTimeout(5 * time.Minute)
 	client.SetRetryCount(3)
-	client.SetRetryWaitTime(5 * time.Second)
-	client.SetRetryMaxWaitTime(60 * time.Second)
+	client.SetRetryWaitTime(2 * time.Second)
+	client.SetRetryMaxWaitTime(30 * time.Second)
 	client.SetHeader("User-Agent", "DeEarthX")
 	return &DownloadClient{client: client}
 }
@@ -58,7 +60,7 @@ func (dc *DownloadClient) downloadFileOnce(opts DownloadOptions, progress Progre
 				return err
 			}
 			if !ok {
-				util.Logger.Warn("Existing file hash mismatch, re-downloading: " + opts.FilePath)
+				util.Logger.Warn("已有文件校验失败，重新下载: " + opts.FilePath)
 				os.Remove(opts.FilePath)
 			} else {
 				return nil
@@ -76,10 +78,10 @@ func (dc *DownloadClient) downloadFileOnce(opts DownloadOptions, progress Progre
 	tempPath := opts.FilePath + ".downloading"
 	os.Remove(tempPath)
 
-	util.Logger.Info("[Download] Starting",
-		"url", opts.URL,
-		"file", filepath.Base(opts.FilePath),
-		"chunked", opts.UseChunked)
+	util.Logger.Debug("[下载] 开始",
+		"地址", opts.URL,
+		"文件", filepath.Base(opts.FilePath),
+		"分块", opts.UseChunked)
 
 	var err error
 	if opts.UseChunked {
@@ -89,10 +91,10 @@ func (dc *DownloadClient) downloadFileOnce(opts DownloadOptions, progress Progre
 	}
 
 	if err != nil {
-		util.Logger.Error("[Download] FAILED",
-			"url", opts.URL,
-			"file", filepath.Base(opts.FilePath),
-			"error", err.Error())
+		util.Logger.Error("[下载] 失败",
+			"地址", opts.URL,
+			"文件", filepath.Base(opts.FilePath),
+			"错误", err.Error())
 		os.Remove(opts.FilePath)
 		os.Remove(tempPath)
 		return err
@@ -101,24 +103,27 @@ func (dc *DownloadClient) downloadFileOnce(opts DownloadOptions, progress Progre
 	if opts.ExpectedHash != "" {
 		ok, err := VerifySHA1(opts.FilePath, opts.ExpectedHash)
 		if err != nil {
-			util.Logger.Error("[Download] Hash verify failed", "error", err.Error())
+			util.Logger.Error("[下载] 哈希校验出错", "错误", err.Error())
 			return err
 		}
 		if !ok {
-			util.Logger.Error("[Download] Hash mismatch", "file", opts.FilePath)
+			util.Logger.Error("[下载] 哈希不匹配", "文件", opts.FilePath)
 			os.Remove(opts.FilePath)
 			return fmt.Errorf("file hash verification failed")
 		}
 	}
 
-	util.Logger.Info("[Download] Complete",
-		"url", opts.URL,
-		"file", filepath.Base(opts.FilePath))
+	util.Logger.Debug("[下载] 完成",
+		"地址", opts.URL,
+		"文件", filepath.Base(opts.FilePath))
 	return nil
 }
 
 func (dc *DownloadClient) simpleDownload(url, filePath string, headers map[string]string) error {
-	req := dc.client.R()
+	tempPath := filePath + ".downloading"
+	os.Remove(tempPath)
+
+	req := dc.client.R().SetResponseDoNotParse(true)
 	if headers != nil {
 		for k, v := range headers {
 			req.SetHeader(k, v)
@@ -127,22 +132,50 @@ func (dc *DownloadClient) simpleDownload(url, filePath string, headers map[strin
 
 	resp, err := req.Get(url)
 	if err != nil {
-		util.Logger.Error("[Download] HTTP GET failed", "url", url, "error", err.Error())
+		util.Logger.Error("[下载] 请求失败", "地址", url, "错误", err.Error())
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode() >= 400 {
-		util.Logger.Error("[Download] HTTP error", "url", url, "status", resp.StatusCode())
+		util.Logger.Error("[下载] HTTP 错误", "地址", url, "状态", resp.StatusCode())
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode(), resp.Status())
 	}
 
-	return os.WriteFile(filePath, resp.Bytes(), 0644)
+	f, err := os.Create(tempPath)
+	if err != nil {
+		return err
+	}
+	_, copyErr := io.Copy(f, resp.Body)
+	closeErr := f.Close()
+	if copyErr != nil {
+		os.Remove(tempPath)
+		return copyErr
+	}
+	if closeErr != nil {
+		os.Remove(tempPath)
+		return closeErr
+	}
+
+	if err := os.Rename(tempPath, filePath); err != nil {
+		os.Remove(tempPath)
+		return err
+	}
+	return nil
+}
+
+func retryBackoff(attempt int) time.Duration {
+	d := time.Duration(2*(1<<uint(attempt))) * time.Second
+	if d > 30*time.Second {
+		return 30 * time.Second
+	}
+	return d
 }
 
 func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[string]string) error {
 	tempPath := filePath + ".downloading"
 	useMCIMirror := IsMCIMirrorURL(url)
-	chunkSize := int64(1 * 1024 * 1024) // 1MB chunks for better progress granularity
+	chunkSize := int64(1 * 1024 * 1024)
 	chunkConcurrency := 8
 	if useMCIMirror {
 		chunkSize = 128 * 1024
@@ -158,7 +191,7 @@ func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[stri
 
 	resp, err := req.Head(url)
 	if err != nil {
-		util.Logger.Info("[Download] HEAD probe failed, fallback to simple", "url", url)
+		util.Logger.Debug("[下载] HEAD 探测失败，改用普通下载", "地址", url)
 		return dc.simpleDownload(url, filePath, headers)
 	}
 
@@ -167,28 +200,32 @@ func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[stri
 	if contentLength != "" {
 		fileSize, _ = strconv.ParseInt(contentLength, 10, 64)
 	}
+	acceptRanges := strings.EqualFold(resp.Header().Get("Accept-Ranges"), "bytes")
 
-	// Files smaller than one chunk don't benefit from chunked download
-	if fileSize < chunkSize {
-		util.Logger.Info("[Download] File too small for chunked, using simple", "url", url, "size", fileSize)
+	minChunkedSize := chunkSize
+	if useMCIMirror {
+		minChunkedSize = 256 * 1024
+	}
+	if !acceptRanges || fileSize < minChunkedSize {
+		util.Logger.Debug("[下载] 不支持分块或文件较小，改用普通下载",
+			"地址", url, "大小", fileSize, "支持Range", acceptRanges)
 		return dc.simpleDownload(url, filePath, headers)
 	}
 
 	totalChunks := int((fileSize + chunkSize - 1) / chunkSize)
-	util.Logger.Info("[Download] Chunked start",
-		"url", url, "sizeMB", fmt.Sprintf("%.1f", float64(fileSize)/1024/1024), "chunks", totalChunks)
+	util.Logger.Debug("[下载] 分块开始",
+		"地址", url, "大小MB", fmt.Sprintf("%.1f", float64(fileSize)/1024/1024), "块数", totalChunks)
 
 	f, err := os.Create(tempPath)
 	if err != nil {
 		return err
 	}
 	f.Truncate(fileSize)
-	defer f.Close()
 
 	sem := make(chan struct{}, chunkConcurrency)
 	var wg sync.WaitGroup
 	errChan := make(chan error, totalChunks)
-	rangeSupported := true
+	var rangeUnsupported atomic.Bool
 
 	for chunkIdx := 0; chunkIdx < totalChunks; chunkIdx++ {
 		wg.Add(1)
@@ -212,10 +249,10 @@ func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[stri
 				resp, err := req.Get(url)
 				if err != nil {
 					if attempt < 5 {
-						time.Sleep(time.Duration(5*(1<<attempt)) * time.Second)
+						time.Sleep(retryBackoff(attempt))
 						continue
 					}
-					errChan <- err
+					errChan <- fmt.Errorf("chunk %d failed after 5 attempts: %w", idx, err)
 					return
 				}
 
@@ -225,12 +262,12 @@ func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[stri
 				}
 
 				if resp.StatusCode() == 429 {
-					time.Sleep(time.Duration(5*(1<<attempt)) * time.Second)
+					time.Sleep(retryBackoff(attempt))
 					continue
 				}
 
-				rangeSupported = false
-				errChan <- fmt.Errorf("server returned HTTP %d", resp.StatusCode())
+				rangeUnsupported.Store(true)
+				errChan <- fmt.Errorf("chunk %d: server returned HTTP %d", idx, resp.StatusCode())
 				return
 			}
 			errChan <- fmt.Errorf("chunk %d failed after 5 attempts", idx)
@@ -239,31 +276,34 @@ func (dc *DownloadClient) chunkedDownload(url, filePath string, headers map[stri
 
 	wg.Wait()
 	close(errChan)
+	f.Close()
 
+	var firstErr error
 	for err := range errChan {
-		if err != nil && !rangeSupported {
-			os.Remove(tempPath)
-			return dc.simpleDownload(url, filePath, headers)
-		}
-		if err != nil {
-			os.Remove(tempPath)
-			return err
+		if err != nil && firstErr == nil {
+			firstErr = err
 		}
 	}
 
-	f.Close()
+	if firstErr != nil {
+		os.Remove(tempPath)
+		util.Logger.Warn("[下载] 分块失败，改用普通下载",
+			"地址", url, "错误", firstErr.Error(), "不支持Range", rangeUnsupported.Load())
+		return dc.simpleDownload(url, filePath, headers)
+	}
+
 	if err := os.Rename(tempPath, filePath); err != nil {
-		util.Logger.Error("[Download] Chunked rename failed", "temp", tempPath, "target", filePath, "error", err.Error())
+		util.Logger.Error("[下载] 分块文件重命名失败", "临时文件", tempPath, "目标", filePath, "错误", err.Error())
 		return err
 	}
-	util.Logger.Info("[Download] Chunked complete", "url", url)
+	util.Logger.Debug("[下载] 分块完成", "地址", url)
 	return nil
 }
 
 func (dc *DownloadClient) BatchDownload(items []DownloadOptions, concurrency int, progress ProgressCallback) error {
-	util.Logger.Info("[BatchDownload] Starting parallel download",
-		"fileCount", len(items),
-		"concurrency", concurrency)
+	util.Logger.Debug("[批量下载] 开始并行下载",
+		"文件数", len(items),
+		"并发", concurrency)
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(items))

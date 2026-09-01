@@ -8,11 +8,13 @@ import (
 	"strings"
 )
 
-var invalidPathChars = regexp.MustCompile(`[<>:"/\\|?*]`)
+var otherInvalidPathChars = regexp.MustCompile(`[<>"/\\|?*]`)
 
 // SanitizePathName turns a modpack name into a safe folder name (Windows-safe).
+// Colon is replaced with the fullwidth Chinese colon "：" to keep the name readable.
 func SanitizePathName(name string) string {
-	cleaned := invalidPathChars.ReplaceAllString(name, "_")
+	cleaned := strings.ReplaceAll(name, ":", "：")
+	cleaned = otherInvalidPathChars.ReplaceAllString(cleaned, "_")
 	cleaned = strings.TrimRight(cleaned, " .")
 	if cleaned == "" {
 		return "modpack"

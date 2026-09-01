@@ -31,7 +31,7 @@ func (n *NeoForge) Setup(progress ProgressCallback) error {
 	cfg := config.GetConfig()
 	if cfg.Mirror.BMCLAPI {
 		if err := n.Forge.downloadLibraries(); err != nil {
-			util.Logger.Warn("Failed to download NeoForge libraries: " + err.Error())
+			util.Logger.Warn("下载 NeoForge 依赖库失败: " + err.Error())
 		}
 	}
 
@@ -75,6 +75,6 @@ func (n *NeoForge) downloadNeoForgeInstaller() error {
 		URL:          url,
 		FilePath:     filePath,
 		ExpectedHash: expectedHash,
-		UseChunked:   true,
+		UseChunked:   false, // BMCLAPI installer jar — simple download like old fastdownload
 	}, nil)
 }

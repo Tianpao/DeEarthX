@@ -43,7 +43,7 @@ func (f *Fabric) Setup(progress ProgressCallback) error {
 	cfg := config.GetConfig()
 	if cfg.Mirror.BMCLAPI {
 		if err := f.downloadLibraries(); err != nil {
-			util.Logger.Warn("Failed to download Fabric libraries: " + err.Error())
+			util.Logger.Warn("下载 Fabric 依赖库失败: " + err.Error())
 		}
 	}
 
@@ -74,11 +74,11 @@ func (f *Fabric) Install() error {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		util.Logger.Error("Fabric install failed: " + string(output))
+		util.Logger.Error("Fabric 安装失败: " + string(output))
 		return err
 	}
 
-	util.Logger.Info("Fabric installation complete")
+	util.Logger.Info("Fabric 安装完成")
 	return nil
 }
 

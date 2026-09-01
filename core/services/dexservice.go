@@ -2,12 +2,14 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"deearthx/core/dex"
+	"deearthx/core/util"
 )
 
 // DexService is the main service for processing modpacks
@@ -23,24 +25,38 @@ func NewDexService() *DexService {
 
 // ServiceStartup is called when the service starts
 func (s *DexService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	s.events = &AppEventEmitter{}
-	s.dex = dex.NewDex(s.events)
+	s.ensureReady()
 	return nil
+}
+
+func (s *DexService) ensureReady() {
+	if s.events == nil {
+		s.events = &AppEventEmitter{}
+	}
+	if s.dex == nil {
+		s.dex = dex.NewDex(s.events)
+	}
 }
 
 // StartTask starts processing a modpack from file data
 func (s *DexService) StartTask(ctx context.Context, fileData []byte, filename, mode, template string) error {
+	s.ensureReady()
 	isServerMode := mode == "server"
 
 	go func() {
+		util.SetUILogEnabled(true)
+		defer util.SetUILogEnabled(false)
 		defer func() {
 			if r := recover(); r != nil {
-				s.events.EmitError("Panic during processing")
+				util.Logger.Error("处理过程发生异常", "recover", fmt.Sprint(r))
+				s.events.EmitError("处理过程发生异常")
 			}
 		}()
 
+		util.Logger.Info("开始任务", "文件", filename, "模式", mode)
 		err := s.dex.ProcessModpack(fileData, filename, isServerMode, template)
 		if err != nil {
+			util.Logger.Error("任务失败", "错误", err.Error())
 			s.events.EmitError(err.Error())
 		}
 	}()
@@ -50,25 +66,32 @@ func (s *DexService) StartTask(ctx context.Context, fileData []byte, filename, m
 
 // StartTaskFromPath starts processing a modpack from a file path
 func (s *DexService) StartTaskFromPath(ctx context.Context, filePath, mode, template string) error {
+	s.ensureReady()
 	isServerMode := mode == "server"
 
 	go func() {
+		util.SetUILogEnabled(true)
+		defer util.SetUILogEnabled(false)
 		defer func() {
 			if r := recover(); r != nil {
-				s.events.EmitError("Panic during processing")
+				util.Logger.Error("从路径启动任务时发生异常", "recover", fmt.Sprint(r))
+				s.events.EmitError("处理过程发生异常")
 			}
 		}()
 
-		// Read file from path
+		util.Logger.Info("开始处理", "文件", filepath.Base(filePath), "模式", mode)
+
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			s.events.EmitError("Failed to read file: " + err.Error())
+			util.Logger.Error("读取文件失败", "路径", filePath, "错误", err.Error())
+			s.events.EmitError("读取文件失败: " + err.Error())
 			return
 		}
 
 		filename := filepath.Base(filePath)
 		err = s.dex.ProcessModpack(data, filename, isServerMode, template)
 		if err != nil {
+			util.Logger.Error("处理整合包失败", "错误", err.Error())
 			s.events.EmitError(err.Error())
 		}
 	}()
@@ -78,17 +101,23 @@ func (s *DexService) StartTaskFromPath(ctx context.Context, filePath, mode, temp
 
 // ResumeFromPath continues a previous task from a modpack file path (skip unzip).
 func (s *DexService) ResumeFromPath(ctx context.Context, filePath, mode, template string) error {
+	s.ensureReady()
 	isServerMode := mode == "server"
 
 	go func() {
+		util.SetUILogEnabled(true)
+		defer util.SetUILogEnabled(false)
 		defer func() {
 			if r := recover(); r != nil {
-				s.events.EmitError("Panic during resume")
+				util.Logger.Error("断点续传时发生异常", "recover", fmt.Sprint(r))
+				s.events.EmitError("断点续传时发生异常")
 			}
 		}()
 
+		util.Logger.Info("开始断点续传", "文件", filepath.Base(filePath), "模式", mode)
 		err := s.dex.ResumeFromPath(filePath, isServerMode, template)
 		if err != nil {
+			util.Logger.Error("断点续传失败", "错误", err.Error())
 			s.events.EmitError(err.Error())
 		}
 	}()

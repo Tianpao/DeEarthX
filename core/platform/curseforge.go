@@ -94,7 +94,7 @@ func (cf *CurseForge) DownloadFiles(manifest map[string]interface{}, path string
 	// Extract file list
 	files, ok := manifest["files"].([]interface{})
 	if !ok || len(files) == 0 {
-		util.Logger.Warn("CurseForge: No files to download")
+		util.Logger.Warn("CurseForge：没有需要下载的文件")
 		return nil
 	}
 
@@ -126,7 +126,7 @@ func (cf *CurseForge) DownloadFiles(manifest map[string]interface{}, path string
 
 	resp, err := req.Post("https://api.curseforge.com/v1/mods/files")
 	if err != nil {
-		util.Logger.Error("Failed to get CurseForge file info: " + err.Error())
+		util.Logger.Error("获取 CurseForge 文件信息失败: " + err.Error())
 		return err
 	}
 
@@ -168,7 +168,7 @@ func (cf *CurseForge) DownloadFiles(manifest map[string]interface{}, path string
 
 	// Download files
 	if len(downloadList) > 0 {
-		util.Logger.Info("[CurseForge] Built download list",
+		util.Logger.Info("[CurseForge] 已构建下载列表",
 			"manifestFiles", len(files),
 			"downloadList", len(downloadList))
 		dl := download.NewDownloadClient()

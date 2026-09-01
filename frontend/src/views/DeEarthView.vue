@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useDeearthStore } from '@/stores/deearth';
 import { ModCheckService, DialogService } from '@/bindings/deearthx/core/services';
+import { eventData } from '@/utils/wailsEvent';
 
 const { t } = useI18n();
 const store = useDeearthStore();
@@ -27,7 +28,8 @@ function setupListeners() {
     if (listenersSetup) return;
     listenersSetup = true;
 
-    Events.On("modcheck_start", (data: any) => {
+    Events.On("modcheck_start", (ev: any) => {
+        const data = eventData(ev);
         showProgress.value = true;
         store.updateProgress({
             current: 0,
@@ -36,7 +38,8 @@ function setupListeners() {
         });
     });
 
-    Events.On("modcheck_progress", (data: any) => {
+    Events.On("modcheck_progress", (ev: any) => {
+        const data = eventData(ev);
         store.updateProgress({
             current: data.current,
             total: data.total,
@@ -44,12 +47,14 @@ function setupListeners() {
         });
     });
 
-    Events.On("modcheck_complete", (data: any) => {
-        message.success(t('deearth.check_complete', { total: data.results.length, filtered: data.filteredCount }));
+    Events.On("modcheck_complete", (ev: any) => {
+        const data = eventData(ev);
+        message.success(t('deearth.check_complete', { total: data.results?.length || 0, filtered: data.filteredCount }));
         store.completeCheck(data);
     });
 
-    Events.On("modcheck_error", (data: any) => {
+    Events.On("modcheck_error", (ev: any) => {
+        const data = eventData(ev);
         message.error(t('deearth.check_failed', { error: data.error }));
         store.errorCheck();
     });

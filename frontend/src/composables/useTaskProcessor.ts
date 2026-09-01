@@ -6,6 +6,7 @@ import { Events } from '@wailsio/runtime';
 import { DexService } from '@/bindings/deearthx/core/services';
 import { useProgressStore } from '@/stores/progress';
 import { useErrorHandler } from '@/composables/useErrorHandler';
+import { eventData } from '@/utils/wailsEvent';
 
 let listenersSetup = false;
 
@@ -13,21 +14,20 @@ function setupWailsListeners(store: ReturnType<typeof useProgressStore>, t: (key
     if (listenersSetup) return;
     listenersSetup = true;
 
-    const handleError = (ctx: ReturnType<typeof useErrorHandler>) => ctx.handleError;
-
-    Events.On("unzip", (data: any) => {
-        store.updateUnzipProgress(data);
+    Events.On("unzip", (ev: any) => {
+        store.updateUnzipProgress(eventData(ev));
     });
 
-    Events.On("downloading", (data: any) => {
-        store.updateDownloadProgress(data);
+    Events.On("downloading", (ev: any) => {
+        store.updateDownloadProgress(eventData(ev));
     });
 
     Events.On("changed", () => {
         store.incrementStep();
     });
 
-    Events.On("finish", (data: any) => {
+    Events.On("finish", (ev: any) => {
+        const data = eventData<{ duration?: number }>(ev);
         const time = Math.round((data?.duration || 0) / 1000);
         store.incrementStep();
         if (store.selectedMode === 'server') {
@@ -43,40 +43,58 @@ function setupWailsListeners(store: ReturnType<typeof useProgressStore>, t: (key
         store.completeTask();
     });
 
-    Events.On("error", (error: any) => {
+    Events.On("error", (ev: any) => {
+        const data = eventData<{ message?: string } | string>(ev);
         const ctx = useErrorHandler();
-        ctx.handleError(error);
+        const msg = typeof data === 'string' ? data : (data?.message || String(data));
+        ctx.handleError(msg);
         store.resetState();
     });
 
-    Events.On("server_install_start", (data: any) => {
-        store.handleServerInstallStart(data);
+    Events.On("server_install_start", (ev: any) => {
+        store.handleServerInstallStart(eventData(ev));
     });
 
-    Events.On("server_install_step", (data: any) => {
-        store.handleServerInstallStep(data);
+    Events.On("server_install_step", (ev: any) => {
+        store.handleServerInstallStep(eventData(ev));
     });
 
-    Events.On("server_install_progress", (data: any) => {
-        store.handleServerInstallProgress(data);
+    Events.On("server_install_progress", (ev: any) => {
+        store.handleServerInstallProgress(eventData(ev));
     });
 
-    Events.On("server_install_complete", (data: any) => {
-        store.handleServerInstallComplete(data);
+    Events.On("server_install_complete", (ev: any) => {
+        store.handleServerInstallComplete(eventData(ev));
     });
 
-    Events.On("filter_mods_start", (data: any) => {
-        store.handleFilterModsStart(data);
+    Events.On("filter_mods_start", (ev: any) => {
+        store.handleFilterModsStart(eventData(ev));
     });
 
-    Events.On("filter_mods_progress", (data: any) => {
-        store.handleFilterModsProgress(data);
+    Events.On("filter_mods_progress", (ev: any) => {
+        store.handleFilterModsProgress(eventData(ev));
     });
 
-    Events.On("filter_mods_complete", (data: any) => {
+    Events.On("filter_mods_complete", (ev: any) => {
+        const data = eventData(ev);
         store.handleFilterModsComplete(data);
-        const timeSpent = Math.round(data.duration / 1000);
-        message.success(t('home.filter_mods_completed', { filtered: data.filteredCount, moved: data.movedCount }) + ` ${t('home.server_install_duration')}: ${timeSpent}s`);
+        const timeSpent = Math.round((data.duration || 0) / 1000);
+        const filtered = data.filteredCount ?? data.clientMods ?? 0;
+        const moved = data.movedCount ?? data.success ?? 0;
+        message.success(t('home.filter_mods_completed', { filtered, moved }) + ` ${t('home.server_install_duration')}: ${timeSpent}s`);
+    });
+
+    Events.On("info", (ev: any) => {
+        const data = eventData<{ level?: string; message?: string; time?: string } | string>(ev);
+        if (typeof data === 'string') {
+            store.appendProcessLog(data);
+            return;
+        }
+        store.appendProcessLog({
+            level: data?.level || 'info',
+            message: data?.message || '',
+            time: data?.time,
+        });
     });
 }
 
@@ -102,6 +120,7 @@ export function useTaskProcessor() {
         filterModsProgress,
         serverInstallInfo,
         filterModsInfo,
+        processLogs,
         startTime,
         startButtonDisabled
     } = storeToRefs(store);
@@ -109,7 +128,6 @@ export function useTaskProcessor() {
     const killCoreProcess = inject<(() => void) | undefined>("killCoreProcess");
     const clearDroppedFile = inject<(() => void) | undefined>('clearDroppedFile');
 
-    // Set up Wails event listeners once
     setupWailsListeners(store, t as any);
 
     function resetState() {
@@ -166,6 +184,8 @@ export function useTaskProcessor() {
         filterModsProgress,
         serverInstallInfo,
         filterModsInfo,
+        processLogs,
+        clearProcessLogs: store.clearProcessLogs,
         startTime,
         startButtonDisabled,
         handleStartProcess

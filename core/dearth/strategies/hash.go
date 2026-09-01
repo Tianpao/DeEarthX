@@ -36,7 +36,7 @@ func (hf *HashFilter) Filter(files []FileInfo) ([]string, error) {
 		hashes = append(hashes, file.Hash)
 	}
 
-	util.Logger.Debug("Checking mod hashes with Modrinth API", "count", len(files))
+	util.Logger.Debug("正在通过 Modrinth 校验模组哈希", "count", len(files))
 
 	client := resty.New()
 	client.SetHeader("User-Agent", "DeEarth")
@@ -51,45 +51,42 @@ func (hf *HashFilter) Filter(files []FileInfo) ([]string, error) {
 		Post(hf.urls.ModrinthURL + "/v2/version_files")
 
 	if err != nil {
-		util.Logger.Error("Hash check failed: " + err.Error())
+		util.Logger.Error("哈希检查失败: " + err.Error())
 		return nil, err
 	}
 
 	if resp.StatusCode() >= 400 {
-		util.Logger.Error("Modrinth API error: HTTP " + resp.Status())
+		util.Logger.Error("Modrinth API 错误: HTTP " + resp.Status())
 		return []string{}, nil
 	}
 
 	// Parse response
 	var hashResponse HashResponse
 	if err := json.Unmarshal(resp.Bytes(), &hashResponse); err != nil {
-		return nil, err
+		util.Logger.Error("哈希检查失败: " + err.Error())
+		return []string{}, nil
 	}
 
-	// Collect project IDs
+	// Collect unique project IDs
 	projectIDToFilename := make(map[string]string)
+	seen := make(map[string]bool)
 	projectIDs := []string{}
 	for hash, info := range hashResponse {
 		filename, exists := hashToFilename[hash]
-		if exists {
-			projectIDToFilename[info.ProjectID] = filename
+		if !exists || info.ProjectID == "" {
+			continue
+		}
+		projectIDToFilename[info.ProjectID] = filename
+		if !seen[info.ProjectID] {
+			seen[info.ProjectID] = true
 			projectIDs = append(projectIDs, info.ProjectID)
 		}
 	}
 
-	// Query project info
-	projectResp, err := client.R().
-		SetQueryParam("ids", "["+joinStrings(projectIDs, ",")+"]").
-		Get(hf.urls.ModrinthURL + "/v2/projects")
-
+	projects, err := fetchModrinthProjects(client, hf.urls.ModrinthURL, projectIDs)
 	if err != nil {
-		util.Logger.Error("Project info query failed: " + err.Error())
-		return nil, err
-	}
-
-	var projects []ProjectInfo
-	if err := json.Unmarshal(projectResp.Bytes(), &projects); err != nil {
-		return nil, err
+		util.Logger.Error("哈希检查失败: " + err.Error())
+		return []string{}, nil
 	}
 
 	// Find client-side only mods
@@ -100,13 +97,13 @@ func (hf *HashFilter) Filter(files []FileInfo) ([]string, error) {
 			filename, exists := projectIDToFilename[project.ID]
 			if exists {
 				clientMods = append(clientMods, filename)
-				util.Logger.Debug("Modrinth Hash marked as client mod",
+				util.Logger.Debug("哈希识别为客户端模组",
 					"filename", filename,
 					"projectId", project.ID)
 			}
 		}
 	}
 
-	util.Logger.Debug("Hash check complete", "clientMods", len(clientMods))
+	util.Logger.Debug("哈希检查完成", "clientMods", len(clientMods))
 	return clientMods, nil
 }

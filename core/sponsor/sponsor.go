@@ -74,7 +74,7 @@ func (ss *SponsorService) List() ([]Sponsor, error) {
 	ss.cache = sponsors
 	ss.cacheMutex.Unlock()
 
-	util.Logger.Info("Fetched sponsors", "count", len(sponsors))
+	util.Logger.Debug("已获取赞助商", "数量", len(sponsors))
 	return sponsors, nil
 }
 

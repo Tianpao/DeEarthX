@@ -55,7 +55,7 @@ func ExcludeRequiredDependencies(clientMods []string, files []FileInfo) []string
 			}
 		}
 		if isRequired {
-			util.Logger.Info("Keeping server dependency mod, skip filter",
+			util.Logger.Debug("保留服务端依赖模组，跳过筛选",
 				"file", filepath.Base(filename),
 				"modIds", modIDs)
 			restored++
@@ -65,7 +65,7 @@ func ExcludeRequiredDependencies(clientMods []string, files []FileInfo) []string
 	}
 
 	if restored > 0 {
-		util.Logger.Info("Dependency guard restored mods", "count", restored)
+		util.Logger.Debug("依赖保护已还原模组", "数量", restored)
 	}
 	return kept
 }

@@ -48,12 +48,12 @@ func NewDex(emitter ProgressEmitter) *Dex {
 func (d *Dex) ProcessModpack(buffer []byte, filename string, isServerMode bool, template string) error {
 	startTime := time.Now()
 
-	util.Logger.Info("Starting modpack processing", "filename", filename)
+	util.Logger.Info("开始处理整合包", "filename", filename)
 
 	// Extract mrpack from PCL-style ZIP if needed
 	processedBuffer, err := d.extractMrpackFromZip(buffer, filename)
 	if err != nil {
-		util.Logger.Error("Failed to extract mrpack: " + err.Error())
+		util.Logger.Error("提取 mrpack 失败: " + err.Error())
 		return err
 	}
 
@@ -72,7 +72,7 @@ func (d *Dex) ProcessModpack(buffer []byte, filename string, isServerMode bool, 
 
 	// Determine platform
 	plat := platform.WhatPlatform(contain)
-	util.Logger.Info("Detected platform", "platform", plat)
+	util.Logger.Info("检测到整合包平台", "platform", plat)
 
 	// Get modpack info
 	platHandler := platform.Platform(plat)
@@ -89,7 +89,7 @@ func (d *Dex) ProcessModpack(buffer []byte, filename string, isServerMode bool, 
 	unpath := filepath.Join(util.GetAppDir(), "instance", mpname)
 	mcVersion := modpackInfo.Minecraft
 
-	util.Logger.Info("Modpack info",
+	util.Logger.Info("整合包信息",
 		"name", mpname,
 		"minecraft", mcVersion,
 		"loader", modpackInfo.Loader,
@@ -121,14 +121,14 @@ func (d *Dex) ProcessModpack(buffer []byte, filename string, isServerMode bool, 
 	duration := time.Since(startTime).Milliseconds()
 	d.completeTask(startTime, unpath, mpname, isServerMode)
 
-	util.Logger.Info("Task complete", "duration", duration)
+	util.Logger.Info("任务完成", "duration", duration)
 	return nil
 }
 
 // ResumeFromPath continues a previous task: skip unzip, re-download missing mods, then filter + install.
 func (d *Dex) ResumeFromPath(filePath string, isServerMode bool, template string) error {
 	startTime := time.Now()
-	util.Logger.Info("Resuming modpack from path", "path", filePath)
+	util.Logger.Info("从路径断点续传", "path", filePath)
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -169,7 +169,7 @@ func (d *Dex) ResumeFromPath(filePath string, isServerMode bool, template string
 		return fmt.Errorf("实例目录不存在: %s", unpath)
 	}
 
-	util.Logger.Info("Resuming from breakpoint", "instance", unpath, "platform", plat)
+	util.Logger.Info("断点续传中", "instance", unpath, "platform", plat)
 
 	progress := func(total, current int, name string) {
 		d.emitter.EmitDownload(total, current, name)
@@ -189,7 +189,7 @@ func (d *Dex) ResumeFromPath(filePath string, isServerMode bool, template string
 	}
 
 	d.completeTask(startTime, unpath, mpname, isServerMode)
-	util.Logger.Info("Resume complete", "duration", time.Since(startTime).Milliseconds())
+	util.Logger.Info("续传完成", "duration", time.Since(startTime).Milliseconds())
 	return nil
 }
 
@@ -207,7 +207,7 @@ func (d *Dex) extractMrpackFromZip(buffer []byte, filename string) ([]byte, erro
 
 	for _, entry := range entries {
 		if entry.Name == "modpack.mrpack" {
-			util.Logger.Info("Found modpack.mrpack inside PCL-style ZIP")
+			util.Logger.Info("在 PCL 风格压缩包中找到 modpack.mrpack")
 			return entry.Data, nil
 		}
 	}
@@ -338,7 +338,7 @@ func (d *Dex) parallelTasks(zipProcessor *ZipProcessor, plat string, info map[st
 func (d *Dex) filterMods(unpath, mpname, mcVersion string) error {
 	// Skip mod filtering for MC 1.12.2 and below
 	if javaVersionCompare(mcVersion, "1.12.2") <= 0 {
-		util.Logger.Info("Minecraft version <= 1.12.2, skipping mod check")
+		util.Logger.Info("Minecraft 版本 <= 1.12.2，跳过模组筛选")
 		d.emitter.EmitChanged()
 		return nil
 	}
@@ -376,7 +376,7 @@ func (d *Dex) installModLoader(modpackInfo *platform.ModpackInfo, unpath string,
 
 	if isServerMode {
 		if isModLoaderAlreadyInstalled(unpath, modpackInfo) {
-			util.Logger.Info("Server core already installed, skipping mod loader setup", "path", unpath)
+			util.Logger.Info("服务端核心已存在，跳过加载器安装", "path", unpath)
 			d.emitter.EmitChanged()
 			return nil
 		}
@@ -433,9 +433,9 @@ func (d *Dex) completeTask(startTime time.Time, unpath, mpname string, isServerM
 	if !isServerMode && cfg.AutoZip {
 		outputPath := filepath.Join(util.GetAppDir(), "instance", mpname+".zip")
 		if err := ziputil.CreateZip(unpath, outputPath); err != nil {
-			util.Logger.Error("Failed to create zip archive", "path", outputPath, "error", err.Error())
+			util.Logger.Error("创建压缩包失败", "path", outputPath, "error", err.Error())
 		} else {
-			util.Logger.Info("Created zip archive", "path", outputPath)
+			util.Logger.Info("已创建压缩包", "path", outputPath)
 		}
 	}
 

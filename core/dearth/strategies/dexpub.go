@@ -44,9 +44,9 @@ func (df *DexpubFilter) Filter(files []FileInfo) ([]string, error) {
 		return nil, err
 	}
 
-	util.Logger.Info("Galaxy Square check complete",
-		"serverMods", len(result.ServerMods),
-		"clientMods", len(result.ClientMods))
+	util.Logger.Debug("星系广场检查完成",
+		"服务端模组", len(result.ServerMods),
+		"客户端模组", len(result.ClientMods))
 
 	return result.ClientMods, nil
 }

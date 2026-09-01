@@ -34,20 +34,20 @@ func Modloader(ml, mcv, mlv, path string) XModloader {
 
 // MLSetup performs modpack server setup
 func MLSetup(ml, mcv, mlv, path string, template string, progress ProgressCallback) error {
-	util.Logger.Info("Starting server installation: " + ml + " " + mcv + "-" + mlv)
+	util.Logger.Info("开始安装服务端: " + ml + " " + mcv + "-" + mlv)
 
 	// Template mode: only copy template data (matches TS mlsetup behavior)
 	if template != "" && template != "0" {
 		if progress != nil {
 			progress("Applying Template: "+template, 1, 1)
 		}
-		util.Logger.Info("[MLSetup] Apply template only", "template", template)
+		util.Logger.Info("[服务端] 仅应用模板", "template", template)
 		if err := ApplyTemplate(template, path); err != nil {
-			util.Logger.Error("[MLSetup] Apply template FAILED", "error", err.Error())
+			util.Logger.Error("[服务端] 应用模板失败", "error", err.Error())
 			return err
 		}
 		util.CleanupInstallFiles(path)
-		util.Logger.Info("Server installation complete (template)")
+		util.Logger.Info("服务端安装完成（仅模板）")
 		return nil
 	}
 
@@ -58,33 +58,33 @@ func MLSetup(ml, mcv, mlv, path string, template string, progress ProgressCallba
 		progress("Installing Minecraft Server", 1, totalSteps)
 	}
 
-	util.Logger.Info("[MLSetup] Step 1: Minecraft setup", "loader", ml, "mc", mcv)
+	util.Logger.Info("[服务端] 步骤1：安装 Minecraft", "loader", ml, "mc", mcv)
 	minecraft := NewMinecraft(ml, mcv, mlv, path)
 	err := minecraft.Setup(progress)
 	if err != nil {
-		util.Logger.Error("[MLSetup] Minecraft setup FAILED", "error", err.Error())
+		util.Logger.Error("[服务端] Minecraft 安装失败", "error", err.Error())
 		return err
 	}
-	util.Logger.Info("[MLSetup] Step 1 complete")
+	util.Logger.Debug("[服务端] 步骤1完成")
 
 	// Step 2: Install mod loader
 	if progress != nil {
 		progress("Installing "+ml+" Loader", 2, totalSteps)
 	}
 
-	util.Logger.Info("[MLSetup] Step 2: Loader setup", "loader", ml)
+	util.Logger.Info("[服务端] 步骤2：安装加载器", "loader", ml)
 	loader := Modloader(ml, mcv, mlv, path)
 	err = loader.Setup(progress)
 	if err != nil {
-		util.Logger.Error("[MLSetup] Loader setup FAILED", "error", err.Error())
+		util.Logger.Error("[服务端] 加载器安装失败", "error", err.Error())
 		return err
 	}
-	util.Logger.Info("[MLSetup] Step 2 complete")
+	util.Logger.Debug("[服务端] 步骤2完成")
 
 	// Cleanup installer files
 	util.CleanupInstallFiles(path)
 
-	util.Logger.Info("Server installation complete")
+	util.Logger.Info("服务端安装完成")
 	return nil
 }
 

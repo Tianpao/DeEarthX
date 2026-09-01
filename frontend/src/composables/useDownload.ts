@@ -4,6 +4,7 @@ import { Events } from '@wailsio/runtime';
 import { storeToRefs } from 'pinia';
 import { useDownloadStore } from '@/stores/download';
 import { DownloadService } from '@/bindings/deearthx/core/services';
+import { eventData } from '@/utils/wailsEvent';
 
 let listenersSetup = false;
 
@@ -11,24 +12,25 @@ function setupWailsListeners(store: ReturnType<typeof useDownloadStore>, t: (key
     if (listenersSetup) return;
     listenersSetup = true;
 
-    Events.On("server_install_start", (data: any) => {
-        store.handleServerInstallStart(data);
+    Events.On("server_install_start", (ev: any) => {
+        store.handleServerInstallStart(eventData(ev));
     });
 
-    Events.On("server_install_step", (data: any) => {
-        store.handleServerInstallStep(data);
+    Events.On("server_install_step", (ev: any) => {
+        store.handleServerInstallStep(eventData(ev));
     });
 
-    Events.On("server_install_progress", (data: any) => {
-        store.handleServerInstallProgress(data);
+    Events.On("server_install_progress", (ev: any) => {
+        store.handleServerInstallProgress(eventData(ev));
     });
 
-    Events.On("server_install_complete", (data: any) => {
-        store.handleServerInstallComplete(data);
+    Events.On("server_install_complete", (ev: any) => {
+        store.handleServerInstallComplete(eventData(ev));
     });
 
-    Events.On("server_install_error", (data: any) => {
-        store.handleServerInstallError(data?.error || t('download.install_error'));
+    Events.On("server_install_error", (ev: any) => {
+        const data = eventData<{ error?: string; message?: string }>(ev);
+        store.handleServerInstallError(data?.error || data?.message || t('download.install_error'));
     });
 }
 

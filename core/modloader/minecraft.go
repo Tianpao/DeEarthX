@@ -81,18 +81,19 @@ func (m *Minecraft) forgeSetupModern() error {
 	mcPath := filepath.Join(m.path, "libraries", "net", "minecraft", "server", m.minecraft, "server-"+m.minecraft+".jar")
 	url := download.GetBMCLAPIPrefix() + "/version/" + m.minecraft + "/server"
 
-	util.Logger.Info("[Minecraft] Downloading server jar", "url", url, "path", mcPath)
+	util.Logger.Info("[Minecraft] 正在下载服务端 jar", "版本", m.minecraft)
 	dl := download.NewDownloadClient()
+	// Match old TS fastdownload: simple GET for BMCLAPI server jars (chunked is flaky)
 	err := dl.DownloadFile(download.DownloadOptions{
 		URL:        url,
 		FilePath:   mcPath,
-		UseChunked: true,
+		UseChunked: false,
 	}, nil)
 	if err != nil {
-		util.Logger.Error("[Minecraft] Server jar download FAILED", "url", url, "error", err.Error())
+		util.Logger.Error("[Minecraft] 服务端 jar 下载失败", "url", url, "error", err.Error())
 		return err
 	}
-	util.Logger.Info("[Minecraft] Server jar downloaded, extracting libraries")
+	util.Logger.Info("[Minecraft] 服务端 jar 已下载，正在提取依赖库")
 
 	// Extract embedded libraries from server jar
 	data, err := os.ReadFile(mcPath)
@@ -136,11 +137,11 @@ func (m *Minecraft) forgeSetupLegacy() error {
 
 	var versionData versionJSON
 
-	// Download server jar
+	// Download server jar (simple — same as old fastdownload)
 	serverErr := dl.DownloadFile(download.DownloadOptions{
 		URL:        url,
 		FilePath:   lowv,
-		UseChunked: true,
+		UseChunked: false,
 	}, nil)
 
 	// Get version JSON
@@ -168,7 +169,7 @@ func (m *Minecraft) forgeSetupLegacy() error {
 			dl.DownloadFile(download.DownloadOptions{
 				URL:        libURL,
 				FilePath:   libPath,
-				UseChunked: true,
+				UseChunked: false,
 			}, nil)
 		}
 	}
@@ -184,7 +185,7 @@ func (m *Minecraft) fabricSetup() error {
 	return dl.DownloadFile(download.DownloadOptions{
 		URL:        url,
 		FilePath:   mcPath,
-		UseChunked: true,
+		UseChunked: false,
 	}, nil)
 }
 

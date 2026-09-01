@@ -27,7 +27,7 @@ type MoveResult struct {
 // MoveClientSideMods moves client-side mods to the rubbish directory
 func (fo *FileOperator) MoveClientSideMods(clientMods []string) (*MoveResult, error) {
 	if len(clientMods) == 0 {
-		util.Logger.Info("No client-side mods to move")
+		util.Logger.Debug("没有需要移动的客户端模组")
 		return &MoveResult{}, nil
 	}
 
@@ -59,7 +59,7 @@ func (fo *FileOperator) MoveClientSideMods(clientMods []string) (*MoveResult, er
 
 		// Check if file exists
 		if _, err := os.Stat(absoluteSourcePath); err != nil {
-			util.Logger.Warn("File does not exist, skipping: " + absoluteSourcePath)
+			util.Logger.Warn("文件不存在，跳过: " + absoluteSourcePath)
 			result.Skipped++
 			continue
 		}
@@ -67,12 +67,12 @@ func (fo *FileOperator) MoveClientSideMods(clientMods []string) (*MoveResult, er
 		filename := filepath.Base(absoluteSourcePath)
 		targetPath := filepath.Join(absoluteMovePath, filename)
 
-		util.Logger.Info("Moving file: " + filename)
+		util.Logger.Debug("正在移动文件: " + filename)
 
 		// Copy file to target
 		err := util.CopyFile(absoluteSourcePath, targetPath)
 		if err != nil {
-			util.Logger.Error("Failed to copy file: " + err.Error())
+			util.Logger.Error("复制文件失败: " + err.Error())
 			result.Error++
 			continue
 		}
@@ -80,7 +80,7 @@ func (fo *FileOperator) MoveClientSideMods(clientMods []string) (*MoveResult, er
 		// Delete original file
 		err = os.Remove(absoluteSourcePath)
 		if err != nil {
-			util.Logger.Error("Failed to delete original file: " + err.Error())
+			util.Logger.Error("删除原文件失败: " + err.Error())
 			result.Error++
 			continue
 		}
@@ -88,11 +88,11 @@ func (fo *FileOperator) MoveClientSideMods(clientMods []string) (*MoveResult, er
 		result.Success++
 	}
 
-	util.Logger.Info("File movement complete",
-		"total", len(clientMods),
-		"success", result.Success,
-		"error", result.Error,
-		"skipped", result.Skipped)
+	util.Logger.Info("文件移动完成",
+		"总数", len(clientMods),
+		"成功", result.Success,
+		"失败", result.Error,
+		"跳过", result.Skipped)
 
 	return result, nil
 }

@@ -172,9 +172,9 @@ export const useDownloadStore = defineStore('download', () => {
 
   function handleServerInstallStart(data: any) {
     serverInstallInfo.value = {
-      modpackName: data.modpackName || '',
-      minecraftVersion: data.minecraftVersion || '',
-      loaderType: data.loaderType || '',
+      modpackName: data.modpackName || data.title || '',
+      minecraftVersion: data.minecraftVersion || data.mcVersion || '',
+      loaderType: data.loaderType || data.loader || '',
       loaderVersion: data.loaderVersion || '',
       currentStep: '',
       stepIndex: 0,
@@ -188,26 +188,32 @@ export const useDownloadStore = defineStore('download', () => {
   }
 
   function handleServerInstallStep(data: any) {
+    const stepIndex = data.stepIndex ?? data.current ?? 0;
+    const totalSteps = data.totalSteps ?? data.total ?? 0;
     serverInstallInfo.value.currentStep = data.step || '';
-    serverInstallInfo.value.stepIndex = data.stepIndex || 0;
-    serverInstallInfo.value.totalSteps = data.totalSteps || 0;
+    serverInstallInfo.value.stepIndex = stepIndex;
+    serverInstallInfo.value.totalSteps = totalSteps;
     if (data.message) serverInstallInfo.value.message = data.message;
+    if (totalSteps > 0) {
+      serverInstallProgress.value.percent = Math.round((stepIndex / totalSteps) * 100);
+    }
   }
 
   function handleServerInstallProgress(data: any) {
     if (data.progress !== undefined) serverInstallProgress.value.percent = data.progress;
     if (data.message) serverInstallInfo.value.message = data.message;
+    if (data.step) serverInstallInfo.value.currentStep = data.step;
   }
 
   function handleServerInstallComplete(data: any) {
     serverInstallProgress.value.percent = 100;
     serverInstallProgress.value.status = 'success';
     serverInstallInfo.value.status = 'completed';
-    serverInstallInfo.value.installPath = data.installPath || '';
+    serverInstallInfo.value.installPath = data.installPath || data.path || '';
     serverInstallInfo.value.duration = data.duration || 0;
     installCompleted.value = true;
     installing.value = false;
-    installPath.value = data.installPath || '';
+    installPath.value = data.installPath || data.path || '';
     taskCompletedAt.value = Date.now();
   }
 

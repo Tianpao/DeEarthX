@@ -33,6 +33,7 @@ type IConfig struct {
 	OAF           bool         `json:"oaf"`
 	AutoZip       bool         `json:"autoZip"`
 	ShowSponsorAd bool         `json:"showSponsorAd"`
+	LogLevel      string       `json:"logLevel"` // "info" | "debug"
 	Port          int          `json:"port,omitempty"`
 	Host          string       `json:"host,omitempty"`
 	JavaPath      string       `json:"javaPath,omitempty"`
@@ -54,6 +55,7 @@ var defaultConfig = IConfig{
 	OAF:           false,
 	AutoZip:       false,
 	ShowSponsorAd: true,
+	LogLevel:      "info",
 	Port:          37019,
 	Host:          "localhost",
 }
@@ -113,6 +115,14 @@ func getEnvString(key string, defaultVal string) string {
 	return val
 }
 
+func normalizeLogLevel(value string) string {
+	v := strings.ToLower(strings.TrimSpace(value))
+	if v == "debug" {
+		return "debug"
+	}
+	return "info"
+}
+
 // GetConfig returns the current configuration
 func GetConfig() *IConfig {
 	if cachedConfig != nil {
@@ -130,13 +140,14 @@ func GetConfig() *IConfig {
 	} else {
 		err = json.Unmarshal(data, &config)
 		if err != nil {
-			util.Logger.Error(fmt.Sprintf("Failed to parse config file: %v", err))
+			util.Logger.Error(fmt.Sprintf("解析配置文件失败: %v", err))
 			config = defaultConfig
 		}
 	}
 
 	// Apply environment variable overrides
 	mcimirror := getEnvString("DEEARTHX_MIRROR_MCIMIRROR", config.Mirror.MCIMirror)
+	logLevel := normalizeLogLevel(getEnvString("DEEARTHX_LOG_LEVEL", config.LogLevel))
 	envConfig := IConfig{
 		Mirror: MirrorConfig{
 			BMCLAPI:   getEnvBool("DEEARTHX_MIRROR_BMCLAPI", config.Mirror.BMCLAPI),
@@ -152,24 +163,32 @@ func GetConfig() *IConfig {
 		OAF:           getEnvBool("DEEARTHX_OAF", config.OAF),
 		AutoZip:       getEnvBool("DEEARTHX_AUTO_ZIP", config.AutoZip),
 		ShowSponsorAd: getEnvBool("DEEARTHX_SHOW_SPONSOR_AD", config.ShowSponsorAd),
+		LogLevel:      logLevel,
 		Port:          getEnvInt("DEEARTHX_PORT", config.Port),
 		Host:          getEnvString("DEEARTHX_HOST", config.Host),
 		JavaPath:      getEnvString("DEEARTHX_JAVA_PATH", config.JavaPath),
 	}
 
 	cachedConfig = &envConfig
-	util.Logger.Debug(fmt.Sprintf("Loaded config: %+v", envConfig))
+	util.SetLogLevel(envConfig.LogLevel)
+	util.Logger.Debug(fmt.Sprintf("已加载配置: %+v", envConfig))
 	return cachedConfig
 }
 
 // SaveConfig writes the configuration to file
 func SaveConfig(config *IConfig) error {
+	if config != nil {
+		config.LogLevel = normalizeLogLevel(config.LogLevel)
+	}
 	err := saveConfigFile(config)
 	if err != nil {
 		return err
 	}
 	cachedConfig = config
-	util.Logger.Info("Config saved successfully")
+	if config != nil {
+		util.SetLogLevel(config.LogLevel)
+	}
+	util.Logger.Debug("配置已保存")
 	return nil
 }
 

@@ -31,6 +31,7 @@ function defaultConfig(): IConfig {
     oaf: false,
     autoZip: false,
     showSponsorAd: true,
+    logLevel: 'info',
   };
 }
 

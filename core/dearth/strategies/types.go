@@ -29,9 +29,10 @@ type HashResponse map[string]struct {
 
 // ProjectInfo represents Modrinth project info
 type ProjectInfo struct {
-	ID          string `json:"id"`
-	ClientSide  string `json:"client_side"`
-	ServerSide  string `json:"server_side"`
+	ID         string `json:"id"`
+	Slug       string `json:"slug"`
+	ClientSide string `json:"client_side"`
+	ServerSide string `json:"server_side"`
 }
 
 // IFilterStrategy defines the filter strategy interface

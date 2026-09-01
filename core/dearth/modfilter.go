@@ -31,7 +31,7 @@ func NewModFilterService(modsPath, movePath string, config FilterConfig, progres
 
 // Filter executes the mod filtering pipeline
 func (mfs *ModFilterService) Filter() error {
-	util.Logger.Info("Starting mod filtering pipeline")
+	util.Logger.Info("开始模组筛选流程")
 	startTime := time.Now()
 
 	files, err := mfs.extractor.ExtractFilesInfo()
@@ -63,7 +63,7 @@ func (mfs *ModFilterService) Filter() error {
 		mfs.OnComplete(len(clientMods), result.Success, duration.Milliseconds())
 	}
 
-	util.Logger.Info("Mod filtering complete",
+	util.Logger.Info("模组筛选完成",
 		"clientMods", len(clientMods),
 		"moved", result.Success,
 		"skipped", result.Skipped,

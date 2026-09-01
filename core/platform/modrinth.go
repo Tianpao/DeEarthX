@@ -136,7 +136,7 @@ func (m *Modrinth) DownloadFiles(manifest map[string]interface{}, path string, p
 
 	// Download files
 	if len(downloadList) > 0 {
-		util.Logger.Info("[Modrinth] Built download list",
+		util.Logger.Info("[Modrinth] 已构建下载列表",
 			"manifestFiles", len(files),
 			"downloadList", len(downloadList))
 		dl := download.NewDownloadClient()

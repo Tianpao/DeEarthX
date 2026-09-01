@@ -164,6 +164,18 @@ const settings = computed<SettingCategory[]>(() => {
           path: 'showSponsorAd',
           defaultValue: true
         }
+      ],
+      selectItems: [
+        {
+          key: 'logLevel',
+          name: t('setting.system_log_level_name'),
+          description: t('setting.system_log_level_desc'),
+          path: 'logLevel',
+          options: [
+            { label: t('setting.system_log_level_info'), value: 'info' },
+            { label: t('setting.system_log_level_debug'), value: 'debug' }
+          ]
+        }
       ]
     }
   ];
@@ -197,8 +209,11 @@ function setConfigValue(path: string, newValue: boolean): void {
 
 function getSelectConfigValue(path: string): string {
   const value = settingStore.getConfigValue(path);
-  if (typeof value === 'string') {
+  if (typeof value === 'string' && value) {
     return value;
+  }
+  if (path === 'logLevel') {
+    return 'info';
   }
   console.warn(`Config value at path "${path}" is not a string:`, value);
   return 'on';

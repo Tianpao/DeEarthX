@@ -9,7 +9,7 @@ import (
 	"deearthx/core/util"
 )
 
-// ModrinthFilter checks mods by Modrinth project API
+// ModrinthFilter checks mods by Modrinth project API (project_id from pack metadata)
 type ModrinthFilter struct {
 	urls download.MirrorUrls
 }
@@ -26,70 +26,87 @@ func (mf *ModrinthFilter) Name() string {
 	return "ModrinthFilter"
 }
 
+func extractModrinthProjectID(infos []InfoFile) string {
+	for _, info := range infos {
+		if info.Name != "modrinth.index.json" && info.Name != "modrinth.json" {
+			continue
+		}
+		var data struct {
+			ProjectID string `json:"project_id"`
+		}
+		if err := json.Unmarshal([]byte(info.Data), &data); err != nil {
+			continue
+		}
+		if data.ProjectID != "" {
+			return data.ProjectID
+		}
+	}
+	return ""
+}
+
+func isModrinthClientMod(p ProjectInfo) bool {
+	// Align with old TS ModrinthFilter.isClientMod
+	return p.ClientSide == "required" ||
+		(p.ClientSide == "optional" && p.ServerSide == "unsupported")
+}
+
 // Filter returns client-side mods identified by Modrinth project API
 func (mf *ModrinthFilter) Filter(files []FileInfo) ([]string, error) {
-	modIDToFilename := make(map[string]string)
-	modIDs := []string{}
+	type pair struct {
+		filename  string
+		projectID string
+	}
+	pairs := []pair{}
+	seen := make(map[string]bool)
+	uniqueIDs := []string{}
 
-	// Extract mod IDs from info files
 	for _, file := range files {
-		for _, info := range file.Infos {
-			var config map[string]interface{}
-			if err := json.Unmarshal([]byte(info.Data), &config); err != nil {
-				continue
-			}
-
-			// Fabric mod.json
-			if id, ok := config["id"].(string); ok {
-				modIDs = append(modIDs, id)
-				modIDToFilename[id] = file.Filename
-			}
+		projectID := extractModrinthProjectID(file.Infos)
+		if projectID == "" {
+			continue
+		}
+		pairs = append(pairs, pair{filename: file.Filename, projectID: projectID})
+		if !seen[projectID] {
+			seen[projectID] = true
+			uniqueIDs = append(uniqueIDs, projectID)
 		}
 	}
 
-	if len(modIDs) == 0 {
+	if len(uniqueIDs) == 0 {
+		util.Logger.Debug("未找到 Modrinth 项目 ID")
 		return []string{}, nil
 	}
 
-	util.Logger.Debug("Checking mods with Modrinth project API", "count", len(modIDs))
+	util.Logger.Debug("找到 Modrinth 项目", "数量", len(uniqueIDs))
 
 	client := resty.New()
 	client.SetHeader("User-Agent", "DeEarth")
 
-	// Query projects
-	projectResp, err := client.R().
-		SetQueryParam("ids", "["+joinStrings(modIDs, ",")+"]").
-		Get(mf.urls.ModrinthURL + "/v2/projects")
-
+	projects, err := fetchModrinthProjects(client, mf.urls.ModrinthURL, uniqueIDs)
 	if err != nil {
-		util.Logger.Error("Modrinth project query failed: " + err.Error())
-		return nil, err
-	}
-
-	if projectResp.StatusCode() >= 400 {
-		util.Logger.Error("Modrinth API error: HTTP " + projectResp.Status())
+		util.Logger.Error("Modrinth 项目查询失败: " + err.Error())
 		return []string{}, nil
 	}
 
-	var projects []ProjectInfo
-	if err := json.Unmarshal(projectResp.Bytes(), &projects); err != nil {
-		return nil, err
+	projectMap := make(map[string]ProjectInfo, len(projects))
+	for _, p := range projects {
+		projectMap[p.ID] = p
 	}
 
-	// Find client-side only mods
 	clientMods := []string{}
-	for _, project := range projects {
-		if project.ClientSide == "required" && project.ServerSide == "unsupported" {
-			filename, exists := modIDToFilename[project.ID]
-			if exists {
-				clientMods = append(clientMods, filename)
-				util.Logger.Debug("Modrinth API marked as client mod",
-					"filename", filename,
-					"projectId", project.ID)
-			}
+	for _, item := range pairs {
+		project, ok := projectMap[item.projectID]
+		if !ok {
+			continue
+		}
+		if isModrinthClientMod(project) {
+			clientMods = append(clientMods, item.filename)
+			util.Logger.Debug("Modrinth 标记为客户端模组",
+				"filename", item.filename,
+				"projectId", item.projectID)
 		}
 	}
 
-	util.Logger.Debug("Modrinth check complete", "clientMods", len(clientMods))
+	util.Logger.Debug("Modrinth 检查完成", "clientMods", len(clientMods))
 	return clientMods, nil
 }

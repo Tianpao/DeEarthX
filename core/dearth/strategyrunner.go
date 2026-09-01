@@ -19,11 +19,11 @@ func RunFilterStrategies(files []FileInfo, config FilterConfig, progress Progres
 
 	// Priority 1: Galaxy Square (Dexpub) - highest authority
 	if config.Dexpub {
-		util.Logger.Info("Starting Galaxy Square (dexpub) check")
+		util.Logger.Debug("开始星系广场（dexpub）检查")
 		dexpubFilter := strategies.NewDexpubFilter()
 		dexpubMods, err := dexpubFilter.Filter(strategyFiles)
 		if err != nil {
-			util.Logger.Error("Dexpub check failed: " + err.Error())
+			util.Logger.Error("星系广场检查失败: " + err.Error())
 		} else {
 			for _, mod := range dexpubMods {
 				gsDecidedFiles[mod] = true
@@ -59,22 +59,22 @@ func RunFilterStrategies(files []FileInfo, config FilterConfig, progress Progres
 	var hashMods, modrinthMods []string
 
 	if config.Hashes {
-		util.Logger.Info("Starting Hash check")
+		util.Logger.Debug("开始哈希筛选")
 		hashFilter := strategies.NewHashFilter()
 		mods, err := hashFilter.Filter(unprocessedFiles)
 		if err != nil {
-			util.Logger.Error("Hash check failed: " + err.Error())
+			util.Logger.Error("哈希筛选失败: " + err.Error())
 		} else {
 			hashMods = mods
 		}
 	}
 
 	if config.Modrinth {
-		util.Logger.Info("Starting Modrinth API check")
+		util.Logger.Debug("开始 Modrinth API 检查")
 		modrinthFilter := strategies.NewModrinthFilter()
 		mods, err := modrinthFilter.Filter(unprocessedFiles)
 		if err != nil {
-			util.Logger.Error("Modrinth check failed: " + err.Error())
+			util.Logger.Error("Modrinth 检查失败: " + err.Error())
 		} else {
 			modrinthMods = mods
 		}
@@ -107,7 +107,7 @@ func RunFilterStrategies(files []FileInfo, config FilterConfig, progress Progres
 
 	// Priority 3: Mcmod API
 	if config.Mcmod {
-		util.Logger.Info("Starting Mcmod API check")
+		util.Logger.Debug("开始 Mcmod API 检查")
 		mcmodFiles := []strategies.FileInfo{}
 		for _, f := range strategyFiles {
 			if !skipMixinFiles[f.Filename] {
@@ -118,7 +118,7 @@ func RunFilterStrategies(files []FileInfo, config FilterConfig, progress Progres
 		mcmodFilter := strategies.NewMcmodFilter()
 		mods, err := mcmodFilter.Filter(mcmodFiles)
 		if err != nil {
-			util.Logger.Error("Mcmod check failed: " + err.Error())
+			util.Logger.Error("Mcmod 检查失败: " + err.Error())
 		} else {
 			for _, mod := range mods {
 				skipMixinFiles[mod] = true
@@ -134,7 +134,7 @@ func RunFilterStrategies(files []FileInfo, config FilterConfig, progress Progres
 	// Priority 4: Mixin (lowest priority)
 	// GS decided files and Hash/Modrinth detected client mods cannot be overridden by Mixin
 	if config.Mixins {
-		util.Logger.Info("Starting Mixin check")
+		util.Logger.Debug("开始 Mixin 检查")
 		mixinFiles := []strategies.FileInfo{}
 		for _, f := range strategyFiles {
 			if !skipMixinFiles[f.Filename] {
@@ -145,7 +145,7 @@ func RunFilterStrategies(files []FileInfo, config FilterConfig, progress Progres
 		mixinFilter := strategies.NewMixinFilter()
 		mods, err := mixinFilter.Filter(mixinFiles)
 		if err != nil {
-			util.Logger.Error("Mixin check failed: " + err.Error())
+			util.Logger.Error("Mixin 检查失败: " + err.Error())
 		} else {
 			clientMods = append(clientMods, mods...)
 		}
@@ -167,7 +167,7 @@ func RunFilterStrategies(files []FileInfo, config FilterConfig, progress Progres
 
 	result = ExcludeRequiredDependencies(result, files)
 
-	util.Logger.Info("Identified client-side mods", "count", len(result))
+	util.Logger.Info("已识别客户端模组", "数量", len(result))
 	return result, nil
 }
 

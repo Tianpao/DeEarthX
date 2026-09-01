@@ -30,7 +30,7 @@ func (fe *FileExtractor) ExtractFilesInfo() ([]FileInfo, error) {
 		return nil, err
 	}
 
-	util.Logger.Info("Extracting file info", "count", len(jarFiles))
+	util.Logger.Debug("正在提取模组文件信息", "数量", len(jarFiles))
 
 	files := []FileInfo{}
 
@@ -39,7 +39,7 @@ func (fe *FileExtractor) ExtractFilesInfo() ([]FileInfo, error) {
 
 		fileData, err := os.ReadFile(fullPath)
 		if err != nil {
-			util.Logger.Error("Failed to read file: " + fullPath + " - " + err.Error())
+			util.Logger.Error("读取文件失败: " + fullPath + " - " + err.Error())
 			continue
 		}
 
@@ -63,7 +63,7 @@ func (fe *FileExtractor) ExtractFilesInfo() ([]FileInfo, error) {
 		})
 	}
 
-	util.Logger.Info("File info extraction complete", "processed", len(files))
+	util.Logger.Debug("模组文件信息提取完成", "已处理", len(files))
 	return files, nil
 }
 

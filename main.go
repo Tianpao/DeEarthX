@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -23,6 +24,8 @@ func main() {
 	// Initialize utilities
 	util.InitLogger()
 	config.InitConfig()
+	cfg := config.GetConfig()
+	util.SetLogLevel(cfg.LogLevel)
 
 	// Create Wails application
 	app := application.New(application.Options{
@@ -46,6 +49,15 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
+	})
+
+	// Push info+ logs to frontend process log panel
+	util.SetUILogSink(func(level, message string) {
+		app.Event.Emit(dex.EventInfo, map[string]interface{}{
+			"level":   level,
+			"message": message,
+			"time":    time.Now().Format("15:04:05"),
+		})
 	})
 
 	// Register event types for type-safe bindings

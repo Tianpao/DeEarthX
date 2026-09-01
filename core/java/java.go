@@ -122,7 +122,7 @@ func CheckJava(javaPath string) JavaCheckResult {
 		RuntimeVersion: string(output),
 	}
 
-	util.Logger.Info(fmt.Sprintf("Detected Java: %+v", versionInfo))
+	util.Logger.Debug(fmt.Sprintf("检测到 Java: %+v", versionInfo))
 
 	return JavaCheckResult{
 		Exists:  true,

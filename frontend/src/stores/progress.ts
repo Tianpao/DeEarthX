@@ -71,6 +71,29 @@ export const useProgressStore = defineStore('progress', () => {
         duration: 0
     });
 
+    // 处理日志（仅 info 及以上）
+    const processLogs = ref<Array<{ id: number; time: string; level: string; message: string }>>([]);
+    let processLogSeq = 0;
+    const MAX_PROCESS_LOGS = 300;
+
+    function appendProcessLog(entry: { level?: string; message?: string; time?: string } | string) {
+        const message = typeof entry === 'string' ? entry : (entry?.message || '');
+        if (!message) return;
+        const level = typeof entry === 'string' ? 'info' : (entry.level || 'info');
+        const time = typeof entry === 'string'
+            ? new Date().toLocaleTimeString('zh-CN', { hour12: false })
+            : (entry.time || new Date().toLocaleTimeString('zh-CN', { hour12: false }));
+        processLogSeq += 1;
+        processLogs.value.push({ id: processLogSeq, time, level, message });
+        if (processLogs.value.length > MAX_PROCESS_LOGS) {
+            processLogs.value.splice(0, processLogs.value.length - MAX_PROCESS_LOGS);
+        }
+    }
+
+    function clearProcessLogs() {
+        processLogs.value = [];
+    }
+
     // 步骤项
     const stepItems = computed<Required<StepsProps>['items']>(() => [
         { title: t('home.step1_title'), description: t('home.step1_desc') },
@@ -109,6 +132,8 @@ export const useProgressStore = defineStore('progress', () => {
         startButtonDisabled.value = true;
         uploadDisabled.value = true;
         startTime.value = Date.now();
+        clearProcessLogs();
+        appendProcessLog({ level: 'info', message: t('home.start_production') });
     }
 
     function resetProgress() {
@@ -195,9 +220,11 @@ export const useProgressStore = defineStore('progress', () => {
     }
 
     // 进度更新方法
-    function updateUnzipProgress(result: { current: number; total: number }) {
-        unzipProgress.value.percent = Math.round((result.current / result.total) * 100);
-        if (result.current === result.total) {
+    function updateUnzipProgress(result: { current?: number; total?: number }) {
+        const current = result.current ?? 0;
+        const total = result.total || 1;
+        unzipProgress.value.percent = Math.round((current / total) * 100);
+        if (current === total && total > 0) {
             unzipProgress.value.status = 'success';
             setTimeout(() => {
                 unzipProgress.value.display = false;
@@ -205,8 +232,10 @@ export const useProgressStore = defineStore('progress', () => {
         }
     }
 
-    function updateDownloadProgress(result: { index: number; total: number }) {
-        downloadProgress.value.percent = Math.round((result.index / result.total) * 100);
+    function updateDownloadProgress(result: { index?: number; current?: number; total?: number }) {
+        const current = result.current ?? result.index ?? 0;
+        const total = result.total || 1;
+        downloadProgress.value.percent = Math.round((current / total) * 100);
         if (downloadProgress.value.percent === 100) {
             downloadProgress.value.status = 'success';
             setTimeout(() => {
@@ -221,10 +250,10 @@ export const useProgressStore = defineStore('progress', () => {
 
     function handleServerInstallStart(result: any) {
         serverInstallInfo.value = {
-            modpackName: result.modpackName,
-            minecraftVersion: result.minecraftVersion,
-            loaderType: result.loaderType,
-            loaderVersion: result.loaderVersion,
+            modpackName: result.modpackName || result.title || '',
+            minecraftVersion: result.minecraftVersion || result.mcVersion || '',
+            loaderType: result.loaderType || result.loader || '',
+            loaderVersion: result.loaderVersion || '',
             currentStep: '',
             stepIndex: 0,
             totalSteps: 0,
@@ -238,11 +267,13 @@ export const useProgressStore = defineStore('progress', () => {
     }
 
     function handleServerInstallStep(result: any) {
+        const stepIndex = result.stepIndex ?? result.current ?? 0;
+        const totalSteps = result.totalSteps ?? result.total ?? 0;
         serverInstallInfo.value.currentStep = result.step;
-        serverInstallInfo.value.stepIndex = result.stepIndex;
-        serverInstallInfo.value.totalSteps = result.totalSteps;
+        serverInstallInfo.value.stepIndex = stepIndex;
+        serverInstallInfo.value.totalSteps = totalSteps;
         serverInstallInfo.value.message = result.message || result.step;
-        const overallProgress = (result.stepIndex / result.totalSteps) * 100;
+        const overallProgress = totalSteps > 0 ? (stepIndex / totalSteps) * 100 : 0;
         serverInstallProgress.value.percent = Math.round(overallProgress);
     }
 
@@ -254,7 +285,7 @@ export const useProgressStore = defineStore('progress', () => {
 
     function handleServerInstallComplete(result: any) {
         serverInstallInfo.value.status = 'completed';
-        serverInstallInfo.value.installPath = result.installPath;
+        serverInstallInfo.value.installPath = result.installPath || result.path || '';
         serverInstallInfo.value.duration = result.duration;
         serverInstallInfo.value.message = t('home.server_install_completed');
         serverInstallProgress.value = { status: 'success', percent: 100, display: true };
@@ -266,8 +297,8 @@ export const useProgressStore = defineStore('progress', () => {
 
     function handleServerInstallError(result: any) {
         serverInstallInfo.value.status = 'error';
-        serverInstallInfo.value.error = result.error;
-        serverInstallInfo.value.message = result.error;
+        serverInstallInfo.value.error = result.error || result.message;
+        serverInstallInfo.value.message = result.error || result.message;
         serverInstallProgress.value = { status: 'exception', percent: serverInstallProgress.value.percent, display: true };
     }
 
@@ -287,15 +318,15 @@ export const useProgressStore = defineStore('progress', () => {
 
     function handleFilterModsProgress(result: any) {
         filterModsInfo.value.currentMod = result.current;
-        filterModsInfo.value.modName = result.modName;
-        const percent = Math.round((result.current / result.total) * 100);
+        filterModsInfo.value.modName = result.modName || result.name || '';
+        const percent = Math.round((result.current / (result.total || 1)) * 100);
         filterModsProgress.value.percent = percent;
     }
 
     function handleFilterModsComplete(result: any) {
         filterModsInfo.value.status = 'completed';
-        filterModsInfo.value.filteredCount = result.filteredCount;
-        filterModsInfo.value.movedCount = result.movedCount;
+        filterModsInfo.value.filteredCount = result.filteredCount ?? result.clientMods ?? 0;
+        filterModsInfo.value.movedCount = result.movedCount ?? result.success ?? 0;
         filterModsInfo.value.duration = result.duration;
         filterModsProgress.value = { status: 'success', percent: 100, display: true };
         setTimeout(() => {
@@ -392,6 +423,7 @@ export const useProgressStore = defineStore('progress', () => {
         filterModsProgress,
         serverInstallInfo,
         filterModsInfo,
+        processLogs,
         // 方法
         setDroppedFilePath,
         clearDroppedFilePath,
@@ -401,6 +433,8 @@ export const useProgressStore = defineStore('progress', () => {
         resetState,
         completeTask,
         checkAndRestoreState,
+        appendProcessLog,
+        clearProcessLogs,
         updateUnzipProgress,
         updateDownloadProgress,
         incrementStep,
