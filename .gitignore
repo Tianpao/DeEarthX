@@ -1,5 +1,5 @@
-# Logs
-logs
+﻿# Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,35 +7,46 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Current directory local artifacts
+.task/
+backend/
+bin/
+node_modules/
+go.sum
+config.json
+
+# Frontend / tooling
+dist/
+dist-ssr/
+frontend/bindings/
 *.local
-
-# Build output
-build/
-
-# Claude Code
-CLAUDE.md
-.claude/
-
-# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-*.zip
-Dex-v3-core.exe
-core-x86_64-pc-windows-msvc.exe
-config.json
+
+# Build installers & binaries (build/ keeps scripts & icons)
+build/*.exe
+build/*.zip
+build/bin/
 *.exe
 *.jar
-instance
+*.zip
 *.mrpack
+
+# App runtime data (also appear under bin/)
+instance/
 templates/
-package-lock.json
+.rubbish/
+
+# Go
+*.syso
+
+# Deprecated
+/template/

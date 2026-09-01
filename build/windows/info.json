@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "3.0.0.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "3.0.0",
+			"CompanyName": "Tianpao",
+			"FileDescription": "Minecraft Modpack to Server Converter",
+			"LegalCopyright": "(c) 2025, Tianpao",
+			"ProductName": "DeEarthX V3",
+			"Comments": "Convert modpacks to server files"
+		}
+	}
+}

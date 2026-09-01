@@ -2,7 +2,7 @@
 
 <br/>
 
-<img src="front/public/dex.png" height="80" width="80" alt="DeEarthX Logo"/>
+<img src="frontend/public/dex.png" height="80" width="80" alt="DeEarthX Logo"/>
 
 # DeEarthX V3
 
@@ -19,12 +19,12 @@
 <br/>
 
 <a href="https://qm.qq.com/q/7WI7AIL0Vq">
-  <img src="front/public/QQ.png" height="16" width="16" alt="QQ"/>
+  <img src="frontend/public/QQ.png" height="16" width="16" alt="QQ"/>
   Join QQ Group
 </a>
 &nbsp;&nbsp;·&nbsp;&nbsp;
 <a href="https://www.bilibili.com/video/BV1CZffB9ErD/?share_source=copy_web&vd_source=93ac910240591935807ae1d3f37c9b79">
-  <img src="front/public/bilibili.svg" height="16" width="16" alt="Bilibili"/>
+  <img src="frontend/public/bilibili.svg" height="16" width="16" alt="Bilibili"/>
   Watch Demo
 </a>
 
@@ -118,11 +118,11 @@ Built-in download mirrors for users in China:
 
 ```
   ┌─────────────┐     ┌──────────────┐     ┌─────────────────────────────────────┐
-  │  Drop .zip  │────>│  Frontend    │────>│  Backend Pipeline (Dex.Main)        │
+  │  Drop .zip  │────>│  Frontend    │────>│  Go Pipeline (Dex.ProcessModpack)   │
   │  or .mrpack │     │  (Vue 3)     │     │                                     │
   └─────────────┘     └──────┬───────┘     │  1. Extract modpack                 │
-                             │ Socket.IO   │  2. Detect platform (CF/MR)         │
-                             │             │  3. Unzip + Download mods (parallel) │
+                             │ Wails RPC   │  2. Detect platform (CF/MR)         │
+                             │ + Events    │  3. Unzip + Download mods (parallel) │
                              │             │  4. Run mod filter strategies        │
                              │             │  5. Install mod loader               │
                              │<────────────│  6. Done! (zip / open folder)        │
@@ -136,35 +136,33 @@ Built-in download mirrors for users in China:
 
 <table>
 <tr>
-<th>Backend</th>
+<th>Backend / Shell</th>
 <th>Frontend</th>
-<th>Packaging</th>
+<th>Build</th>
 </tr>
 <tr>
 <td>
 
-- TypeScript
-- Node.js (SEA → `core.exe`)
-- Express
-- Socket.IO
-- yauzl (zip processing)
-- p-map (concurrency)
+- Go
+- Wails v3 (desktop shell + RPC/Events)
+- Packages: `core/dex`, `platform`, `modloader`, `dearth`, `download`, …
 
 </td>
 <td>
 
 - Vue 3 (Composition API)
 - TypeScript
-- Tauri 2
 - Ant Design Vue
 - Tailwind CSS
 - Vue I18n
+- Pinia
 
 </td>
 <td>
 
-- Rollup (CJS bundle)
-- Node.js SEA (Single Executable)
+- Task / Taskfile
+- `wails3 dev` / `wails3 build`
+- Vite (frontend)
 
 </td>
 </tr>
@@ -195,25 +193,27 @@ Built-in download mirrors for users in China:
 
 ## Development
 
+Requires Go 1.22+, Node.js / pnpm, [Wails v3 CLI](https://v3.wails.io/), and optionally [Task](https://taskfile.dev/).
+
 ```bash
-# Install all dependencies
-pnpm install
+# Frontend deps
+cd frontend && pnpm install && cd ..
 
-# Type-check everything
-cd backend && pnpm exec tsc --noEmit && cd ../front && pnpm exec vue-tsc --noEmit
+# Dev mode (Wails + Vite)
+wails3 dev
+# or
+task dev
 
-# Run backend in dev mode
-cd backend && pnpm run test
+# Compile Go core packages only
+go build ./core/...
 
-# Run frontend dev server (port 9888)
-cd front && pnpm run dev
-
-# Tauri dev (Vite + Tauri window)
-cd front && pnpm run tauri-dev
-
-# Full production build
-pnpm run build
+# Production build / package
+wails3 build
+task build
+task package
 ```
+
+Default Vite port: `9245` (override with `WAILS_VITE_PORT`).
 
 ---
 
@@ -222,12 +222,12 @@ pnpm run build
 <table>
 <tr>
 <td align="center" width="50%">
-  <img src="front/public/tianpao.jpg" width="80" height="80" style="border-radius:50%" alt="Tianpao"/><br/>
+  <img src="frontend/public/tianpao.jpg" width="80" height="80" style="border-radius:50%" alt="Tianpao"/><br/>
   <b>Tianpao</b><br/>
   <sub>Core Development</sub>
 </td>
 <td align="center" width="50%">
-  <img src="front/public/xcc.jpg" width="80" height="80" style="border-radius:50%" alt="XCC"/><br/>
+  <img src="frontend/public/xcc.jpg" width="80" height="80" style="border-radius:50%" alt="XCC"/><br/>
   <b>XCC</b><br/>
   <sub>Feature Optimization</sub>
 </td>

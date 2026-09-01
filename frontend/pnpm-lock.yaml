@@ -6,7 +6,7 @@ settings:
 
 importers:
 
-  frontend:
+  .:
     dependencies:
       '@ant-design/icons-vue':
         specifier: ^7.0.1

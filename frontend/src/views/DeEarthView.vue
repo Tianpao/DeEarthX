@@ -1,0 +1,196 @@
+<script lang="ts" setup>
+import { onMounted, onUnmounted } from 'vue';
+import { message } from 'ant-design-vue';
+import { FileSearchOutlined, FolderOpenOutlined } from '@ant-design/icons-vue';
+import { Events } from '@wailsio/runtime';
+import { useI18n } from 'vue-i18n';
+import { storeToRefs } from 'pinia';
+import { useDeearthStore } from '@/stores/deearth';
+import { ModCheckService, DialogService } from '@/bindings/deearthx/core/services';
+import { eventData } from '@/utils/wailsEvent';
+
+const { t } = useI18n();
+const store = useDeearthStore();
+
+const {
+    selectedFolder,
+    bundleName,
+    checking,
+    results,
+    showResults,
+    progress,
+    showProgress
+} = storeToRefs(store);
+
+let listenersSetup = false;
+
+function setupListeners() {
+    if (listenersSetup) return;
+    listenersSetup = true;
+
+    Events.On("modcheck_start", (ev: any) => {
+        const data = eventData(ev);
+        showProgress.value = true;
+        store.updateProgress({
+            current: 0,
+            total: data.totalMods || 0,
+            modName: ''
+        });
+    });
+
+    Events.On("modcheck_progress", (ev: any) => {
+        const data = eventData(ev);
+        store.updateProgress({
+            current: data.current,
+            total: data.total,
+            modName: data.modName
+        });
+    });
+
+    Events.On("modcheck_complete", (ev: any) => {
+        const data = eventData(ev);
+        message.success(t('deearth.check_complete', { total: data.results?.length || 0, filtered: data.filteredCount }));
+        store.completeCheck(data);
+    });
+
+    Events.On("modcheck_error", (ev: any) => {
+        const data = eventData(ev);
+        message.error(t('deearth.check_failed', { error: data.error }));
+        store.errorCheck();
+    });
+}
+
+onMounted(() => {
+    setupListeners();
+    store.checkAndRestoreState();
+});
+
+async function selectFolder() {
+    try {
+        const selected = await DialogService.OpenDirectory();
+        if (selected) {
+            store.setSelectedFolder(selected);
+            message.success(t('deearth.select_folder_success', { path: selected }));
+        }
+    } catch (error) {
+        console.error('选择文件夹失败:', error);
+        message.error(t('deearth.select_folder_failed'));
+    }
+}
+
+async function handleCheck() {
+    if (!selectedFolder.value) {
+        message.warning(t('deearth.please_select_folder'));
+        return;
+    }
+    if (!bundleName.value.trim()) {
+        message.warning(t('deearth.please_enter_name'));
+        return;
+    }
+
+    store.startCheck();
+    ModCheckService.StartModCheck(selectedFolder.value, bundleName.value.trim());
+}
+</script>
+
+<template>
+    <div class="tw:h-full tw:w-full tw:overflow-y-auto tw:p-6">
+        <div class="tw:mx-auto tw:flex tw:w-full tw:max-w-5xl tw:flex-col tw:gap-6">
+            <div>
+                <h1 class="tw:text-2xl tw:font-semibold tw:text-slate-900">{{ t('deearth.title') }}</h1>
+                <p class="tw:mt-1 tw:text-sm tw:text-slate-500">{{ t('deearth.subtitle') }}</p>
+            </div>
+
+            <section class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
+                <div class="tw:grid tw:gap-4 lg:tw:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
+                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.select_mods_folder') }}</div>
+                        <a-button type="default" size="large" block @click="selectFolder">
+                            <template #icon><FolderOpenOutlined /></template>
+                            {{ t('deearth.select_mods_folder') }}
+                        </a-button>
+                        <div v-if="selectedFolder" class="tw:mt-3 tw:rounded-lg tw:border tw:border-slate-200 tw:bg-white tw:p-3 tw:text-sm tw:text-slate-600">
+                            <span class="tw:font-medium">{{ t('deearth.selected') }}:</span> {{ selectedFolder }}
+                        </div>
+                    </div>
+
+                    <div class="tw:rounded-lg tw:border tw:border-slate-200 tw:bg-slate-50 tw:p-4">
+                        <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.bundle_info') }}</div>
+                        <a-input
+                            v-model:value="bundleName"
+                            :placeholder="t('deearth.bundle_name_placeholder')"
+                            size="large"
+                            allow-clear
+                        />
+                        <div class="tw:mt-2 tw:text-xs tw:text-slate-400">
+                            {{ t('deearth.bundle_name_hint', { name: bundleName || t('deearth.bundle_name_placeholder') }) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tw:mt-4 tw:flex tw:flex-wrap tw:gap-3">
+                    <a-button
+                        type="primary"
+                        size="large"
+                        :loading="checking"
+                        @click="handleCheck"
+                        :disabled="checking || !selectedFolder || !bundleName.trim()"
+                    >
+                        <template #icon><FileSearchOutlined /></template>
+                        {{ checking ? t('deearth.checking') : t('deearth.start_check') }}
+                    </a-button>
+                </div>
+            </section>
+
+            <section v-if="showProgress && checking" class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
+                <div class="tw:mb-3 tw:text-sm tw:font-medium tw:text-slate-800">{{ t('deearth.check_progress') }}</div>
+                <a-progress :percent="progress.percent" :status="progress.percent === 100 ? 'success' : 'active'" />
+                <div class="tw:mt-2 tw:text-sm tw:text-slate-500">
+                    {{ t('deearth.processing', { name: progress.modName, current: progress.current, total: progress.total }) }}
+                </div>
+            </section>
+
+            <section v-if="showResults" class="tw:rounded-xl tw:border tw:border-slate-200 tw:bg-white tw:p-5 tw:shadow-sm">
+                <div class="tw:mb-4 tw:flex tw:flex-col tw:gap-1 md:tw:flex-row md:tw:items-end md:tw:justify-between">
+                    <div>
+                        <h2 class="tw:text-lg tw:font-semibold tw:text-slate-900">{{ t('deearth.check_results') }}</h2>
+                        <p class="tw:text-sm tw:text-slate-500">{{ t('deearth.check_results_desc') }}</p>
+                    </div>
+                </div>
+
+                <div v-if="results.length > 0" class="tw:overflow-x-auto">
+                    <a-table
+                        :dataSource="results"
+                        :pagination="false"
+                        :scroll="{ y: 320, x: 'max-content' }"
+                        size="small"
+                        :bordered="true"
+                    >
+                        <a-table-column :title="t('deearth.mod_info')" key="modInfo" :width="280">
+                            <template #default="{ record }">
+                                <div class="tw:min-w-0 tw:overflow-hidden">
+                                    <div class="tw:truncate tw:text-sm tw:font-medium tw:text-slate-800">{{ record.filename }}</div>
+                                </div>
+                            </template>
+                        </a-table-column>
+                        <a-table-column :title="t('deearth.mod_type')" key="type" :width="120">
+                            <template #default="{ record }">
+                                <a-tag v-if="record.clientSide === 'required' || record.clientSide === 'optional'" color="purple">
+                                    {{ t('deearth.client_mod') }}
+                                </a-tag>
+                                <a-tag v-else-if="record.serverSide === 'required' || record.serverSide === 'optional'" color="blue">
+                                    {{ t('deearth.server_mod') }}
+                                </a-tag>
+                                <a-tag v-else color="gray">
+                                    {{ t('deearth.unknown') }}
+                                </a-tag>
+                            </template>
+                        </a-table-column>
+                    </a-table>
+                </div>
+
+                <a-empty v-else :description="t('deearth.no_mods_found')" />
+            </section>
+        </div>
+    </div>
+</template>

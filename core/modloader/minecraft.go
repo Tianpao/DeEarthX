@@ -1,0 +1,201 @@
+package modloader
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"resty.dev/v3"
+
+	"deearthx/core/config"
+	"deearthx/core/download"
+	"deearthx/core/java"
+	"deearthx/core/util"
+	"deearthx/core/ziputil"
+)
+
+// Minecraft handles vanilla Minecraft server installation
+type Minecraft struct {
+	loader        string
+	minecraft     string
+	loaderVersion string
+	path          string
+}
+
+// NewMinecraft creates a new Minecraft handler
+func NewMinecraft(loader, minecraft, lv, path string) *Minecraft {
+	return &Minecraft{
+		loader:        loader,
+		minecraft:     minecraft,
+		loaderVersion: lv,
+		path:          path,
+	}
+}
+
+// Setup installs the Minecraft server
+func (m *Minecraft) Setup(progress ProgressCallback) error {
+	// Create eula.txt
+	if err := m.createEula(); err != nil {
+		return err
+	}
+
+	cfg := config.GetConfig()
+
+	// Check if BMCLAPI mirror is enabled
+	if !cfg.Mirror.BMCLAPI {
+		return nil
+	}
+
+	// Install based on loader type
+	switch m.loader {
+	case "forge", "neoforge":
+		return m.forgeSetup()
+	case "fabric", "fabric-loader":
+		return m.fabricSetup()
+	}
+
+	return nil
+}
+
+// Installer is empty for vanilla Minecraft
+func (m *Minecraft) Installer() error {
+	return nil
+}
+
+// Install is empty for vanilla Minecraft
+func (m *Minecraft) Install() error {
+	return nil
+}
+
+func (m *Minecraft) forgeSetup() error {
+	// For MC 1.18+, we need to handle embedded libraries
+	if java.VersionCompare(m.minecraft, "1.18") > 0 {
+		return m.forgeSetupModern()
+	}
+	return m.forgeSetupLegacy()
+}
+
+func (m *Minecraft) forgeSetupModern() error {
+	// Download server jar
+	mcPath := filepath.Join(m.path, "libraries", "net", "minecraft", "server", m.minecraft, "server-"+m.minecraft+".jar")
+	url := download.GetBMCLAPIPrefix() + "/version/" + m.minecraft + "/server"
+
+	util.Logger.Info("[Minecraft] 正在下载服务端 jar", "版本", m.minecraft)
+	dl := download.NewDownloadClient()
+	// Match old TS fastdownload: simple GET for BMCLAPI server jars (chunked is flaky)
+	err := dl.DownloadFile(download.DownloadOptions{
+		URL:        url,
+		FilePath:   mcPath,
+		UseChunked: false,
+	}, nil)
+	if err != nil {
+		util.Logger.Error("[Minecraft] 服务端 jar 下载失败", "url", url, "error", err.Error())
+		return err
+	}
+	util.Logger.Info("[Minecraft] 服务端 jar 已下载，正在提取依赖库")
+
+	// Extract embedded libraries from server jar
+	data, err := os.ReadFile(mcPath)
+	if err != nil {
+		return err
+	}
+
+	entries, err := ziputil.ReadZip(data)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name, "META-INF/libraries/") && !strings.HasSuffix(entry.Name, "/") {
+			destPath := filepath.Join(m.path, "libraries", strings.TrimPrefix(entry.Name, "META-INF/libraries/"))
+			os.MkdirAll(filepath.Dir(destPath), 0755)
+			os.WriteFile(destPath, entry.Data, 0644)
+		}
+	}
+
+	return nil
+}
+
+func (m *Minecraft) forgeSetupLegacy() error {
+	// Download server jar
+	lowv := filepath.Join(m.path, "minecraft_server."+m.minecraft+".jar")
+	url := download.GetBMCLAPIPrefix() + "/version/" + m.minecraft + "/server"
+
+	dl := download.NewDownloadClient()
+
+	// Download server and version json concurrently
+	type versionJSON struct {
+		Libraries []struct {
+			Downloads struct {
+				Artifact struct {
+					Path string `json:"path"`
+				} `json:"artifact"`
+			} `json:"downloads"`
+		} `json:"libraries"`
+	}
+
+	var versionData versionJSON
+
+	// Download server jar (simple — same as old fastdownload)
+	serverErr := dl.DownloadFile(download.DownloadOptions{
+		URL:        url,
+		FilePath:   lowv,
+		UseChunked: false,
+	}, nil)
+
+	// Get version JSON
+	client := resty.New()
+	resp, err := client.R().SetHeader("User-Agent", "DeEarthX").Get(
+		download.GetBMCLAPIPrefix() + "/version/" + m.minecraft + "/json")
+	if err == nil && resp.StatusCode() == 200 {
+		json.Unmarshal(resp.Bytes(), &versionData)
+	}
+
+	if serverErr != nil {
+		return serverErr
+	}
+
+	// Download libraries for 1.12.x and newer
+	if len(versionData.Libraries) > 0 && java.VersionCompare(m.minecraft, "1.12.2") > 0 {
+		for _, lib := range versionData.Libraries {
+			if lib.Downloads.Artifact.Path == "" {
+				continue
+			}
+
+			libPath := filepath.Join(m.path, "libraries", lib.Downloads.Artifact.Path)
+			libURL := download.GetBMCLAPIPrefix() + "/maven/" + lib.Downloads.Artifact.Path
+
+			dl.DownloadFile(download.DownloadOptions{
+				URL:        libURL,
+				FilePath:   libPath,
+				UseChunked: false,
+			}, nil)
+		}
+	}
+
+	return nil
+}
+
+func (m *Minecraft) fabricSetup() error {
+	mcPath := filepath.Join(m.path, "server.jar")
+	url := download.GetBMCLAPIPrefix() + "/version/" + m.minecraft + "/server"
+
+	dl := download.NewDownloadClient()
+	return dl.DownloadFile(download.DownloadOptions{
+		URL:        url,
+		FilePath:   mcPath,
+		UseChunked: false,
+	}, nil)
+}
+
+func (m *Minecraft) createEula() error {
+	if err := os.MkdirAll(m.path, 0755); err != nil {
+		return err
+	}
+	content := `#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).
+#Generated by DeEarthX(QQ group:559349662) Tianpao:(https://space.bilibili.com/1728953419)
+#DeEarthX (https://bbsmc.net/software/dearthx)
+eula=true`
+	return os.WriteFile(filepath.Join(m.path, "eula.txt"), []byte(content), 0644)
+}
