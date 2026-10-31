@@ -16,14 +16,14 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
  * ProcessModpack runs the full pipeline on an in-memory modpack buffer.
  * Returns the instance install path immediately; progress is reported via Wails events.
  */
-export function ProcessModpack(buffer: string | null, filename: string, mode: string): $CancellablePromise<string> {
-    return $Call.ByID(3632742208, buffer, filename, mode);
+export function ProcessModpack(buffer: string | null, filename: string, mode: string, templateID: string): $CancellablePromise<string> {
+    return $Call.ByID(3632742208, buffer, filename, mode, templateID);
 }
 
 /**
  * ProcessModpackFromPath reads a modpack file from disk and runs the full pipeline.
  * Returns the instance install path immediately; progress is reported via Wails events.
  */
-export function ProcessModpackFromPath(path: string, mode: string): $CancellablePromise<string> {
-    return $Call.ByID(3190158775, path, mode);
+export function ProcessModpackFromPath(path: string, mode: string, templateID: string): $CancellablePromise<string> {
+    return $Call.ByID(3190158775, path, mode, templateID);
 }

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { Events } from '@wailsio/runtime';
 import { useProgressStore } from '@/stores/progress';
 import { useErrorHandler } from '@/composables/useErrorHandler';
+import { notifyTaskComplete } from '@/composables/useProgress';
 import * as ModpackService from '&/dex/backend/download/modpackservice';
 
 export function useTaskProcessor() {
@@ -54,7 +55,9 @@ export function useTaskProcessor() {
 
         try {
             // Call the Wails binding directly — no HTTP, no Socket.IO
-            await ModpackService.ProcessModpackFromPath(actualPath, store.selectedMode);
+            await ModpackService.ProcessModpackFromPath(
+                actualPath, store.selectedMode, store.selectedMode === 'server' ? store.selectedTemplate : '0'
+            );
         } catch (error: any) {
             console.error('Failed to start modpack processing:', error);
             message.error(t('home.request_failed'));
@@ -124,6 +127,11 @@ export function useTaskProcessor() {
             }
 
             store.completeTask();
+            // Exactly one native notification for the actual pack completion event.
+            const body = store.selectedMode === 'server'
+                ? t('home.server_install_completed') + ` ${t('home.server_install_duration')}: ${time}s`
+                : t('home.production_complete', { time });
+            void notifyTaskComplete(t('common.app_name'), body);
         }));
 
         cleanups.push(Events.On('pack_error', (event: any) => {

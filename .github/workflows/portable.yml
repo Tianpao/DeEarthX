@@ -1,0 +1,175 @@
+name: Portable CI and release
+
+on:
+  pull_request:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+# PRs (including forks) never receive a write token. No pull_request_target.
+permissions:
+  contents: read
+
+concurrency:
+  group: portable-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+
+jobs:
+  build:
+    name: ${{ matrix.platform }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            arch: amd64
+            runner: windows-2022
+            asset: deearthx-windows-amd64.zip
+          - platform: darwin
+            arch: arm64
+            runner: macos-15
+            asset: deearthx-darwin-arm64.app.zip
+          - platform: darwin
+            arch: amd64
+            runner: macos-15-intel
+            asset: deearthx-darwin-amd64.app.zip
+          - platform: linux
+            arch: amd64
+            runner: ubuntu-24.04
+            asset: deearthx-linux-amd64.tar.gz
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI: 'true'
+      # Also freezes the plain "pnpm install" invoked by existing Taskfiles.
+      npm_config_frozen_lockfile: 'true'
+      GOTOOLCHAIN: local
+      PLATFORM: ${{ matrix.platform }}
+      TARGET_ARCH: ${{ matrix.arch }}
+      ASSET: ${{ matrix.asset }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Go from go.mod
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.20.0'
+      - name: Set up pinned pnpm
+        uses: pnpm/action-setup@a748cb3f8ad822c9e6e0004d9b53e64315f7dfda # v4.1.0
+        with:
+          version: '10.28.2'
+          run_install: false
+      - name: Validate CI helper offline
+        run: node .github/scripts/portable-ci.test.mjs
+      - name: Linux native dependencies (Wails alpha2.106 defaults to GTK4)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+          pkg-config --modversion gtk4 webkitgtk-6.0
+      - name: Test portable release helpers
+        run: node .github/scripts/portable-ci.test.mjs
+      - name: Install exactly the Wails module CLI
+        run: node .github/scripts/portable-ci.mjs install-wails
+      - name: Install locked frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Build portable target using existing Taskfiles
+        run: |
+          case "$PLATFORM" in
+            windows) wails3 task windows:build ARCH="$TARGET_ARCH" PACKAGE_MANAGER=pnpm ;;
+            darwin) wails3 task darwin:package ARCH="$TARGET_ARCH" PACKAGE_MANAGER=pnpm ;;
+            linux) wails3 task linux:build ARCH="$TARGET_ARCH" PACKAGE_MANAGER=pnpm ;;
+            *) exit 1 ;;
+          esac
+      - name: Go tests
+        run: go test ./...
+      - name: Ensure dependency manifests were not rewritten
+        run: git diff --exit-code -- go.mod go.sum frontend/package.json frontend/pnpm-lock.yaml
+      - name: Archive Windows executable only
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (!(Test-Path -LiteralPath bin/deearthx.exe -PathType Leaf)) { throw 'Missing portable exe' }
+          New-Item -ItemType Directory -Path dist -ErrorAction Stop | Out-Null
+          Compress-Archive -LiteralPath bin/deearthx.exe -DestinationPath "dist/$env:ASSET" -ErrorAction Stop
+      - name: Archive macOS app bundle (preserve permissions and signature)
+        if: runner.os == 'macOS'
+        run: |
+          test -x bin/deearthx.app/Contents/MacOS/deearthx
+          test "$(lipo -archs bin/deearthx.app/Contents/MacOS/deearthx)" = "$(if [ "$TARGET_ARCH" = amd64 ]; then echo x86_64; else echo arm64; fi)"
+          codesign --verify --deep --strict bin/deearthx.app
+          mkdir dist
+          ditto -c -k --sequesterRsrc --keepParent bin/deearthx.app "dist/$ASSET"
+      - name: Archive Linux executable only
+        if: runner.os == 'Linux'
+        run: |
+          test -x bin/deearthx
+          mkdir dist
+          tar -czf "dist/$ASSET" -C bin deearthx
+      - name: Create SHA-256 sidecar
+        run: node .github/scripts/portable-ci.mjs checksum "$ASSET"
+      - name: Upload only allowlisted portable archive and checksum
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: portable-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/${{ matrix.asset }}
+            dist/${{ matrix.asset }}.sha256
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          include-hidden-files: false
+
+  release:
+    name: Publish verified portable release
+    needs: build
+    # A manual run on a tag validates only; only a v-tag push publishes.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && needs.build.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout trusted tag scripts (no credentials persisted)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.20.0'
+      - name: Download artifacts from this run only
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: portable-*
+          path: dist
+          merge-multiple: true
+      - name: Enforce exact asset set and recheck hashes
+        run: node .github/scripts/portable-ci.mjs release-manifest
+      - name: Publish all archives and SHA-256 files
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # An existing release is deliberately not overwritten on reruns.
+          gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --generate-notes \
+            dist/deearthx-windows-amd64.zip dist/deearthx-windows-amd64.zip.sha256 \
+            dist/deearthx-darwin-arm64.app.zip dist/deearthx-darwin-arm64.app.zip.sha256 \
+            dist/deearthx-darwin-amd64.app.zip dist/deearthx-darwin-amd64.app.zip.sha256 \
+            dist/deearthx-linux-amd64.tar.gz dist/deearthx-linux-amd64.tar.gz.sha256 \
+            dist/SHA256SUMS

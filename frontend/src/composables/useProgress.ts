@@ -2,8 +2,19 @@ import { ref, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import type { StepsProps } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
-import { sendNotification } from '@tauri-apps/plugin-notification';
+import { RequestNotificationAuthorization, SendNotification } from '&/github.com/wailsapp/wails/v3/pkg/services/notifications/notificationservice';
 import type { ProgressStatus, ServerInstallInfo, FilterModsInfo } from '@/types/progress';
+
+// Best effort: notification errors must never interrupt task completion.
+export async function notifyTaskComplete(title: string, body: string): Promise<void> {
+    try {
+        if (await RequestNotificationAuthorization()) {
+            await SendNotification({ id: crypto.randomUUID(), title, body });
+        }
+    } catch (error) {
+        console.warn('Task completed, but native notification failed:', error);
+    }
+}
 
 export function useProgress() {
     const { t } = useI18n();
@@ -112,7 +123,7 @@ export function useProgress() {
         const timeSpent = Math.round(result / 1000);
         currentStep.value++;
         message.success(t('home.production_complete', { time: timeSpent }));
-        sendNotification({ title: t('common.app_name'), body: t('home.production_complete', { time: timeSpent }) });
+        void notifyTaskComplete(t('common.app_name'), t('home.production_complete', { time: timeSpent }));
     }
 
     function handleServerInstallStart(result: any) {
@@ -160,7 +171,7 @@ export function useProgress() {
 
         const timeSpent = Math.round(result.duration / 1000);
         message.success(t('home.server_install_completed') + ` ${t('home.server_install_duration')}: ${timeSpent}s`);
-        sendNotification({ title: t('common.app_name'), body: t('home.production_complete', { time: timeSpent }) });
+        void notifyTaskComplete(t('common.app_name'), t('home.production_complete', { time: timeSpent }));
 
         setTimeout(() => {
             serverInstallProgress.value.display = false;

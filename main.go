@@ -6,14 +6,15 @@ import (
 	"os"
 	"time"
 
-	i "dex/backend/information"
 	d "dex/backend/dearth"
 	dl "dex/backend/download"
 	e "dex/backend/events"
+	i "dex/backend/information"
 	tmpl "dex/backend/template"
 	u "dex/backend/utils"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -46,12 +47,13 @@ func main() {
 		Description: "DeEarthX",
 		Services: []application.Service{
 			application.NewService(i.NewSponsorService()),
+			application.NewService(notifications.New()),
 			application.NewService(d.NewGalaxy()),
-				application.NewService(d.NewModCheckService()),
+			application.NewService(d.NewModCheckService()),
 			application.NewService(u.NewConfigService()),
 			application.NewService(dl.NewDownloadService()),
-				application.NewService(dl.NewModpackService()),
-				application.NewService(tmpl.NewTemplateService()),
+			application.NewService(dl.NewModpackService()),
+			application.NewService(tmpl.NewTemplateService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

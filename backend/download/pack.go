@@ -43,7 +43,7 @@ const totalSteps = 5
 
 // ProcessModpackFromPath reads a modpack file from disk and runs the full pipeline.
 // Returns the instance install path immediately; progress is reported via Wails events.
-func (s *ModpackService) ProcessModpackFromPath(path string, mode string) (string, error) {
+func (s *ModpackService) ProcessModpackFromPath(path string, mode string, templateID string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("modpack path is required")
 	}
@@ -56,12 +56,12 @@ func (s *ModpackService) ProcessModpackFromPath(path string, mode string) (strin
 		return "", fmt.Errorf("failed to read modpack file: %w", err)
 	}
 
-	return s.start(buffer, path, mode)
+	return s.start(buffer, path, mode, templateID)
 }
 
 // ProcessModpack runs the full pipeline on an in-memory modpack buffer.
 // Returns the instance install path immediately; progress is reported via Wails events.
-func (s *ModpackService) ProcessModpack(buffer []byte, filename string, mode string) (string, error) {
+func (s *ModpackService) ProcessModpack(buffer []byte, filename string, mode string, templateID string) (string, error) {
 	if len(buffer) == 0 {
 		return "", fmt.Errorf("modpack buffer is empty")
 	}
@@ -69,11 +69,16 @@ func (s *ModpackService) ProcessModpack(buffer []byte, filename string, mode str
 		mode = ModeServer
 	}
 
-	return s.start(buffer, filename, mode)
+	return s.start(buffer, filename, mode, templateID)
 }
 
 // start kicks off the async pipeline goroutine and returns the install path.
-func (s *ModpackService) start(buffer []byte, filename string, mode string) (string, error) {
+func (s *ModpackService) start(buffer []byte, filename string, mode string, templateID string) (string, error) {
+	if mode == ModeServer {
+		if _, err := modloader.TemplateDataPath(templateID); err != nil {
+			return "", err
+		}
+	}
 	instanceName := sanitizeInstanceName(filename)
 	installPath := filepath.Join(utils.GetAppDir(), "instance", instanceName)
 
@@ -81,14 +86,14 @@ func (s *ModpackService) start(buffer []byte, filename string, mode string) (str
 		return "", fmt.Errorf("failed to create instance directory: %w", err)
 	}
 
-	go s.runPipeline(buffer, filename, mode, instanceName, installPath)
+	go s.runPipeline(buffer, filename, mode, instanceName, installPath, templateID)
 
 	return installPath, nil
 }
 
 // runPipeline is the core orchestration, executed in a goroutine.
 // Each phase emits pack_step/pack_progress events; failures emit pack_error.
-func (s *ModpackService) runPipeline(buffer []byte, filename, mode, instanceName, installPath string) {
+func (s *ModpackService) runPipeline(buffer []byte, filename, mode, instanceName, installPath, templateID string) {
 	startTime := time.Now()
 
 	fail := func(step string, err error) {
@@ -197,7 +202,7 @@ func (s *ModpackService) runPipeline(buffer []byte, filename, mode, instanceName
 
 	// --- Phase 5: Install modloader ---
 	emitStep("安装加载器", 4)
-	if err := s.installLoader(info, installPath, mode); err != nil {
+	if err := s.installLoader(info, installPath, mode, templateID); err != nil {
 		fail("安装加载器失败", err)
 		return
 	}
@@ -259,7 +264,7 @@ func (s *ModpackService) filterMods(installPath string) error {
 }
 
 // installLoader runs the appropriate modloader installation for the mode.
-func (s *ModpackService) installLoader(info *platform.ModpackInfo, installPath, mode string) error {
+func (s *ModpackService) installLoader(info *platform.ModpackInfo, installPath, mode, templateID string) error {
 	loader := info.Loader
 	if loader == "" {
 		return fmt.Errorf("no modloader specified in modpack")
@@ -268,7 +273,7 @@ func (s *ModpackService) installLoader(info *platform.ModpackInfo, installPath, 
 	if mode == ModeServer {
 		// Server mode: full setup (Minecraft server jar + loader)
 		// MLSetup handles both: Minecraft.Setup() then Loader.Setup()
-		return modloader.MLSetup(loader, info.Minecraft, info.LoaderVersion, installPath)
+		return modloader.MLSetup(loader, info.Minecraft, info.LoaderVersion, installPath, templateID)
 	}
 
 	// Client mode: lightweight install (download installer + write scripts)

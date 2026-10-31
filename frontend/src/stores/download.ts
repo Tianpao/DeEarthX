@@ -83,7 +83,7 @@ export const useDownloadStore = defineStore('download', () => {
       const data = await DownloadService.FetchMcVersions();
       if (data?.versions) {
         mcVersions.value = data.versions.filter(
-          (v: MinecraftVersion) => v.type === 'release'
+          (v): v is typeof v & MinecraftVersion => v.type === 'release'
         );
       }
     } catch { mcVersions.value = []; }

@@ -38,36 +38,8 @@ func MLSetup(ml, mcv, mlv, path string, template ...string) error {
 	}
 
 	if tmpl != "" && tmpl != "0" {
-		// Apply template: copy template files to install directory
-		templatePath := filepath.Join(GetAppDir(), "templates", tmpl)
-		dataPath := filepath.Join(templatePath, "data")
-
-		err := filepath.Walk(dataPath, func(srcPath string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return nil
-			}
-
-			relPath, _ := filepath.Rel(dataPath, srcPath)
-			destPath := filepath.Join(path, relPath)
-			destDir := filepath.Dir(destPath)
-
-			if err := os.MkdirAll(destDir, 0o755); err != nil {
-				return err
-			}
-
-			data, err := os.ReadFile(srcPath)
-			if err != nil {
-				return err
-			}
-
-			return os.WriteFile(destPath, data, 0o644)
-		})
-
-		if err != nil {
-			return fmt.Errorf("failed to apply template %s: %w", tmpl, err)
+		if err := applyTemplate(tmpl, path); err != nil {
+			return err
 		}
 	} else {
 		// Step 1: Install Minecraft server
@@ -85,8 +57,10 @@ func MLSetup(ml, mcv, mlv, path string, template ...string) error {
 		}
 	}
 
-	// Cleanup installer files and logs
-	cleanupInstallFiles(path)
+	// Custom template contents are user-owned; do not remove their jars or logs.
+	if tmpl == "" || tmpl == "0" {
+		cleanupInstallFiles(path)
+	}
 
 	return nil
 }
