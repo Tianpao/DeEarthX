@@ -101,11 +101,12 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 	}
 
 	// Priority 3: CurseForge fingerprints gameVersions, vetted by consensus.
+	var cfVerdicts map[string]types.SideVerdict
 	if config.CurseForge {
 		slog.Info("Running CurseForge filter")
 		cf := strategies.NewCurseForgeFilter()
 		cf.SetSharedFingerprints(cfFingerprints)
-		cfVerdicts := cf.Verdicts(filterUndecided(files, skipForMixin))
+		cfVerdicts = cf.Verdicts(filterUndecided(files, skipForMixin))
 		for filename, v := range cfVerdicts {
 			if v != types.VerdictClient {
 				continue
@@ -117,6 +118,14 @@ func RunFilterStrategies(files []types.FileInfo, config types.FilterConfig) ([]s
 		}
 	}
 
+	// A lower-confidence local side inference must not override a server verdict.
+	for _, verdicts := range []map[string]types.SideVerdict{modrinthVerdicts, mcmodVerdicts, cfVerdicts} {
+		for filename, verdict := range verdicts {
+			if verdict == types.VerdictServer {
+				skipForMixin[filename] = true
+			}
+		}
+	}
 	// Priority 5: Mixin (lowest)
 	if config.Mixins {
 		slog.Info("Running Mixin filter")

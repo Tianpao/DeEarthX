@@ -3,15 +3,19 @@ package types
 // MixinClass represents the bytecode of a mixin class referenced by a mixin config.
 type MixinClass struct {
 	Name  string `json:"name"`
+	Side  string `json:"side"` // common, client, or server config group
 	Bytes []byte `json:"-"`
 }
 
 // MixinFile represents a mixin configuration file extracted from a jar.
 type MixinFile struct {
-	Name    string       `json:"name"`
-	Data    string       `json:"data"`
-	Refmap  []byte       `json:"-"` // optional refmap JSON (from the config's "refmap" field)
-	Classes []MixinClass `json:"-"`
+	Name        string       `json:"name"`
+	Data        string       `json:"data"`
+	Refmap      []byte       `json:"-"` // optional refmap JSON (from the config's "refmap" field)
+	Classes     []MixinClass `json:"-"`
+	Environment string       `json:"environment"` // registration environment, not the config filename
+	Registered  bool         `json:"registered"`
+	Incomplete  bool         `json:"incomplete"`
 }
 
 // InfoFile represents a mod metadata file extracted from a jar.

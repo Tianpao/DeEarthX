@@ -195,7 +195,7 @@ func TestParseMixinClass(t *testing.T) {
 	}
 }
 
-func TestIsClientOnlyByMixin(t *testing.T) {
+func TestMixinEvidenceAloneDoesNotRemoveMod(t *testing.T) {
 	serverSafe := types.MixinFile{
 		Name: "server.mixins.json",
 		Data: `{"package":"com.x","mixins":["ServerMixin"]}`,
@@ -251,8 +251,8 @@ func TestIsClientOnlyByMixin(t *testing.T) {
 	}
 	// dual-side via refmap: one mixin targets a client class, one a common class.
 	refmapDual := types.MixinFile{
-		Name: "mod.mixins.json",
-		Data: `{"package":"com.x","mixins":["ServerMixin"],"client":["ClientMixin"]}`,
+		Name:   "mod.mixins.json",
+		Data:   `{"package":"com.x","mixins":["ServerMixin"],"client":["ClientMixin"]}`,
 		Refmap: []byte(`{"mappings":{"com/x/ServerMixin":{"m":"Lnet/minecraft/world/entity/LivingEntity;m_1_()V"},"com/x/ClientMixin":{"m":"Lnet/minecraft/client/Minecraft;m_1_()V"}}}`),
 		Classes: []types.MixinClass{
 			{Name: "com/x/ServerMixin.class", Bytes: buildClass(newCP())},
@@ -271,23 +271,23 @@ func TestIsClientOnlyByMixin(t *testing.T) {
 	tests := []struct {
 		name  string
 		mixin types.MixinFile
-		want  bool
 	}{
-		{"server-only mixin kept", serverSafe, false},
-		{"config declares client", clientOnly, true},
-		{"client mixin verified by bytecode", clientByRef, true},
-		{"dual-side kept", dual, false},
-		{"plugin-filtered skipped", pluginFiltered, false},
-		{"optional mixin skipped", optional, false},
-		{"client caught by refmap only", refmapOnlyClient, true},
-		{"dual-side kept by refmap", refmapDual, false},
-		{"refmap absent falls back to bytecode", refmapAbsent, true},
+		{"server-only mixin kept", serverSafe},
+		{"config declares client", clientOnly},
+		{"client mixin verified by bytecode", clientByRef},
+		{"dual-side kept", dual},
+		{"plugin-filtered skipped", pluginFiltered},
+		{"optional mixin skipped", optional},
+		{"client caught by refmap only", refmapOnlyClient},
+		{"dual-side kept by refmap", refmapDual},
+		{"refmap absent falls back to bytecode", refmapAbsent},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isClientOnlyByMixin([]types.MixinFile{tt.mixin}); got != tt.want {
-				t.Errorf("isClientOnlyByMixin = %v, want %v", got, tt.want)
+			mods, err := NewMixinFilter().Filter([]types.FileInfo{{Filename: "test.jar", Mixins: []types.MixinFile{tt.mixin}}})
+			if err != nil || len(mods) != 0 {
+				t.Fatalf("Mixin evidence alone removed a whole mod: %v, %v", mods, err)
 			}
 		})
 	}

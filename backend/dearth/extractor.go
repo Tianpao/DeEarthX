@@ -6,10 +6,11 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"log/slog"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"dex/backend/dearth/types"
@@ -106,28 +107,121 @@ func extractMixins(fileData []byte) []types.MixinFile {
 		entryByName[f.Name] = f
 	}
 
+	registrations := mixinRegistrations(entryByName)
+	seen := make(map[string]bool)
+	addConfig := func(name, environment string, registered bool) {
+		if seen[name] {
+			return
+		}
+		seen[name] = true
+		mf := types.MixinFile{Name: name, Environment: environment, Registered: registered}
+		entry := entryByName[name]
+		if entry == nil || entry.FileInfo().IsDir() {
+			mf.Incomplete = true
+			mixins = append(mixins, mf)
+			return
+		}
+		data, err := readZipEntry(entry)
+		mf.Data = string(data)
+		var cfg mixinConfig
+		if err != nil || json.Unmarshal(data, &cfg) != nil {
+			mf.Incomplete = true
+		} else {
+			mf.Refmap = readRefmap(cfg.Refmap, entryByName)
+			mf.Classes, mf.Incomplete = resolveMixinClassesState(&cfg, entryByName)
+		}
+		mixins = append(mixins, mf)
+	}
+	// Registered configs need not follow any naming convention. Walk the ZIP
+	// first for stable output, then retain missing registrations as incomplete.
+	for _, f := range r.File {
+		if env, ok := registrations[f.Name]; ok {
+			addConfig(f.Name, env, true)
+		}
+	}
+	var missing []string
+	for name := range registrations {
+		if !seen[name] {
+			missing = append(missing, name)
+		}
+	}
+	sort.Strings(missing)
+	for _, name := range missing {
+		addConfig(name, registrations[name], true)
+	}
 	for _, f := range r.File {
 		name := strings.ToLower(f.Name)
 		if (strings.HasPrefix(name, "mixins.") || strings.HasPrefix(name, "mixin.") ||
 			strings.Contains(name, ".mixins.json") || strings.Contains(name, ".mixin.json")) &&
 			strings.HasSuffix(name, ".json") && !f.FileInfo().IsDir() {
-			data, err := readZipEntry(f)
-			if err != nil {
-				continue
-			}
-			var cfg mixinConfig
-			if json.Unmarshal(data, &cfg) != nil {
-				continue
-			}
-			mixins = append(mixins, types.MixinFile{
-				Name:    f.Name,
-				Data:    string(data),
-				Refmap:  readRefmap(cfg.Refmap, entryByName),
-				Classes: resolveMixinClasses(&cfg, entryByName),
-			})
+			addConfig(f.Name, "common", false)
 		}
 	}
 	return mixins
+}
+
+// mixinRegistrations reads loader registrations without guessing from filenames.
+// Unspecified, wildcard, or unknown environments are conservatively common.
+func mixinRegistrations(entries map[string]*zip.File) map[string]string {
+	registrations := make(map[string]string)
+	add := func(name, environment string) {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return
+		}
+		if environment != "client" && environment != "server" {
+			environment = "common"
+		}
+		if previous, ok := registrations[name]; ok && previous != environment {
+			environment = "common"
+		}
+		registrations[name] = environment
+	}
+	if f := entries["fabric.mod.json"]; f != nil {
+		if data, err := readZipEntry(f); err == nil {
+			var metadata struct {
+				Mixins []json.RawMessage `json:"mixins"`
+			}
+			if json.Unmarshal(data, &metadata) == nil {
+				for _, raw := range metadata.Mixins {
+					var name string
+					if json.Unmarshal(raw, &name) == nil {
+						add(name, "common")
+						continue
+					}
+					var registration struct {
+						Config      string `json:"config"`
+						Environment string `json:"environment"`
+					}
+					if json.Unmarshal(raw, &registration) == nil {
+						add(registration.Config, registration.Environment)
+					}
+				}
+			}
+		}
+	}
+	if f := entries["META-INF/MANIFEST.MF"]; f != nil {
+		if data, err := readZipEntry(f); err == nil {
+			// Manifest continuation lines concatenate without introducing spaces.
+			var logical []string
+			for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+				if strings.HasPrefix(line, " ") && len(logical) > 0 {
+					logical[len(logical)-1] += line[1:]
+				} else {
+					logical = append(logical, line)
+				}
+			}
+			for _, line := range logical {
+				key, value, ok := strings.Cut(line, ":")
+				if ok && strings.EqualFold(key, "MixinConfigs") {
+					for _, name := range strings.Split(value, ",") {
+						add(name, "common")
+					}
+				}
+			}
+		}
+	}
+	return registrations
 }
 
 // readRefmap reads the optional refmap JSON named by a mixin config's "refmap"
@@ -155,45 +249,62 @@ const maxMixinClassesPerConfig = 64
 // resolveMixinClasses reads the bytecode of the mixin classes named in a config
 // (mixins/server/client arrays, resolved against the config's package prefix).
 func resolveMixinClasses(cfg *mixinConfig, entryByName map[string]*zip.File) []types.MixinClass {
+	classes, _ := resolveMixinClassesState(cfg, entryByName)
+	return classes
+}
+
+// resolveMixinClassesState preserves group membership and reports lost evidence.
+func resolveMixinClassesState(cfg *mixinConfig, entryByName map[string]*zip.File) ([]types.MixinClass, bool) {
 	prefix := ""
 	if cfg.Package != "" {
 		prefix = strings.ReplaceAll(cfg.Package, ".", "/") + "/"
 	}
-
-	// Track seen internal names so the same class referenced by multiple arrays
-	// is only read once.
 	var classes []types.MixinClass
-	seen := make(map[string]bool)
-	addClass := func(cls string) {
-		if cls == "" || len(classes) >= maxMixinClassesPerConfig {
-			return
+	incomplete := false
+	// Resolve all group assignments before applying the read limit: a duplicate
+	// in a later group must still downgrade an already-read class to common.
+	var names []string
+	sides := make(map[string]string)
+	for _, group := range []struct {
+		side  string
+		names []string
+	}{
+		{"common", cfg.Mixins}, {"server", cfg.Server}, {"client", cfg.Client},
+	} {
+		for _, cls := range group.names {
+			if cls == "" {
+				incomplete = true
+				continue
+			}
+			internal := prefix + strings.ReplaceAll(cls, ".", "/") + ".class"
+			if previous, ok := sides[internal]; ok {
+				if previous != group.side {
+					sides[internal] = "common"
+				}
+			} else {
+				names = append(names, internal)
+				sides[internal] = group.side
+			}
 		}
-		internal := prefix + strings.ReplaceAll(cls, ".", "/") + ".class"
-		if seen[internal] {
-			return
-		}
-		seen[internal] = true
-		entry, ok := entryByName[internal]
-		if !ok || entry.FileInfo().IsDir() {
-			return
+	}
+	if len(names) > maxMixinClassesPerConfig {
+		incomplete = true
+		names = names[:maxMixinClassesPerConfig]
+	}
+	for _, internal := range names {
+		entry := entryByName[internal]
+		if entry == nil || entry.FileInfo().IsDir() {
+			incomplete = true
+			continue
 		}
 		b, err := readZipEntry(entry)
 		if err != nil {
-			return
+			incomplete = true
+			continue
 		}
-		classes = append(classes, types.MixinClass{Name: internal, Bytes: b})
+		classes = append(classes, types.MixinClass{Name: internal, Side: sides[internal], Bytes: b})
 	}
-
-	for _, cls := range cfg.Mixins {
-		addClass(cls)
-	}
-	for _, cls := range cfg.Server {
-		addClass(cls)
-	}
-	for _, cls := range cfg.Client {
-		addClass(cls)
-	}
-	return classes
+	return classes, incomplete
 }
 
 // extractModInfo extracts mod metadata files from a jar.
