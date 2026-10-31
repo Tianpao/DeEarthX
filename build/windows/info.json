@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "3.1.0"
+	},
+	"info": {
+		"0409": {
+			"ProductVersion": "3.1.0",
+			"CompanyName": "DeEarthX",
+			"FileDescription": "DeEarth",
+			"LegalCopyright": "(c) 2027, DeEarthX",
+			"ProductName": "DeEarthX",
+			"Comments": "all the modpack are serverpack"
+		}
+	}
+}

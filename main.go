@@ -43,7 +43,7 @@ func main() {
 	// 'Mac' options tailor the application when running an macOS.
 	app := application.New(application.Options{
 		Name:        "DeEarthX",
-		Description: "A demo of using raw HTML & CSS",
+		Description: "DeEarthX",
 		Services: []application.Service{
 			application.NewService(i.NewSponsorService()),
 			application.NewService(d.NewGalaxy()),

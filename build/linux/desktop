@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=DeEarthX
+Comment=DeEarth
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/deearthx %u
+Terminal=false
+Type=Application
+Icon=deearthx
+Categories=Utility;
+StartupWMClass=deearthx
+
+ 
